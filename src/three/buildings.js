@@ -59,6 +59,17 @@ class Builder {
     return this;
   }
 
+  /** A short bollard light (its cap glows at night). */
+  bollard(x, z) {
+    this.cyl('metal', x, z, 0, 0.9, 0.11, 10);
+    return this.cyl('strip', x, z, 0.9, 1.04, 0.14, 10);
+  }
+
+  /** A plain concrete bench along X. */
+  bench(x, z, len = 3) {
+    return this.box('concrete', [x, 0, z], [x + len, 0.45, z + 0.7]);
+  }
+
   /** Window that sits flush on a facade facing +Z at depth z. */
   winZ(key, x0, x1, y0, y1, z) {
     return this.box(key, [x0, y0, z - 0.06], [x1, y1, z + 0.06]);
@@ -113,22 +124,56 @@ function home(mats) {
   b.box('strip', [-29, 9.58, 0.6], [3, 9.7, 4.2]);
   b.winZ('glass', -28, -11, 13.0, 14.6, 4.6);
   b.winZ('glassDark', -28, -17, 17.0, 18.6, 4.6);
+  // The side that faces the lamp: two ribbons behind a row of vertical fins.
   b.winX('glass', -11, 2.5, 13.0, 14.6, 4);
+  b.winX('glassDark', -11, 2.5, 17.0, 18.6, 4);
+  for (let z = -10.5; z <= 2.6; z += 1.45) b.box('white', [4, 12.2, z - 0.09], [4.75, 19.4, z + 0.09]);
   b.box('whiteShade', [-30.2, 21.5, -14.2], [4.2, 21.9, 4.8]);
+  // An orange light tube down the front corner.
+  b.box('orange', [3.15, 10.3, 4.6], [3.75, 21.1, 5.0]);
+  // Roof: railing, stair hut and vent boxes, so the skyline isn't a flat line.
+  b.railingX('metal', -29.5, 3.8, 4.4, 21.9, 1.0, 1.6);
+  b.box('white', [-14, 21.9, -11], [-6, 25.2, -5]);
+  b.winZ('glassDark', -13, -7, 22.6, 24.4, -5);
+  b.box('whiteShade', [-14.2, 25.2, -11.2], [-5.8, 25.5, -4.8]);
+  b.box('whiteShade', [-24, 21.9, -9], [-20, 23.0, -6]);
+  b.box('whiteShade', [-3, 21.9, -9], [1.5, 22.8, -6]);
 
-  // Glass bridge into the tower.
+  // Glass bridge into the low wing, framed, with mullions.
   b.box('glass', [4, 9.7, -12], [7.5, 13.5, -6]);
+  b.box('white', [4, 13.5, -12.2], [7.5, 14.0, -5.8]);
+  b.box('white', [4, 9.3, -12.2], [7.5, 9.7, -5.8]);
+  b.mullionsZ('metal', 4.4, 7.2, 9.7, 13.5, -5.95, 0.95, 0.05);
 
   // Low wing on the right: its roofline sits mid-frame, so the upper half of
   // the lamp's beam stands against open sky (as in the poster).
-  b.box('white', [7.5, 0, -20], [32, 12.4, -5]);
+  // Ground floor: warm glazing under a lit canopy.
+  b.box('white', [7.5, 0, -20], [32, 8.4, -5]);
   b.winZ('warm', 8.5, 31, 0.4, 3.6, -5);
-  b.winZ('glass', 9, 31, 5.6, 7.2, -5);
-  b.winZ('glassDark', 9, 31, 9.0, 10.4, -5);
-  b.box('whiteShade', [7.3, 12.4, -20.2], [32.2, 12.8, -4.8]);
-  // Slim stair tower closing the far right end.
+  b.box('white', [8, 4.0, -5], [31.5, 4.4, -2.6]);
+  b.box('strip', [8.5, 3.92, -4.8], [31, 4.0, -2.8]);
+  for (let x = 10; x <= 30; x += 5) b.cyl('metal', x, -3.0, 0, 4.0, 0.09, 8);
+  // Middle floor: ribbon window behind vertical fins.
+  b.winZ('glass', 9, 31, 5.4, 7.6, -5);
+  for (let x = 9; x <= 31.01; x += 1.6) b.box('white', [x - 0.12, 4.4, -5], [x + 0.12, 8.4, -4.2]);
+  // Top floor set back behind a terrace, with a pergola.
+  b.box('white', [7.5, 8.4, -20], [32, 8.8, -5]);
+  b.box('white', [9, 8.8, -20], [32, 12.4, -8.5]);
+  b.winZ('glassDark', 10, 31, 9.6, 11.4, -8.5);
+  b.railingX('metal', 7.6, 31.9, -5.2, 8.8, 1.0, 1.4);
+  b.box('whiteShade', [8.8, 12.4, -20.2], [32.2, 12.8, -8.3]);
+  for (let x = 10; x <= 30.01; x += 2.5) b.box('white', [x - 0.1, 11.6, -8.5], [x + 0.1, 11.8, -5.4]);
+  b.box('white', [9.6, 11.6, -5.6], [30.4, 11.8, -5.4]);
+
+  // Slim stair tower closing the far right end, with horizontal fins.
   b.box('white', [32, 0, -16], [37, 25, -8]);
   b.winZ('glassDark', 33.8, 35.2, 3, 22, -8);
+  for (let y = 5; y < 24; y += 2.6) b.box('white', [31.6, y, -8.6], [37.4, y + 0.18, -7.4]);
+
+  // Street furniture along the plaza edge.
+  for (let x = -24; x <= 30; x += 4.5) if (x < 2 || x > 16) b.bollard(x, 8);
+  b.bench(-18, 9.5);
+  b.bench(19, 9.5);
   return b.build();
 }
 

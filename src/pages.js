@@ -18,15 +18,15 @@
 export const PAGES = [
   {
     id: 'home',
-    side: 'left', // which side the content panel sits on (away from the beam)
+    side: 'right', // which side the content panel sits on (away from the beam)
     no: '01',
     nav: '首页',
     en: 'HOME',
     building: 'home',
     scene: {
-      view: { pos: [0, 1.5, 26], target: [14.5, 16, 0], fov: 58, roll: 0.03 },
-      lamp: { p: [12, 13], h: 20 },
-      cluster: { p: [9.5, 11.2, 11.2], r: [0.08, -0.06, 0], size: 5.6, title: 'TERRITORY', cn: '思域', of: 'OF REASON', caps: 'CLEFT IN THE DAY', script: 'The Territory of Thought' },
+      view: { pos: [-6, 1.5, 28], target: [6, 15.5, 0], fov: 58, roll: 0.03 },
+      lamp: { p: [6.5, 13], h: 20 },
+      cluster: { p: [3.2, 11.8, 11.4], r: [0.08, -0.06, 0], size: 5.6, title: 'TERRITORY', cn: '思域', of: 'OF REASON', caps: 'CLEFT IN THE DAY', script: 'The Territory of Thought' },
       texts: [{ t: 'THE TRACE OF REASON', f: 'display', s: 2.3, p: [-12.5, 7.0, -0.85], c: 'orange' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],

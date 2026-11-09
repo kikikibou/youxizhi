@@ -232,7 +232,9 @@ export class World {
   buildSites() {
     const n = this.pages.length;
     this.pages.forEach((page, i) => {
-      const a = (i / n) * Math.PI * 2;
+      // Clockwise around the plaza: the next page's building is to the camera's
+      // right, so → / wheel-down / swipe-left turn right and ← turns left.
+      const a = -(i / n) * Math.PI * 2;
       const group = BUILDERS[page.building](this.mats);
       group.position.set(Math.sin(a) * PLAZA_RADIUS, 0, Math.cos(a) * PLAZA_RADIUS);
       group.rotation.y = a + Math.PI;
@@ -305,7 +307,7 @@ export class World {
     // so they glow during flights without crowding the compositions), plus trees.
     this.plazaLamps = [];
     for (let i = 0; i < n; i++) {
-      const a = ((i + 0.5) / n) * Math.PI * 2;
+      const a = -((i + 0.5) / n) * Math.PI * 2;
       const lamp = new Lamp(this.mats, { height: 8, beamRadius: 3.2 });
       lamp.group.position.set(Math.sin(a) * 18, 0, Math.cos(a) * 18);
       this.scene.add(lamp.group);
@@ -593,10 +595,14 @@ export class World {
   /** Post-processing follows the *current* time of day only. */
   updatePost(n) {
     this.renderer.toneMappingExposure = THREE.MathUtils.lerp(1.08, 1.05, n);
-    this.bloom.strength = THREE.MathUtils.lerp(0.1, 0.45, n);
-    this.bloom.threshold = THREE.MathUtils.lerp(0.95, 0.9, n);
-    this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.5, n);
-    this.bloom.enabled = n > 0.02; // barely visible by day; skip the cost
+    // Night keeps a steady glow. While the light changes (either way) a soft
+    // haze swells over the bright facades and then fades out *smoothly*;
+    // by full day bloom is at zero and switched off to save the cost.
+    const haze = Math.pow(Math.sin(Math.PI * n), 1.5);
+    this.bloom.strength = 0.45 * n + 0.42 * haze;
+    this.bloom.threshold = THREE.MathUtils.lerp(0.9, 0.78, haze);
+    this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.6, Math.max(n, haze));
+    this.bloom.enabled = this.bloom.strength > 0.004;
     this.sky.material.uniforms.uTime.value = this.time;
   }
 
