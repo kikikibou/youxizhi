@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YOUXIZHI · Territory of Reason</title>
     <meta name="description" content="辩论、谜题与小游戏的个人街区" />
+    <!-- Pre-launch: keep search engines out until the real domain goes live. -->
+    <meta name="robots" content="noindex, nofollow" />
   </head>
   <body>
     <canvas id="gl"></canvas>
@@ -13,6 +15,14 @@
       <div class="loader-inner">
         <span class="loader-word">TERRITORY</span>
         <span class="loader-bar"><i></i></span>
+        <form class="gate" autocomplete="off">
+          <label class="gate-label" for="gate-input">PRIVATE PREVIEW · 请输入口令</label>
+          <span class="gate-row">
+            <input id="gate-input" type="password" inputmode="text" autocapitalize="off" spellcheck="false" placeholder="口令" />
+            <button type="submit">进入 →</button>
+          </span>
+          <span class="gate-msg" aria-live="polite"></span>
+        </form>
       </div>
     </div>
 

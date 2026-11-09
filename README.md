@@ -11,6 +11,12 @@ npm run dev
 
 打开 http://localhost:5173 。构建静态文件：`npm run build`（输出在 `dist/`，可部署到任意静态托管）。
 
+## 上线与口令门
+
+推送到 `main` 分支后，GitHub Actions 会自动构建并发布到 GitHub Pages（见 `.github/workflows/deploy.yml`）。
+
+目前站点前有一道口令门（`src/gate.js`），并设置了 `noindex` 不让搜索引擎收录。它只是"软门槛"：静态网站无法真正保密，懂行的人看源码就能绕过。正式公开时，把 `GATE_HASH` 设为 `''`，并删掉 `index.html` 里的 `robots` meta。
+
 ## 结构
 
 | 文件 | 作用 |

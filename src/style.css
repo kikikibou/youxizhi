@@ -108,6 +108,70 @@ a {
   }
 }
 
+/* Pre-launch passphrase gate (lives inside the loader screen) */
+.gate {
+  display: none;
+  justify-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.loader.is-gated .gate {
+  display: grid;
+}
+.loader.is-gated .loader-bar {
+  display: none;
+}
+.gate-label {
+  font-family: var(--caps);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: rgba(255, 255, 255, 0.7);
+}
+.gate-row {
+  display: flex;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+.gate input {
+  width: min(200px, 52vw);
+  padding: 11px 14px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font: 500 16px var(--caps);
+  letter-spacing: 0.2em;
+}
+.gate input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
+}
+.gate button {
+  padding: 0 18px;
+  border: 0;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+.gate-msg {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--orange);
+}
+.gate.is-wrong .gate-row {
+  animation: shake 0.42s var(--ease);
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-7px);
+  }
+  40%,
+  80% {
+    transform: translateX(7px);
+  }
+}
+
 /* ------------------------------------------------------------------ chrome */
 
 .ui {
