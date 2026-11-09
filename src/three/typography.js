@@ -10,6 +10,29 @@ import * as THREE from 'three';
  */
 export const MAX_HULL = 32;
 
+/**
+ * GLSL: how much of the pixel p (window coordinates) lies inside the beam's
+ * on-screen outline — a counter-clockwise convex polygon. Returns 0..1 with a
+ * one-pixel anti-aliased edge. Needs uniforms uHull[MAX_HULL] and uHullN.
+ */
+export const BEAM_GLSL = /* glsl */ `
+  uniform vec2 uHull[${MAX_HULL}];
+  uniform int uHullN;
+  float beamCoverage(vec2 p) {
+    if (uHullN < 3) return 0.0;
+    float d = 1e6;
+    for (int i = 0; i < ${MAX_HULL}; i++) {
+      if (i >= uHullN) break;
+      vec2 a = uHull[i];
+      vec2 e = uHull[i + 1 < uHullN ? i + 1 : 0] - a;
+      float len = length(e);
+      if (len < 1e-3) continue;
+      d = min(d, (e.x * (p.y - a.y) - e.y * (p.x - a.x)) / len);
+    }
+    return clamp(d + 0.5, 0.0, 1.0);
+  }
+`;
+
 export const FONTS = {
   display: { family: '"Anton", "Oswald", Impact, sans-serif', weight: 400, lh: 1.08, pad: 0.18 },
   caps: { family: '"Oswald", "Anton", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
@@ -69,24 +92,12 @@ const frag = /* glsl */ `
   uniform vec3 uIn;
   uniform vec3 uOut;
   uniform float uOpacity;
-  uniform vec2 uHull[${MAX_HULL}];
-  uniform int uHullN;
   varying vec2 vUv;
-  // Counter-clockwise convex polygon in window pixels.
-  bool inBeam(vec2 p) {
-    if (uHullN < 3) return false;
-    for (int i = 0; i < ${MAX_HULL}; i++) {
-      if (i >= uHullN) break;
-      vec2 a = uHull[i];
-      vec2 b = uHull[i + 1 < uHullN ? i + 1 : 0];
-      if ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) < 0.0) return false;
-    }
-    return true;
-  }
+  ${BEAM_GLSL}
   void main() {
     float a = texture2D(map, vUv).a * uOpacity;
     if (a < 0.004) discard;
-    vec3 c = inBeam(gl_FragCoord.xy) ? uIn : uOut;
+    vec3 c = mix(uOut, uIn, beamCoverage(gl_FragCoord.xy));
     gl_FragColor = vec4(c, a);
   }
 `;

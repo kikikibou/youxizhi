@@ -119,14 +119,16 @@ function home(mats) {
   // Glass bridge into the tower.
   b.box('glass', [4, 9.7, -12], [7.5, 13.5, -6]);
 
-  // Tower on the right.
-  b.box('white', [7.5, 0, -20], [21, 28, -5]);
-  b.winZ('glassDark', 11, 12.3, 3, 25, -5);
-  b.winZ('glass', 15.5, 19.5, 6, 7.4, -5);
-  b.winZ('glass', 15.5, 19.5, 12, 13.4, -5);
-  b.winZ('glassDark', 15.5, 19.5, 18, 19.4, -5);
-  b.box('warm', [8.5, 0, -5.2], [10.2, 3.4, -4.9]);
-  b.box('whiteShade', [7.3, 28, -20.2], [21.2, 28.4, -4.8]);
+  // Low wing on the right: its roofline sits mid-frame, so the upper half of
+  // the lamp's beam stands against open sky (as in the poster).
+  b.box('white', [7.5, 0, -20], [32, 12.4, -5]);
+  b.winZ('warm', 8.5, 31, 0.4, 3.6, -5);
+  b.winZ('glass', 9, 31, 5.6, 7.2, -5);
+  b.winZ('glassDark', 9, 31, 9.0, 10.4, -5);
+  b.box('whiteShade', [7.3, 12.4, -20.2], [32.2, 12.8, -4.8]);
+  // Slim stair tower closing the far right end.
+  b.box('white', [32, 0, -16], [37, 25, -8]);
+  b.winZ('glassDark', 33.8, 35.2, 3, 22, -8);
   return b.build();
 }
 
@@ -159,6 +161,12 @@ function debate(mats) {
   b.box('white', [C, 0, D], [R, top + 4.5, 0.3]);
   for (let y = 6; y < top; y += fh * 2) b.winZ(y % 3 > 1 ? 'glass' : 'glassDark', C + 2.2, C + 3.6, y, y + 1.4, 0.3);
   b.box('warm', [C + 1.4, 0, 0.2], [C + 4.5, 3.6, 0.45]);
+
+  // Low lecture hall to the right of the tower (open sky above the lamp).
+  b.box('white', [R, 0, -16], [38, 10.6, -3]);
+  b.winZ('warm', R + 1, 37, 0.4, 3.8, -3);
+  b.winZ('glass', R + 1, 37, 6.2, 8.0, -3);
+  b.box('whiteShade', [R - 0.2, 10.6, -16.2], [38.2, 11.0, -2.8]);
 
   // Cantilevered wing on the upper floors.
   const wy0 = base + 4 * fh;
@@ -212,9 +220,9 @@ function puzzle(mats) {
   b.box('orange', [3.5, y0 + size + 0.4, -9], [8.5, y0 + size + 5.4, -4]);
 
   // Side cube and a ramp.
-  b.box('white', [13, 0, -18], [24, 11, -6]);
-  b.winZ('glass', 14, 23, 6.5, 8, -6);
-  b.box('warm', [15, 0, -6.2], [18, 3.4, -5.9]);
+  b.box('white', [13, 0, -18], [34, 11, -6]);
+  b.winZ('glass', 14, 33, 6.5, 8, -6);
+  b.winZ('warm', 15, 32, 0.4, 3.4, -6);
   b.boxRot('white', [-15, 2.2, 3], [3, 0.4, 16], [0.29, 0, 0]);
   b.boxRot('metal', [-16.45, 3.3, 3], [0.08, 1.1, 16], [0.29, 0, 0]);
   return b.build();
@@ -242,6 +250,12 @@ function games(mats) {
   b.cyl('white', 0, cz, top, top + 2.6, R, 72);
   b.cyl('whiteShade', 0, cz, top + 2.6, top + 2.9, R + 0.15, 72);
 
+  // Low arcade on the left, under the lamp's beam.
+  b.box('white', [-44, 6.6, -16], [-14, 8.2, -1.5]);
+  b.box('strip', [-43.5, 6.52, -15.5], [-14.5, 6.6, -2]);
+  b.box('warm', [-43, 0, -15], [-15, 6.6, -14.4]);
+  for (let x = -42.5; x <= -16; x += 3.3) b.cyl('white', x, -2.6, 0, 6.6, 0.32, 14);
+
   // Tall block behind.
   b.box('white', [2, 0, -40], [21, 36, -22]);
   for (let y = 22; y < 34; y += 3.4) b.winX(y % 2 ? 'glass' : 'glassDark', -38, -24, y, y + 1.3, 21);
@@ -265,8 +279,8 @@ function about(mats) {
   b.box('metal', [-14, 6.6, -3.1], [10, 6.75, -2.9]);
 
   // Tall white fin wall with a slit.
-  b.box('white', [-26, 0, -12], [-23.6, 19, 7]);
-  b.winX('glass', -4, -2.6, 2, 17, -23.6);
+  b.box('white', [-26, 0, -12], [-23.6, 12, 7]);
+  b.winX('glass', -4, -2.6, 2, 10.5, -23.6);
 
   // Slab tower behind.
   b.box('white', [-2, 0, -36], [17, 38, -21]);

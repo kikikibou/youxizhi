@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { SKY_GLSL, SKY_SHARED } from './sky.js';
 
 /* --------------------------------- Ground -------------------------------- */
 
@@ -62,34 +61,10 @@ const beamVert = /* glsl */ `
   }
 `;
 
-// The hero beam is a window onto the same sky at the opposite time of day:
-// by day it shows the night (navy, stars, dark clouds), by night it shows the
-// day (blue sky, white clouds) with the lamp glowing like a sun at its top.
-// NOTE: with MSAA, varyings can be extrapolated slightly outside a triangle,
-// so every value fed to pow() is clamped first (a negative base gives NaN,
-// which bloom would smear into a big rectangle).
-const portalFrag = /* glsl */ `
-  uniform float uOpacity;
-  uniform float uOtherNight;
-  varying vec2 vUv;
-  varying vec3 vWorld;
-  ${SKY_GLSL}
-  void main() {
-    float v = clamp(vUv.y, 0.0, 1.0);
-    vec3 dir = normalize(vWorld - cameraPosition);
-    // Showing night: keep it a deep poster navy with only a few dim clouds.
-    vec3 col = skyColor(dir, uOtherNight, mix(1.0, 0.3, uOtherNight));
-    // Showing day: stay just under the night bloom threshold so only the
-    // lamp's "sun" glows, and letters inside the beam stay crisp.
-    col *= mix(0.84, 0.72, uOtherNight);
-    float sun = pow(v, 7.0) * (1.0 - uOtherNight);
-    col += vec3(1.0, 0.86, 0.62) * sun * 0.7;
-    float a = uOpacity * mix(0.95, 1.0, smoothstep(0.0, 0.5, v));
-    gl_FragColor = vec4(col, a);
-  }
-`;
-
 // Ordinary lamps at night: a soft additive glow.
+// NOTE: with MSAA, varyings can be extrapolated slightly past a triangle's
+// edge, so every pow() base is clamped (a negative base gives NaN, which bloom
+// would smear into a big rectangle).
 const glowFrag = /* glsl */ `
   uniform float uOpacity;
   uniform vec3 uColor;
@@ -106,7 +81,16 @@ const glowFrag = /* glsl */ `
 `;
 
 export class Lamp {
-  constructor(mats, { height = 14, beam = false, beamRadius = null, spot = false } = {}) {
+  /**
+   * @param {object} opts
+   *   height      pole height (m)
+   *   beamRadius  radius of the light pool on the ground
+   *   hero        the page's main lamp: its beam is where the scene switches to
+   *               the opposite time of day (see BEAM_GLSL / World.renderBeam)
+   *   spot        add a real spotlight (night only)
+   */
+  constructor(mats, { height = 14, beamRadius = null, hero = false, spot = false } = {}) {
+    this.hero = hero;
     this.group = new THREE.Group();
     this.height = height;
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, height + 0.3, 14), mats.lampPole);
@@ -151,22 +135,6 @@ export class Lamp {
     this.glow.renderOrder = 5;
     this.group.add(this.glow);
 
-    if (beam) {
-      this.portal = new THREE.Mesh(
-        beamGeo,
-        new THREE.ShaderMaterial({
-          vertexShader: beamVert,
-          fragmentShader: portalFrag,
-          uniforms: { ...SKY_SHARED, uOpacity: { value: 0 }, uOtherNight: { value: 1 } },
-          transparent: true,
-          depthWrite: false,
-          side: THREE.FrontSide,
-        }),
-      );
-      this.portal.renderOrder = 4;
-      this.group.add(this.portal);
-    }
-
     if (spot) {
       this.spot = new THREE.SpotLight(0xffc580, 0, 46, 0.72, 0.75, 1.4);
       this.spot.position.set(0, this.topY, 0);
@@ -175,15 +143,10 @@ export class Lamp {
     }
   }
 
+  /** Called once per render pass with that pass's time of day. */
   update(night, active) {
-    if (this.portal) {
-      const u = this.portal.material.uniforms;
-      u.uOpacity.value = active;
-      u.uOtherNight.value = 1 - night;
-      this.portal.visible = active > 0.002;
-    }
-    // The hero lamp's ordinary glow gives way to its portal.
-    const glow = night * 0.3 * (this.portal ? 1 - active : 1);
+    // A hero lamp's ordinary glow gives way to its day/night beam.
+    const glow = night * 0.3 * (this.hero ? 1 - active : 1);
     this.glow.material.uniforms.uOpacity.value = glow;
     this.glow.visible = glow > 0.002;
     if (this.spot) this.spot.intensity = night * 260;

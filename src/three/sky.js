@@ -2,11 +2,8 @@ import * as THREE from 'three';
 
 /**
  * Sky: vertical gradient + two layers of drifting fbm clouds + stars.
- *
- * The colour function is shared with the lamp beams (see props.js): a beam is
- * a window onto the *same* sky — same clouds, same wind — but at the opposite
- * time of day. Uniform objects in SKY_SHARED are shared by reference, so
- * updating time once moves the clouds everywhere.
+ * `uNight` picks the time of day; `uCloud` scales cloud cover (the view seen
+ * through the hero beam uses fewer clouds at night).
  */
 export const SKY = {
   dayTop: new THREE.Color(0x4a82ba),
@@ -88,10 +85,11 @@ const vert = /* glsl */ `
 
 const frag = /* glsl */ `
   uniform float uNight;
+  uniform float uCloud;
   varying vec3 vDir;
   ${SKY_GLSL}
   void main() {
-    gl_FragColor = vec4(skyColor(normalize(vDir), uNight, 1.0), 1.0);
+    gl_FragColor = vec4(skyColor(normalize(vDir), uNight, uCloud), 1.0);
   }
 `;
 
@@ -99,7 +97,7 @@ export function createSky() {
   const mat = new THREE.ShaderMaterial({
     vertexShader: vert,
     fragmentShader: frag,
-    uniforms: { ...SKY_SHARED, uNight: { value: 0 } },
+    uniforms: { ...SKY_SHARED, uNight: { value: 0 }, uCloud: { value: 1 } },
     side: THREE.BackSide,
     depthWrite: false,
   });

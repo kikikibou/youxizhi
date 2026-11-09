@@ -11,7 +11,7 @@ import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
 import { createSky, SKY } from './sky.js';
-import { TextBlock, buildCluster, loadFonts, MAX_HULL } from './typography.js';
+import { TextBlock, buildCluster, loadFonts, MAX_HULL, BEAM_GLSL } from './typography.js';
 
 const PLAZA_RADIUS = 56;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -58,6 +58,44 @@ const gradeShader = {
     }`,
 };
 
+/**
+ * Inside the hero lamp's beam the scene is shown at the *opposite* time of day:
+ * tOther is a second render of the whole scene (buildings and sky) at that
+ * time, swapped in wherever the pixel lies inside the beam's outline.
+ */
+const beamCompositeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    tOther: { value: null },
+    uHull: { value: Array.from({ length: MAX_HULL }, () => new THREE.Vector2()) },
+    uHullN: { value: 0 },
+    uMix: { value: 0 },
+    uSunPos: { value: new THREE.Vector2() },
+    uSunR: { value: 10 },
+    uSun: { value: 0 },
+  },
+  vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tOther;
+    uniform float uMix;
+    uniform vec2 uSunPos;
+    uniform float uSunR;
+    uniform float uSun;
+    varying vec2 vUv;
+    ${BEAM_GLSL}
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      if (uMix > 0.001) {
+        float k = beamCoverage(gl_FragCoord.xy) * uMix;
+        if (k > 0.0) c = mix(c, texture2D(tOther, vUv), k);
+      }
+      // When the beam shows daylight, the lamp is its sun.
+      c.rgb += vec3(1.0, 0.86, 0.62) * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
+      gl_FragColor = c;
+    }`,
+};
+
 export class World {
   constructor(canvas, pages) {
     this.canvas = canvas;
@@ -85,6 +123,8 @@ export class World {
     r.setSize(window.innerWidth, window.innerHeight, false);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Updated once per frame by hand: both time-of-day renders share one map.
+    r.shadowMap.autoUpdate = false;
     r.toneMapping = THREE.NeutralToneMapping;
     r.toneMappingExposure = 1.0;
 
@@ -112,6 +152,11 @@ export class World {
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
+    this._moon = new THREE.Color(0.55, 0.65, 1.0);
+    this._hemiDay = new THREE.Color(0xc4dcf2);
+    this._hemiNight = new THREE.Color(0x24345e);
+    this._groundDay = new THREE.Color(0xd9c6ae);
+    this._groundNight = new THREE.Color(0x8a5a32);
     this._size = new THREE.Vector2();
     window.addEventListener('resize', () => this.resize());
   }
@@ -143,7 +188,7 @@ export class World {
       group.updateMatrixWorld(true);
 
       const sc = page.scene;
-      const lamp = new Lamp(this.mats, { height: sc.lamp.h, beam: true, spot: true });
+      const lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true, spot: true });
       lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
       group.add(lamp.group);
 
@@ -159,35 +204,63 @@ export class World {
       }
       group.updateMatrixWorld(true);
 
-      const v = sc.view;
-      const pos = group.localToWorld(new THREE.Vector3(...v.pos));
-      const target = group.localToWorld(new THREE.Vector3(...v.target));
-      const m = new THREE.Matrix4().lookAt(pos, target, UP);
-      const quat = new THREE.Quaternion().setFromRotationMatrix(m);
-      quat.multiply(new THREE.Quaternion().setFromAxisAngle(Z, v.roll || 0));
 
       // On-screen outline of this page's beam, shared by all its 3D text.
       const beam = {
         pts: { value: Array.from({ length: MAX_HULL }, () => new THREE.Vector2()) },
         n: { value: 0 },
       };
-      this.sites.push({ page, group, lamp, ribbon, beam, texts: [], view: { pos, quat, fov: v.fov }, activity: 0 });
+      this.sites.push({ page, group, lamp, ribbon, beam, texts: [], view: this.viewFor(group, sc.view), activity: 0 });
     });
+  }
+
+  /** Camera pose for a view given in a building's local frame. */
+  viewFor(group, v) {
+    const pos = group.localToWorld(new THREE.Vector3(...v.pos));
+    const target = group.localToWorld(new THREE.Vector3(...v.target));
+    const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
+    quat.multiply(new THREE.Quaternion().setFromAxisAngle(Z, v.roll || 0));
+    return { pos, quat, fov: v.fov };
+  }
+
+  /**
+   * Dev tool: change a page's camera, hero lamp and title placement live
+   * (same shape as pages.js scene config) and jump there.
+   */
+  recompose(index, { view, lamp, cluster } = {}) {
+    const site = this.sites[index];
+    const sc = site.page.scene;
+    if (lamp) {
+      Object.assign(sc.lamp, lamp);
+      site.group.remove(site.lamp.group);
+      site.lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true, spot: true });
+      site.lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
+      site.group.add(site.lamp.group);
+      site.group.updateMatrixWorld(true);
+    }
+    if (view) site.view = this.viewFor(site.group, Object.assign(sc.view, view));
+    if (cluster && site.cluster) {
+      Object.assign(sc.cluster, cluster);
+      site.cluster.position.set(...sc.cluster.p);
+      site.cluster.rotation.set(...sc.cluster.r);
+    }
+    this.jumpTo(index);
   }
 
   buildPlazaFurniture() {
     const n = this.pages.length;
-    // Smaller lamps between the buildings, and a ring of trees.
+    // Smaller lamps in a ring around the plaza centre (behind the page cameras,
+    // so they glow during flights without crowding the compositions), plus trees.
     this.plazaLamps = [];
     for (let i = 0; i < n; i++) {
       const a = ((i + 0.5) / n) * Math.PI * 2;
-      const lamp = new Lamp(this.mats, { height: 10, beamRadius: 3.6 });
-      lamp.group.position.set(Math.sin(a) * 38, 0, Math.cos(a) * 38);
+      const lamp = new Lamp(this.mats, { height: 8, beamRadius: 3.2 });
+      lamp.group.position.set(Math.sin(a) * 18, 0, Math.cos(a) * 18);
       this.scene.add(lamp.group);
       this.plazaLamps.push(lamp);
       for (const off of [-0.09, 0.09]) {
         const t = createTree(this.mats, 0.95 + Math.random() * 0.3);
-        t.position.set(Math.sin(a + off) * 47, 0, Math.cos(a + off) * 47);
+        t.position.set(Math.sin(a + off * 2) * 24, 0, Math.cos(a + off * 2) * 24);
         this.scene.add(t);
       }
     }
@@ -211,6 +284,7 @@ export class World {
     const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats.whiteShade);
     mesh.receiveShadow = true;
     this.scene.add(mesh);
+    this.skyline = mesh;
   }
 
   buildComposer() {
@@ -221,6 +295,11 @@ export class World {
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.15, 0.45, 0.95);
     this.composer.addPass(this.bloom);
+    // The other time of day, rendered separately and swapped in inside the beam.
+    this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: this.lowPower ? 2 : 4 });
+    this.beamPass = new ShaderPass(beamCompositeShader);
+    this.beamPass.uniforms.tOther.value = this.otherRT.texture;
+    this.composer.addPass(this.beamPass);
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(gradeShader);
     this.composer.addPass(this.grade);
@@ -239,6 +318,7 @@ export class World {
     for (const site of this.sites) {
       const cluster = buildCluster(site.page.scene.cluster, site.beam, aniso);
       site.group.add(cluster.group);
+      site.cluster = cluster.group;
       site.texts.push(...cluster.blocks);
       for (const spec of site.page.scene.texts) {
         const block = new TextBlock(spec, site.beam, aniso);
@@ -316,6 +396,8 @@ export class World {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
+    const size = this.renderer.getDrawingBufferSize(this._size);
+    this.otherRT.setSize(size.x, size.y);
   }
 
   /* ------------------------------------------------------------------ */
@@ -357,32 +439,46 @@ export class World {
     this.camera.updateMatrixWorld();
   }
 
-  updateLighting() {
-    const n = this.night;
-    // The sun swings with the camera so every facade is lit — and while the
-    // camera travels, shadows sweep across the plaza like passing hours.
+  /**
+   * The sun swings with the camera so every facade is lit — and while the
+   * camera travels, shadows sweep across the plaza like passing hours. Its
+   * direction is set once per frame so both renders share one shadow map.
+   */
+  updateSun() {
     const fwd = this._v.set(0, 0, -1).applyQuaternion(this.baseQuat);
     const yaw = Math.atan2(fwd.x, fwd.z) + Math.PI + 0.85;
-    const elev = THREE.MathUtils.lerp(0.78, 0.95, n);
+    const elev = THREE.MathUtils.lerp(0.78, 0.95, this.night);
     this.sun.position.set(Math.sin(yaw) * Math.cos(elev), Math.sin(elev), Math.cos(yaw) * Math.cos(elev)).multiplyScalar(180);
     this.sun.target.position.set(0, 0, 0);
+  }
+
+  /**
+   * Everything that depends on the time of day, for one render pass.
+   * `inBeam` is the pass seen through the hero beam: its night sky keeps fewer
+   * clouds, so by day the beam reads as the poster's deep navy.
+   */
+  applyTime(n, inBeam = false) {
     this.sun.intensity = THREE.MathUtils.lerp(3.3, 0.35, n);
-    this.sun.color.setRGB(1, 0.94, 0.87).lerp(new THREE.Color(0.55, 0.65, 1.0), n);
-
+    this.sun.color.setRGB(1, 0.94, 0.87).lerp(this._moon, n);
     this.hemi.intensity = THREE.MathUtils.lerp(1.25, 0.55, n);
-    this.hemi.color.set(0xc4dcf2).lerp(new THREE.Color(0x24345e), n);
-    this.hemi.groundColor.set(0xd9c6ae).lerp(new THREE.Color(0x8a5a32), n);
+    this.hemi.color.copy(this._hemiDay).lerp(this._hemiNight, n);
+    this.hemi.groundColor.copy(this._groundDay).lerp(this._groundNight, n);
     this.scene.environmentIntensity = THREE.MathUtils.lerp(0.55, 0.12, n);
-    this.renderer.toneMappingExposure = THREE.MathUtils.lerp(1.08, 1.05, n);
-
     this.fog.color.copy(SKY.dayHor).lerp(SKY.nightHor, n);
     this.sky.material.uniforms.uNight.value = n;
-    this.sky.material.uniforms.uTime.value = this.time;
+    this.sky.material.uniforms.uCloud.value = inBeam ? 1 - 0.65 * n : 1;
+    updateMaterials(this.mats, n);
+    this.sites.forEach((site) => site.lamp.update(n, site.activity));
+    this.plazaLamps.forEach((l) => l.update(n, 0));
+  }
 
+  /** Post-processing follows the *current* time of day only. */
+  updatePost(n) {
+    this.renderer.toneMappingExposure = THREE.MathUtils.lerp(1.08, 1.05, n);
     this.bloom.strength = THREE.MathUtils.lerp(0.1, 0.45, n);
     this.bloom.threshold = THREE.MathUtils.lerp(0.95, 0.9, n);
     this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.5, n);
-    updateMaterials(this.mats, n);
+    this.sky.material.uniforms.uTime.value = this.time;
   }
 
   /**
@@ -417,7 +513,91 @@ export class World {
       }
       hull.forEach((p, i) => site.beam.pts.value[i].set(p.x, p.y));
       site.beam.n.value = hull.length;
+
+      // Lens centre and on-screen radius, for the "lamp as sun" glow.
+      const c = lamp.group.localToWorld(this._v.set(0, lamp.topY, 0)).project(cam);
+      const e = lamp.group.localToWorld(this._v2.set(lamp.topRadius, lamp.topY, 0)).project(cam);
+      site.beam.sun = site.beam.sun || new THREE.Vector2();
+      site.beam.sun.set((c.x * 0.5 + 0.5) * size.x, (c.y * 0.5 + 0.5) * size.y);
+      site.beam.sunR = Math.max(4, Math.hypot((e.x - c.x) * 0.5 * size.x, (e.y - c.y) * 0.5 * size.y));
     }
+  }
+
+  /**
+   * Dev tool for composing views: ray-casts a grid of points inside the active
+   * beam's on-screen outline and reports how much of it shows sky, row by row
+   * from the lamp down to the bottom of the frame.
+   */
+  probeBeam(rows = 16, cols = 7) {
+    const site = this.sites[this.active];
+    const n = site.beam.n.value;
+    const hull = site.beam.pts.value.slice(0, n);
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const lampParts = new Set();
+    site.lamp.group.traverse((o) => lampParts.add(o));
+    const targets = [];
+    this.scene.traverse((o) => {
+      if (!o.isMesh || !o.visible || o === this.sky || lampParts.has(o)) return;
+      if (o.material.isShaderMaterial || this.sites.some((x) => x.ribbon.mesh === o)) return;
+      targets.push(o);
+    });
+    const top = Math.max(...hull.map((p) => p.y));
+    const bottom = Math.max(0, Math.min(...hull.map((p) => p.y)));
+    const ray = new THREE.Raycaster();
+    const rowSky = [];
+    for (let r = 0; r < rows; r++) {
+      const y = top - ((r + 0.5) / rows) * (top - bottom);
+      // Horizontal extent of the polygon at this height.
+      let xl = Infinity;
+      let xr = -Infinity;
+      for (let i = 0; i < n; i++) {
+        const a = hull[i];
+        const b = hull[(i + 1) % n];
+        if ((a.y - y) * (b.y - y) > 0 || a.y === b.y) continue;
+        const x = a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x);
+        xl = Math.min(xl, x);
+        xr = Math.max(xr, x);
+      }
+      if (!isFinite(xl)) continue;
+      let sky = 0;
+      for (let c = 0; c < cols; c++) {
+        const x = xl + ((c + 0.5) / cols) * (xr - xl);
+        ray.setFromCamera(new THREE.Vector2((x / size.x) * 2 - 1, (y / size.y) * 2 - 1), this.camera);
+        if (!ray.intersectObjects(targets, false).length) sky++;
+      }
+      rowSky.push(sky / cols);
+    }
+    const half = Math.ceil(rowSky.length / 2);
+    const avg = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+    return {
+      lampTopPct: +(100 - (top / size.y) * 100).toFixed(1), // lamp lens, % from top of the frame
+      lampXPct: +((site.beam.sun.x / size.x) * 100).toFixed(1),
+      skyUpperHalf: +avg(rowSky.slice(0, half)).toFixed(2),
+      skyAll: +avg(rowSky).toFixed(2),
+      rows: rowSky.map((v) => Math.round(v * 9)).join(''), // 9 = all sky, 0 = all building
+    };
+  }
+
+  /** Render the scene at the opposite time of day for the beam, if one is visible. */
+  renderBeam() {
+    const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
+    const mix = site.activity > 0.002 && site.beam.n.value >= 3 ? site.activity : 0;
+    const u = this.beamPass.uniforms;
+    u.uMix.value = mix;
+    u.uSun.value = 0;
+    if (!mix) return;
+    u.uHull.value = site.beam.pts.value;
+    u.uHullN.value = site.beam.n.value;
+    u.uSunPos.value.copy(site.beam.sun);
+    u.uSunR.value = site.beam.sunR * 0.9;
+    u.uSun.value = this.night * mix * 1.1;
+
+    this.applyTime(1 - this.night, true);
+    const r = this.renderer;
+    r.setRenderTarget(this.otherRT);
+    r.clear();
+    r.render(this.scene, this.camera);
+    r.setRenderTarget(null);
   }
 
   update(dt) {
@@ -426,23 +606,25 @@ export class World {
     if (Math.abs(this.night - this.nightTarget) < 0.001) this.night = this.nightTarget;
 
     this.updateCamera(dt);
-    this.updateLighting();
+    this.updateSun();
 
     const p = this.progress;
     this.sites.forEach((site, i) => {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
-      site.lamp.update(this.night, site.activity);
       site.ribbon.update(this.time + i * 3.1);
-      const fadeIn = site.activity;
       site.texts.forEach((t, k) => {
         // Stagger the letters' arrival a little.
-        const o = THREE.MathUtils.clamp(fadeIn * 1.6 - k * 0.12, 0, 1);
+        const o = THREE.MathUtils.clamp(site.activity * 1.6 - k * 0.12, 0, 1);
         t.update(this.night, o);
       });
     });
-    this.plazaLamps.forEach((l) => l.update(this.night, 0));
     this.updateBeams();
+    this.updatePost(this.night);
+
+    this.renderer.shadowMap.needsUpdate = true;
+    this.renderBeam(); // other time of day -> otherRT (also refreshes the shadow map)
+    this.applyTime(this.night);
     this.composer.render(dt);
   }
 }

@@ -3,7 +3,11 @@
  *
  * scene.view    camera position / look-at target in the building's local frame
  *               (+Z faces the plaza), fov in degrees, roll in radians
- * scene.lamp    the "hero" street lamp whose beam colours the typography
+ * scene.lamp    the "hero" street lamp. Inside its beam the scene is shown at
+ *               the opposite time of day. Compose so the lamp stands in front of
+ *               a LOW volume with open sky above it: the upper half of the beam
+ *               then crosses the sky, the lower half the building (as in the
+ *               poster). World.probeBeam() measures this in dev.
  * scene.cluster the poster-style title stack (laid out automatically around p)
  * scene.texts   extra 3D lettering: t text, f font (display|caps|cn|script),
  *               s font size in metres, p position, r rotation,
@@ -14,17 +18,18 @@
 export const PAGES = [
   {
     id: 'home',
+    side: 'left', // which side the content panel sits on (away from the beam)
     no: '01',
     nav: '首页',
     en: 'HOME',
     building: 'home',
     scene: {
-      view: { pos: [-7, 1.5, 27], target: [1, 15.5, 2], fov: 56, roll: 0.035 },
-      lamp: { p: [-3, 11], h: 17 },
-      cluster: { p: [-3.5, 12.4, 9.6], r: [0.08, -0.06, 0], size: 5.6, title: 'TERRITORY', cn: '思域', of: 'OF REASON', caps: 'CLEFT IN THE DAY', script: 'The Territory of Thought' },
+      view: { pos: [0, 1.5, 26], target: [14.5, 16, 0], fov: 58, roll: 0.03 },
+      lamp: { p: [12, 13], h: 20 },
+      cluster: { p: [9.5, 11.2, 11.2], r: [0.08, -0.06, 0], size: 5.6, title: 'TERRITORY', cn: '思域', of: 'OF REASON', caps: 'CLEFT IN THE DAY', script: 'The Territory of Thought' },
       texts: [{ t: 'THE TRACE OF REASON', f: 'display', s: 2.3, p: [-12.5, 7.0, -0.85], c: 'orange' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
-      trees: [[-21, 8, 1.05], [14, 7, 1.1], [-27, 14, 1.2]],
+      trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
     },
     eyebrow: 'MANIFESTO',
     poem: ['This corner exists to prove', 'that an argument can be a gift,', 'not an inevitable war.'],
@@ -50,17 +55,18 @@ export const PAGES = [
   },
   {
     id: 'debate',
+    side: 'left', // which side the content panel sits on (away from the beam)
     no: '02',
     nav: '辩论',
     en: 'DEBATE',
     building: 'debate',
     scene: {
-      view: { pos: [9, 1.5, 28], target: [-3, 17, 0], fov: 56, roll: -0.03 },
-      lamp: { p: [-3.5, 12], h: 17 },
-      cluster: { p: [-4.5, 13.5, 10.6], r: [0.08, 0.1, 0], size: 6.0, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement' },
+      view: { pos: [11, 1.5, 27], target: [27, 16, 0], fov: 58, roll: 0.03 },
+      lamp: { p: [24, 13], h: 20 },
+      cluster: { p: [21.5, 11.8, 11.2], r: [0.08, -0.06, 0], size: 6.0, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement' },
       texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 1.25, p: [-4, 4.95, 0.76], c: 'orange' }],
       ribbon: { p: [6, 22.5, 9], r: [0, -0.12, -0.15], length: 26, width: 1.2, seed: 2.1 },
-      trees: [[-17, 10, 1.1], [12, 11, 1.0], [20, 6, 1.2]],
+      trees: [[-18, 10, 1.1], [-28, 16, 1.0]],
     },
     eyebrow: 'DEBATE',
     poem: ['Every motion is a door', 'left half open on purpose.', 'Walk through it twice.'],
@@ -86,17 +92,18 @@ export const PAGES = [
   },
   {
     id: 'puzzle',
+    side: 'left', // which side the content panel sits on (away from the beam)
     no: '03',
     nav: '谜题',
     en: 'PUZZLES',
     building: 'puzzle',
     scene: {
-      view: { pos: [-9, 1.5, 27], target: [2, 15.5, 0], fov: 56, roll: 0.03 },
-      lamp: { p: [5, 11], h: 17 },
-      cluster: { p: [5.5, 13.0, 9.6], r: [0.08, -0.1, 0], size: 6.6, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light' },
+      view: { pos: [7, 1.5, 26], target: [22.5, 16, 0], fov: 58, roll: 0.03 },
+      lamp: { p: [20, 12], h: 20 },
+      cluster: { p: [16.5, 11.8, 10.6], r: [0.08, -0.06, 0], size: 6.6, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light' },
       texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 1.3, p: [18.5, 9.6, -5.9], c: 'orange' }],
       ribbon: { p: [-12, 14, 7.5], r: [0, 0.1, 0.2], length: 26, width: 1.2, seed: 4.3 },
-      trees: [[-18, 8, 1.1], [16, 12, 1.0], [-6, 13, 0.85]],
+      trees: [[-18, 8, 1.1], [-26, 14, 1.0]],
     },
     eyebrow: 'PUZZLES',
     poem: ['A good puzzle is a locked room', 'whose key was in your pocket', 'the whole time.'],
@@ -122,17 +129,18 @@ export const PAGES = [
   },
   {
     id: 'games',
+    side: 'right', // which side the content panel sits on (away from the beam)
     no: '04',
     nav: '游戏',
     en: 'GAMES',
     building: 'games',
     scene: {
-      view: { pos: [9, 1.5, 26], target: [-2, 14.5, -3], fov: 56, roll: -0.035 },
-      lamp: { p: [-4.5, 10], h: 16.5 },
-      cluster: { p: [-4.5, 12.0, 8.6], r: [0.08, 0.12, 0], size: 5.4, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research' },
+      view: { pos: [-9, 1.5, 27], target: [-25, 16, 0], fov: 58, roll: -0.03 },
+      lamp: { p: [-24, 12], h: 20 },
+      cluster: { p: [-22, 11.8, 10.6], r: [0.08, 0.08, 0], size: 5.4, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research' },
       texts: [],
       ribbon: { p: [8, 19, 6], r: [0, -0.15, -0.12], length: 24, width: 1.2, seed: 6.2 },
-      trees: [[-16, 6, 1.15], [15, 8, 1.0], [-10, 15, 0.9]],
+      trees: [[-40, 6, 1.1], [26, 8, 1.0]],
     },
     eyebrow: 'GAMES',
     poem: ['Play is the oldest laboratory.', 'Nobody told the children', 'they were doing research.'],
@@ -158,17 +166,18 @@ export const PAGES = [
   },
   {
     id: 'about',
+    side: 'right', // which side the content panel sits on (away from the beam)
     no: '05',
     nav: '关于',
     en: 'ABOUT',
     building: 'about',
     scene: {
-      view: { pos: [-9, 1.5, 28], target: [1, 15.5, -4], fov: 56, roll: 0.03 },
-      lamp: { p: [2.5, 11.5], h: 17 },
-      cluster: { p: [3.0, 12.8, 10.6], r: [0.08, -0.12, 0], size: 6.6, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
+      view: { pos: [1, 1.5, 28], target: [-15, 16, 0], fov: 58, roll: -0.03 },
+      lamp: { p: [-12, 14], h: 20 },
+      cluster: { p: [-10, 9.4, 12.6], r: [0.08, 0.08, 0], size: 6.6, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
       texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 1.0, p: [-2, 7.65, 6.06], c: 'orange' }],
       ribbon: { p: [-14, 13.5, 8], r: [0, 0.1, 0.18], length: 26, width: 1.2, seed: 8.8 },
-      trees: [[-17, 12, 1.1], [15, 9, 1.05], [21, 15, 0.9]],
+      trees: [[-30, 4, 1.1], [24, 10, 1.05]],
     },
     eyebrow: 'ABOUT',
     poem: ['I build small rooms for thinking', 'and leave the lights on', 'for whoever walks by.'],
