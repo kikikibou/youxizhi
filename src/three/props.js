@@ -118,6 +118,7 @@ export class Lamp {
     this.beamRadius = beamRadius ?? height * 0.42;
     const beamGeo = new THREE.CylinderGeometry(this.topRadius, this.beamRadius, this.topY, 72, 1, true);
     beamGeo.translate(0, this.topY / 2, 0);
+    this.beamGeo = beamGeo;
 
     this.glow = new THREE.Mesh(
       beamGeo,

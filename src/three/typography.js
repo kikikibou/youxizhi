@@ -5,31 +5,24 @@ import * as THREE from 'three';
  * fonts, then mapped onto a plane. Because it is real geometry it gets
  * perspective, occlusion (the lamp pole passes in front of it) and it turns a
  * different colour wherever it sits inside the lamp's beam on screen — the
- * signature trick of the reference poster. The beam's on-screen outline is a
- * convex polygon recomputed every frame by World.updateBeams().
+ * signature trick of the reference poster. Where it changes colour comes from
+ * the reveal mask (MASK below).
  */
-export const MAX_HULL = 32;
-
 /**
- * GLSL: how much of the pixel p (window coordinates) lies inside the beam's
- * on-screen outline — a counter-clockwise convex polygon. Returns 0..1 with a
- * one-pixel anti-aliased edge. Needs uniforms uHull[MAX_HULL] and uHullN.
+ * Shared uniforms for the reveal mask (see devices.js): a screen-sized texture
+ * that is white wherever the scene shows the opposite time of day. Letters
+ * inside it switch colour. World keeps these values up to date.
  */
-export const BEAM_GLSL = /* glsl */ `
-  uniform vec2 uHull[${MAX_HULL}];
-  uniform int uHullN;
+export const MASK = {
+  tMask: { value: null },
+  uMaskRes: { value: new THREE.Vector2(1, 1) },
+};
+
+export const MASK_GLSL = /* glsl */ `
+  uniform sampler2D tMask;
+  uniform vec2 uMaskRes;
   float beamCoverage(vec2 p) {
-    if (uHullN < 3) return 0.0;
-    float d = 1e6;
-    for (int i = 0; i < ${MAX_HULL}; i++) {
-      if (i >= uHullN) break;
-      vec2 a = uHull[i];
-      vec2 e = uHull[i + 1 < uHullN ? i + 1 : 0] - a;
-      float len = length(e);
-      if (len < 1e-3) continue;
-      d = min(d, (e.x * (p.y - a.y) - e.y * (p.x - a.x)) / len);
-    }
-    return clamp(d + 0.5, 0.0, 1.0);
+    return clamp(texture2D(tMask, p / uMaskRes).r, 0.0, 1.0);
   }
 `;
 
@@ -93,7 +86,7 @@ const frag = /* glsl */ `
   uniform vec3 uOut;
   uniform float uOpacity;
   varying vec2 vUv;
-  ${BEAM_GLSL}
+  ${MASK_GLSL}
   void main() {
     float a = texture2D(map, vUv).a * uOpacity;
     if (a < 0.004) discard;
@@ -118,9 +111,8 @@ const PALETTE = {
 export class TextBlock {
   /**
    * @param {object} spec  { t, f, s, p:[x,y,z], r:[x,y,z], c, align }
-   * @param {object} beam  shared { pts, n } uniforms holding the page's beam outline
    */
-  constructor(spec, beam, maxAniso = 8) {
+  constructor(spec, maxAniso = 8) {
     const { canvas, px, w, h } = drawText(spec.t, spec.f, spec.align);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
@@ -140,8 +132,8 @@ export class TextBlock {
         uIn: { value: new THREE.Color() },
         uOut: { value: new THREE.Color() },
         uOpacity: { value: 0 },
-        uHull: beam.pts,
-        uHullN: beam.n,
+        tMask: MASK.tMask,
+        uMaskRes: MASK.uMaskRes,
       },
       transparent: true,
       depthWrite: false,
@@ -180,14 +172,14 @@ export class TextBlock {
  *   T E R R I T O R Y
  *        ~ script lettering across ~
  */
-export function buildCluster(c, beam, aniso) {
+export function buildCluster(c, aniso) {
   const group = new THREE.Group();
   group.position.set(...c.p);
   group.rotation.set(...(c.r || [0, 0, 0]));
   const S = c.size;
   const blocks = [];
   const add = (spec) => {
-    const b = new TextBlock(spec, beam, aniso);
+    const b = new TextBlock(spec, aniso);
     group.add(b.mesh);
     blocks.push(b);
     return b;

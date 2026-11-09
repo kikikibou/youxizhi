@@ -11,33 +11,14 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
+import { LampDevice, BeaconDevice, MASK_LAYER } from './devices.js';
+import { createSea, inSea } from './sea.js';
 import { createSky, SKY } from './sky.js';
-import { TextBlock, buildCluster, loadFonts, MAX_HULL, BEAM_GLSL } from './typography.js';
+import { TextBlock, buildCluster, loadFonts, MASK, MASK_GLSL } from './typography.js';
 
 const PLAZA_RADIUS = 56;
 const UP = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
-
-/** Monotone-chain convex hull; returns the polygon counter-clockwise (y up). */
-function convexHull(points) {
-  const pts = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
-  if (pts.length < 3) return pts;
-  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const lower = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-}
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
@@ -60,16 +41,16 @@ const gradeShader = {
 };
 
 /**
- * Inside the hero lamp's beam the scene is shown at the *opposite* time of day:
- * tOther is a second render of the whole scene (buildings and sky) at that
- * time, swapped in wherever the pixel lies inside the beam's outline.
+ * Wherever the reveal mask is white, the scene is shown at the *opposite* time
+ * of day: tOther is a second render of the whole scene (buildings and sky) at
+ * that time. See devices.js.
  */
-const beamCompositeShader = {
+const revealCompositeShader = {
   uniforms: {
     tDiffuse: { value: null },
     tOther: { value: null },
-    uHull: { value: Array.from({ length: MAX_HULL }, () => new THREE.Vector2()) },
-    uHullN: { value: 0 },
+    tMask: { value: null },
+    uMaskRes: { value: new THREE.Vector2(1, 1) },
     uMix: { value: 0 },
     uSunPos: { value: new THREE.Vector2() },
     uSunR: { value: 10 },
@@ -84,14 +65,14 @@ const beamCompositeShader = {
     uniform float uSunR;
     uniform float uSun;
     varying vec2 vUv;
-    ${BEAM_GLSL}
+    ${MASK_GLSL}
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
-      if (uMix > 0.001) {
-        float k = beamCoverage(gl_FragCoord.xy) * uMix;
+      if (uMix > 0.5) {
+        float k = beamCoverage(gl_FragCoord.xy);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv), k);
       }
-      // When the beam shows daylight, the lamp is its sun.
+      // The device's light source glows like a sun.
       c.rgb += vec3(1.0, 0.86, 0.62) * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
       gl_FragColor = c;
     }`,
@@ -203,6 +184,9 @@ export class World {
     this._groundDay = new THREE.Color(0xd9c6ae);
     this._groundNight = new THREE.Color(0x8a5a32);
     this._size = new THREE.Vector2();
+    this._box = new THREE.Box3();
+    this._corners = Array.from({ length: 8 }, () => new THREE.Vector3());
+    this._clear = new THREE.Color();
     window.addEventListener('resize', () => this.resize(true));
   }
 
@@ -242,9 +226,9 @@ export class World {
       group.updateMatrixWorld(true);
 
       const sc = page.scene;
-      const lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true });
-      lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
-      group.add(lamp.group);
+      const device = this.makeDevice(sc);
+      group.add(device.group);
+      if (sc.sea) group.add((this.sea = createSea()));
 
       const ribbon = new Ribbon(this.mats.orange, sc.ribbon);
       ribbon.mesh.position.set(...sc.ribbon.p);
@@ -259,13 +243,14 @@ export class World {
       group.updateMatrixWorld(true);
 
 
-      // On-screen outline of this page's beam, shared by all its 3D text.
-      const beam = {
-        pts: { value: Array.from({ length: MAX_HULL }, () => new THREE.Vector2()) },
-        n: { value: 0 },
-      };
-      this.sites.push({ page, group, lamp, ribbon, beam, texts: [], view: this.viewFor(group, sc.view), activity: 0 });
+      this.sites.push({ page, group, device, ribbon, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
     });
+  }
+
+  /** The page's reveal device (see devices.js): a street lamp unless configured otherwise. */
+  makeDevice(sc) {
+    if (sc.device?.type === 'beacon') return new BeaconDevice(sc.device);
+    return new LampDevice(this.mats, sc.lamp);
   }
 
   /** Camera pose for a view given in a building's local frame. */
@@ -284,12 +269,11 @@ export class World {
   recompose(index, { view, lamp, cluster } = {}) {
     const site = this.sites[index];
     const sc = site.page.scene;
-    if (lamp) {
+    if (lamp && sc.lamp) {
       Object.assign(sc.lamp, lamp);
-      site.group.remove(site.lamp.group);
-      site.lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true });
-      site.lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
-      site.group.add(site.lamp.group);
+      site.group.remove(site.device.group);
+      site.device = this.makeDevice(sc);
+      site.group.add(site.device.group);
       site.group.updateMatrixWorld(true);
     }
     if (view) site.view = this.viewFor(site.group, Object.assign(sc.view, view));
@@ -333,6 +317,12 @@ export class World {
       const g = new THREE.BoxGeometry(w, h, 10 + rnd() * 20);
       g.rotateY(a);
       g.translate(Math.sin(a) * d, h / 2, Math.cos(a) * d);
+      // No blocks standing in the sea behind the lighthouse.
+      const sea = this.sites.find((x) => x.page.scene.sea);
+      if (sea) {
+        const local = sea.group.worldToLocal(new THREE.Vector3(Math.sin(a) * d, 0, Math.cos(a) * d));
+        if (inSea(local.x, local.z)) continue;
+      }
       geos.push(g);
     }
     const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats.whiteShade);
@@ -354,8 +344,14 @@ export class World {
     this.composer.addPass(this.bloom);
     // The other time of day, rendered separately and swapped in inside the beam.
     this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
-    this.beamPass = new ShaderPass(beamCompositeShader);
+    // Reveal mask: white where the opposite time shows (drawn from MASK_LAYER).
+    this.maskRT = new THREE.WebGLRenderTarget(size.x, size.y, { samples });
+    MASK.tMask.value = this.maskRT.texture;
+    MASK.uMaskRes.value.copy(size);
+    this.beamPass = new ShaderPass(revealCompositeShader);
     this.beamPass.uniforms.tOther.value = this.otherRT.texture;
+    this.beamPass.uniforms.tMask.value = this.maskRT.texture;
+    this.beamPass.uniforms.uMaskRes.value = MASK.uMaskRes.value; // shared Vector2
     this.composer.addPass(this.beamPass);
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(gradeShader);
@@ -373,12 +369,12 @@ export class World {
     await loadFonts(all);
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
     for (const site of this.sites) {
-      const cluster = buildCluster(site.page.scene.cluster, site.beam, aniso);
+      const cluster = buildCluster(site.page.scene.cluster, aniso);
       site.group.add(cluster.group);
       site.cluster = cluster.group;
       site.texts.push(...cluster.blocks);
       for (const spec of site.page.scene.texts) {
-        const block = new TextBlock(spec, site.beam, aniso);
+        const block = new TextBlock(spec, aniso);
         block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
         site.group.add(block.mesh);
         site.texts.push(block);
@@ -422,6 +418,7 @@ export class World {
         r.render(this.scene, this.camera);
       }
     }
+    this.renderMask();
     r.setRenderTarget(null);
     // Run the post chain once with bloom on, so the first switch to night
     // doesn't compile the bloom shaders mid-animation.
@@ -512,6 +509,8 @@ export class World {
     this.composer.setSize(w, h);
     const size = this.renderer.getDrawingBufferSize(this._size);
     this.otherRT.setSize(size.x, size.y); // sceneRT is resized by its pass
+    this.maskRT.setSize(size.x, size.y);
+    MASK.uMaskRes.value.copy(size);
   }
 
   /* ------------------------------------------------------------------ */
@@ -587,8 +586,9 @@ export class World {
     this.sky.material.uniforms.uNight.value = n;
     this.sky.material.uniforms.uCloud.value = inBeam ? 1 - 0.65 * n : 1;
     updateMaterials(this.mats, n);
-    this.spot.intensity = n * 260 * (this.spotSite ? this.spotSite.activity : 0);
-    this.sites.forEach((site) => site.lamp.update(n, site.activity));
+    this.spot.intensity = this.spotSite?.device.spotAnchor ? n * 260 * this.spotSite.activity : 0;
+    this.sites.forEach((site) => site.device.applyTime(n, site.activity));
+    if (this.sea) this.sea.material.uniforms.uNight.value = n;
     this.plazaLamps.forEach((l) => l.update(n, 0));
   }
 
@@ -607,107 +607,127 @@ export class World {
   }
 
   /**
-   * Project each active hero beam (a frustum from the lamp's full width down to
-   * the ground) to its on-screen outline: the convex hull of its projected top
-   * and bottom circles. The text shader uses it to recolour letters inside.
+   * Screen-space bounding box of a page's mask (to scissor the opposite-time
+   * render), and the on-screen position/size of its glowing light source.
    */
-  updateBeams() {
+  updateReveal(site) {
     const size = this.renderer.getDrawingBufferSize(this._size);
     const cam = this.camera;
-    const SEG = 20;
-    for (const site of this.sites) {
-      if (site.activity < 0.002) continue;
-      const lamp = site.lamp;
-      const pts = [];
-      for (const [y, r] of [
-        [lamp.topY, lamp.topRadius],
-        [0, lamp.beamRadius],
-      ]) {
-        for (let k = 0; k < SEG; k++) {
-          const th = (k / SEG) * Math.PI * 2;
-          const w = lamp.group.localToWorld(this._v.set(Math.cos(th) * r, y, Math.sin(th) * r));
-          if (this._v2.copy(w).applyMatrix4(cam.matrixWorldInverse).z > -cam.near) continue; // behind camera
-          w.project(cam);
-          pts.push({ x: (w.x * 0.5 + 0.5) * size.x, y: (w.y * 0.5 + 0.5) * size.y });
-        }
-      }
-      let hull = convexHull(pts);
-      if (hull.length > MAX_HULL) {
-        const stepN = Math.ceil(hull.length / MAX_HULL);
-        hull = hull.filter((_, i) => i % stepN === 0);
-      }
-      hull.forEach((p, i) => site.beam.pts.value[i].set(p.x, p.y));
-      site.beam.n.value = hull.length;
-      // Pixel bounding box: the opposite-time render is scissored to it.
-      const xs = hull.map((q) => q.x);
-      const ys = hull.map((q) => q.y);
-      const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 2);
-      const y0 = Math.max(0, Math.floor(Math.min(...ys)) - 2);
-      const x1 = Math.min(size.x, Math.ceil(Math.max(...xs)) + 2);
-      const y1 = Math.min(size.y, Math.ceil(Math.max(...ys)) + 2);
-      (site.beam.box ||= new THREE.Vector4()).set(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
-
-      // Lens centre and on-screen radius, for the "lamp as sun" glow.
-      const c = lamp.group.localToWorld(this._v.set(0, lamp.topY, 0)).project(cam);
-      const e = lamp.group.localToWorld(this._v2.set(lamp.topRadius, lamp.topY, 0)).project(cam);
-      site.beam.sun = site.beam.sun || new THREE.Vector2();
-      site.beam.sun.set((c.x * 0.5 + 0.5) * size.x, (c.y * 0.5 + 0.5) * size.y);
-      site.beam.sunR = Math.max(4, Math.hypot((e.x - c.x) * 0.5 * size.x, (e.y - c.y) * 0.5 * size.y));
+    const box = this._box.setFromObject(site.device.mask);
+    // Box corners in view space, clipped against the near plane (a steeply
+    // up-looking camera often has the bottom of a beam behind it).
+    const near = -cam.near - 1e-3;
+    const cv = this._corners;
+    for (let i = 0; i < 8; i++) {
+      cv[i].set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).applyMatrix4(cam.matrixWorldInverse);
     }
+    const pts = [];
+    for (let i = 0; i < 8; i++) {
+      if (cv[i].z < near) pts.push(cv[i].clone());
+      for (const bit of [1, 2, 4]) {
+        const j = i | bit;
+        if (j === i) continue;
+        const a = cv[i];
+        const b = cv[j];
+        if (a.z < near !== b.z < near) pts.push(a.clone().lerp(b, (near - a.z) / (b.z - a.z)));
+      }
+    }
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const q of pts) {
+      q.applyMatrix4(cam.projectionMatrix);
+      const x = (q.x * 0.5 + 0.5) * size.x;
+      const y = (q.y * 0.5 + 0.5) * size.y;
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    }
+    if (!pts.length) site.box.set(0, 0, 1, 1);
+    else {
+      x0 = Math.max(0, Math.floor(x0) - 2);
+      y0 = Math.max(0, Math.floor(y0) - 2);
+      x1 = Math.min(size.x, Math.ceil(x1) + 2);
+      y1 = Math.min(size.y, Math.ceil(y1) + 2);
+      site.box.set(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    }
+
+    const g = site.device.glow;
+    if (!g) return null;
+    const c = site.group.localToWorld(this._v.copy(g.pos));
+    const e = this._v2.copy(cam.position).sub(c).cross(cam.up).normalize().multiplyScalar(g.radius).add(c);
+    c.project(cam);
+    e.project(cam);
+    return {
+      x: (c.x * 0.5 + 0.5) * size.x,
+      y: (c.y * 0.5 + 0.5) * size.y,
+      r: Math.max(4, Math.hypot((e.x - c.x) * 0.5 * size.x, (e.y - c.y) * 0.5 * size.y)),
+      visible: c.z < 1,
+    };
+  }
+
+  /** Draw every visible device mask into maskRT (white = show the other time). */
+  renderMask() {
+    const r = this.renderer;
+    const layers = this.camera.layers.mask;
+    this.camera.layers.set(MASK_LAYER);
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.maskRT);
+    r.clear();
+    r.render(this.scene, this.camera);
+    r.setRenderTarget(null);
+    r.setClearColor(this._clear, alpha);
+    this.camera.layers.mask = layers;
   }
 
   /**
-   * Dev tool for composing views: ray-casts a grid of points inside the active
-   * beam's on-screen outline and reports how much of it shows sky, row by row
-   * from the lamp down to the bottom of the frame.
+   * Dev tool for composing views: renders the active page's mask small, and
+   * ray-casts each masked pixel to see whether it shows sky or something
+   * solid. Reports coverage and how much of the mask's upper half is sky.
    */
-  probeBeam(rows = 16, cols = 7) {
-    const site = this.sites[this.active];
-    const n = site.beam.n.value;
-    const hull = site.beam.pts.value.slice(0, n);
-    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
-    const lampParts = new Set();
-    site.lamp.group.traverse((o) => lampParts.add(o));
+  probeMask(w = 96, h = 60) {
+    const rt = new THREE.WebGLRenderTarget(w, h);
+    const keep = this.maskRT;
+    this.maskRT = rt;
+    this.renderMask();
+    this.maskRT = keep;
+    const px = new Uint8Array(w * h * 4);
+    this.renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
+    rt.dispose();
     const targets = [];
+    const site = this.sites[this.active];
+    const skip = new Set();
+    site.device.group.traverse((o) => skip.add(o));
     this.scene.traverse((o) => {
-      if (!o.isMesh || !o.visible || o === this.sky || lampParts.has(o)) return;
-      if (o.material.isShaderMaterial || this.sites.some((x) => x.ribbon.mesh === o)) return;
+      if (!o.isMesh || !o.visible || o === this.sky || o === this.sea || skip.has(o)) return;
+      if (o.material.isShaderMaterial || o.layers.mask !== 1) return;
       targets.push(o);
     });
-    const top = Math.max(...hull.map((p) => p.y));
-    const bottom = Math.max(0, Math.min(...hull.map((p) => p.y)));
     const ray = new THREE.Raycaster();
-    const rowSky = [];
-    for (let r = 0; r < rows; r++) {
-      const y = top - ((r + 0.5) / rows) * (top - bottom);
-      // Horizontal extent of the polygon at this height.
-      let xl = Infinity;
-      let xr = -Infinity;
-      for (let i = 0; i < n; i++) {
-        const a = hull[i];
-        const b = hull[(i + 1) % n];
-        if ((a.y - y) * (b.y - y) > 0 || a.y === b.y) continue;
-        const x = a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x);
-        xl = Math.min(xl, x);
-        xr = Math.max(xr, x);
-      }
-      if (!isFinite(xl)) continue;
+    const rows = [];
+    for (let y = h - 1; y >= 0; y--) {
+      let n = 0;
       let sky = 0;
-      for (let c = 0; c < cols; c++) {
-        const x = xl + ((c + 0.5) / cols) * (xr - xl);
-        ray.setFromCamera(new THREE.Vector2((x / size.x) * 2 - 1, (y / size.y) * 2 - 1), this.camera);
+      for (let x = 0; x < w; x += 2) {
+        if (px[(y * w + x) * 4] < 128) continue;
+        n++;
+        ray.setFromCamera(new THREE.Vector2(((x + 0.5) / w) * 2 - 1, ((y + 0.5) / h) * 2 - 1), this.camera);
         if (!ray.intersectObjects(targets, false).length) sky++;
       }
-      rowSky.push(sky / cols);
+      if (n) rows.push(sky / n);
     }
-    const half = Math.ceil(rowSky.length / 2);
-    const avg = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+    const half = Math.ceil(rows.length / 2);
+    const avg = (a) => a.reduce((x, v) => x + v, 0) / Math.max(1, a.length);
+    let covered = 0;
+    for (let i = 0; i < w * h; i++) if (px[i * 4] >= 128) covered++;
     return {
-      lampTopPct: +(100 - (top / size.y) * 100).toFixed(1), // lamp lens, % from top of the frame
-      lampXPct: +((site.beam.sun.x / size.x) * 100).toFixed(1),
-      skyUpperHalf: +avg(rowSky.slice(0, half)).toFixed(2),
-      skyAll: +avg(rowSky).toFixed(2),
-      rows: rowSky.map((v) => Math.round(v * 9)).join(''), // 9 = all sky, 0 = all building
+      coverage: +((covered / (w * h)) * 100).toFixed(1), // % of the frame inside the mask
+      skyUpperHalf: +avg(rows.slice(0, half)).toFixed(2),
+      skyAll: +avg(rows).toFixed(2),
     };
   }
 
@@ -715,9 +735,10 @@ export class World {
   placeSpot() {
     const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
     this.spotSite = site;
-    const lamp = site.lamp;
-    lamp.group.localToWorld(this.spot.position.set(0, lamp.topY, 0));
-    lamp.group.localToWorld(this.spot.target.position.set(0, 0, 0));
+    const a = site.device.spotAnchor;
+    if (!a) return;
+    site.group.localToWorld(this.spot.position.copy(a.top));
+    site.group.localToWorld(this.spot.target.position.copy(a.base));
     this.spot.target.updateMatrixWorld();
   }
 
@@ -746,23 +767,26 @@ export class World {
     }
   }
 
-  /** Render the scene at the opposite time of day for the beam, if one is visible. */
+  /** Render the mask and, if anything is revealed, the scene at the opposite time of day. */
   renderBeam() {
     const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
-    const mix = site.activity > 0.002 && site.beam.n.value >= 3 ? site.activity : 0;
     const u = this.beamPass.uniforms;
-    u.uMix.value = mix;
+    u.uMix.value = 0;
     u.uSun.value = 0;
-    if (!mix) return;
-    u.uHull.value = site.beam.pts.value;
-    u.uHullN.value = site.beam.n.value;
-    u.uSunPos.value.copy(site.beam.sun);
-    u.uSunR.value = site.beam.sunR * 0.9;
-    u.uSun.value = this.night * mix * 1.1;
+    if (site.activity < 0.002) return;
+    const glow = this.updateReveal(site);
+    this.renderMask();
+    u.uMix.value = 1;
+    const g = site.device.glow;
+    if (glow && glow.visible) {
+      u.uSunPos.value.set(glow.x, glow.y);
+      u.uSunR.value = glow.r * 0.9;
+      u.uSun.value = THREE.MathUtils.lerp(g.day, g.night, this.night) * site.activity;
+    }
 
     this.applyTime(1 - this.night, true);
     const r = this.renderer;
-    this.otherRT.scissor.copy(site.beam.box);
+    this.otherRT.scissor.copy(site.box);
     this.otherRT.scissorTest = true;
     r.setRenderTarget(this.otherRT);
     r.clear();
@@ -783,14 +807,16 @@ export class World {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
       site.ribbon.update(this.time + i * 3.1);
+      site.device.update(this.time, dt, this.night, site.activity, this.camera);
+      site.group.userData.animate?.(this.time, dt, this.night);
       site.texts.forEach((t, k) => {
         // Stagger the letters' arrival a little.
         const o = THREE.MathUtils.clamp(site.activity * 1.6 - k * 0.12, 0, 1);
         t.update(this.night, o);
       });
     });
-    this.updateBeams();
     this.updatePost(this.night);
+    if (this.sea) this.sea.material.uniforms.uSunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     this.placeSpot();
 
     this.renderer.shadowMap.needsUpdate = true;

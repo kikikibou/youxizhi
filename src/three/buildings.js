@@ -70,6 +70,27 @@ class Builder {
     return this.box('concrete', [x, 0, z], [x + len, 0.45, z + 0.7]);
   }
 
+  /** A railing running along Z at x, on top of height y. */
+  railingZ(key, z0, z1, x, y, h = 1.1, step = 1.5) {
+    this.box(key, [x - 0.05, y + h - 0.05, z0], [x + 0.05, y + h + 0.05, z1]);
+    this.box(key, [x - 0.03, y + 0.25, z0], [x + 0.03, y + 0.3, z1]);
+    for (let z = z0; z <= z1 + 1e-3; z += step) this.box(key, [x - 0.03, y, z - 0.03], [x + 0.03, y + h, z + 0.03]);
+    return this;
+  }
+
+  /** Vertical cylinder that tapers from r0 (bottom) to r1 (top). */
+  taper(key, cx, cz, y0, y1, r0, r1, segments = 40) {
+    const g = new THREE.CylinderGeometry(r1, r0, y1 - y0, segments, 1, false);
+    g.translate(cx, (y0 + y1) / 2, cz);
+    return this.push(key, g);
+  }
+
+  /** Any geometry, moved to (x, y, z). */
+  geo(key, geometry, x = 0, y = 0, z = 0) {
+    geometry.translate(x, y, z);
+    return this.push(key, geometry);
+  }
+
   /** Window that sits flush on a facade facing +Z at depth z. */
   winZ(key, x0, x1, y0, y1, z) {
     return this.box(key, [x0, y0, z - 0.06], [x1, y1, z + 0.06]);
@@ -82,9 +103,12 @@ class Builder {
 
   build() {
     const group = new THREE.Group();
-    for (const [key, geos] of Object.entries(this.parts)) {
+    for (const [key, list] of Object.entries(this.parts)) {
+      // Merging needs all-indexed or all-non-indexed geometry (e.g. rocks are non-indexed).
+      const mixed = list.some((g) => !g.index) && list.some((g) => g.index);
+      const geos = mixed ? list.map((g) => (g.index ? g.toNonIndexed() : g)) : list;
       const merged = mergeGeometries(geos, false);
-      geos.forEach((g) => g.dispose());
+      new Set([...list, ...geos]).forEach((g) => g.dispose());
       const mesh = new THREE.Mesh(merged, this.mats[key]);
       const lightish = key === 'strip';
       mesh.castShadow = !lightish;
@@ -310,31 +334,119 @@ function games(mats) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* 05 · ABOUT — a floating-roof pavilion beside a ribbon-window slab         */
+/* 05 · ABOUT — a lighthouse at the end of a pier, and a study by the sea    */
 /* ------------------------------------------------------------------------ */
+// Lantern centre: the beacon device in pages.js sweeps its beam from here.
+export const LIGHTHOUSE = { x: -21, z: -66, lantern: 29.6 };
+
 function about(mats) {
   const b = new Builder(mats);
-  b.box('concrete', [-21, 0, -19], [17, 0.35, 6]);
-  b.box('white', [-21, 7, -19], [17, 8.3, 6]);
-  b.box('strip', [-20, 6.92, -18], [16, 7.0, 5]);
-  for (const x of [-18, -10, -2, 6, 14]) for (const z of [3.5, -16]) b.cyl('metal', x, z, 0.35, 7, 0.16, 12);
-  b.box('warm', [-14, 0.35, -14], [10, 7, -13.4]);
-  b.box('warm', [-14, 0.35, -14], [-13.4, 7, -3]);
-  b.mullionsZ('metal', -14, 10, 0.35, 7, -3, 2.0);
-  b.box('metal', [-14, 6.6, -3.1], [10, 6.75, -2.9]);
+  const Q = -24; // quay line; the sea starts here (see sea.js)
 
-  // Tall white fin wall with a slit.
-  b.box('white', [-26, 0, -12], [-23.6, 12, 7]);
-  b.winX('glass', -4, -2.6, 2, 10.5, -23.6);
+  // Quay wall and railing along the shore.
+  b.box('white', [-120, 0, Q - 0.6], [120, 0.9, Q + 0.4]);
+  b.railingX('metal', -120, 120, Q - 0.1, 0.9, 1.0, 2.2);
+  for (let x = -40; x <= 40; x += 6) if (x < -27 || x > -15) b.bollard(x, Q + 2.2);
+  b.bench(-6, Q + 3);
+  b.bench(36, Q + 3);
 
-  // Slab tower behind.
-  b.box('white', [-2, 0, -36], [17, 38, -21]);
-  for (let i = 0; i < 9; i++) {
-    const y = 10 + i * 3.1;
-    b.winZ(i % 3 === 0 ? 'glassDark' : 'glass', -0.5, 15.5, y, y + 1.35, -21);
+  // Pier out to the lighthouse.
+  const { x: LX, z: LZ } = LIGHTHOUSE;
+  b.box('white', [LX - 3.5, 0, LZ + 6], [LX + 3.5, 1.0, Q - 0.6]);
+  b.railingZ('metal', LZ + 6, Q - 0.6, LX - 3.3, 1.0, 1.0, 2.0);
+  b.railingZ('metal', LZ + 6, Q - 0.6, LX + 3.3, 1.0, 1.0, 2.0);
+  for (let z = Q - 4; z > LZ + 6; z -= 5) for (const x of [LX - 3.2, LX + 3.2]) b.box('concrete', [x - 0.3, -2, z - 0.3], [x + 0.3, 0.05, z + 0.3]);
+  for (let z = Q - 6; z > LZ + 8; z -= 9) b.bollard(LX + 2.6, z);
+
+  // Rock island with a round platform.
+  b.cyl('concrete', LX, LZ, 0, 1.6, 12, 48);
+  b.railingX('metal', LX - 11, LX - 6, LZ + 11.6, 1.6, 1.0, 1.25);
+  for (let i = 0; i < 20; i++) {
+    const ang = (i / 20) * Math.PI * 2 + (i % 3) * 0.2;
+    const r = 12 + (i % 4) * 1.1;
+    const g = new THREE.DodecahedronGeometry(1.4 + (i % 3) * 0.6, 0);
+    g.rotateY(i * 1.7);
+    b.geo('concrete', g, LX + Math.cos(ang) * r, 0.5, LZ + Math.sin(ang) * r);
   }
-  b.box('whiteShade', [-2.2, 38, -36.2], [17.2, 38.4, -20.8]);
-  return b.build();
+
+  // Tower: tapered, white with two orange bands and a few small windows.
+  const y0 = 1.6;
+  const y1 = 27.6;
+  const radiusAt = (y) => 3.1 - ((y - y0) / (y1 - y0)) * 0.9;
+  b.taper('white', LX, LZ, y0, y1, 3.1, 2.2);
+  for (const [a0, a1] of [[9, 11.5], [18, 20.5]]) b.taper('orange', LX, LZ, a0, a1, radiusAt(a0) + 0.06, radiusAt(a1) + 0.06);
+  for (const y of [5.5, 14.5, 23]) {
+    const r = radiusAt(y);
+    b.box('glassDark', [LX - 0.45, y, LZ + r - 0.25], [LX + 0.45, y + 1.3, LZ + r + 0.08]);
+  }
+  // Gallery with railing.
+  b.cyl('white', LX, LZ, y1, y1 + 0.5, 3.7, 40);
+  for (let i = 0; i < 20; i++) {
+    const ang = (i / 20) * Math.PI * 2;
+    b.box('metal', [LX + Math.cos(ang) * 3.5 - 0.04, y1 + 0.5, LZ + Math.sin(ang) * 3.5 - 0.04], [LX + Math.cos(ang) * 3.5 + 0.04, y1 + 1.5, LZ + Math.sin(ang) * 3.5 + 0.04]);
+  }
+  const ring = new THREE.TorusGeometry(3.5, 0.06, 6, 48);
+  ring.rotateX(Math.PI / 2);
+  b.geo('metal', ring, LX, y1 + 1.5, LZ);
+  // Lantern room (glows at night), mullions, orange cap and finial.
+  b.cyl('glass', LX, LZ, y1 + 0.5, y1 + 3.6, 1.9, 24);
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2;
+    b.box('white', [LX + Math.cos(ang) * 1.92 - 0.07, y1 + 0.5, LZ + Math.sin(ang) * 1.92 - 0.07], [LX + Math.cos(ang) * 1.92 + 0.07, y1 + 3.6, LZ + Math.sin(ang) * 1.92 + 0.07]);
+  }
+  b.cyl('white', LX, LZ, y1 + 3.6, y1 + 3.85, 2.4, 32);
+  const cap = new THREE.ConeGeometry(2.3, 2.1, 32);
+  b.geo('orange', cap, LX, y1 + 3.85 + 1.05, LZ);
+  b.cyl('metal', LX, LZ, y1 + 5.9, y1 + 7.4, 0.07, 6);
+  b.geo('metal', new THREE.SphereGeometry(0.22, 12, 8), LX, y1 + 7.4, LZ);
+  // The keeper's study on the island: a white box with a big warm-lit glass
+  // front, and a small observatory dome on its roof.
+  const sx0 = LX - 12.5;
+  const sx1 = LX - 3.6;
+  const sz0 = LZ - 6;
+  const sz1 = LZ + 5;
+  b.box('white', [sx0, y0, sz0], [sx1, y0 + 5.2, sz0 + 1]);
+  b.box('white', [sx0, y0, sz0], [sx0 + 0.8, y0 + 5.2, sz1]);
+  b.box('white', [sx0 - 0.4, y0 + 5.2, sz0 - 0.4], [sx1 + 1.2, y0 + 5.9, sz1 + 1.4]);
+  b.box('strip', [sx0, y0 + 5.12, sz0 + 1], [sx1 + 1, y0 + 5.2, sz1 + 1.2]);
+  b.box('warm', [sx0 + 0.8, y0, sz0 + 1], [sx1, y0 + 5.2, sz0 + 1.4]);
+  b.mullionsZ('metal', sx0 + 1, sx1, y0, y0 + 5.2, sz1, 1.6);
+  b.box('metal', [sx0 + 0.8, y0 + 3.9, sz1 - 0.08], [sx1, y0 + 4.02, sz1 + 0.08]);
+  b.box('orange', [sx1 - 0.2, y0, sz1 - 2], [sx1 + 0.2, y0 + 5.2, sz1]);
+  const dx = (sx0 + sx1) / 2 - 1;
+  const dz = (sz0 + sz1) / 2 - 1.5;
+  b.cyl('white', dx, dz, y0 + 5.9, y0 + 6.8, 2.9, 32);
+  const dome = new THREE.SphereGeometry(2.7, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  b.geo('white', dome, dx, y0 + 6.8, dz);
+  b.boxRot('glassDark', [dx, y0 + 8.2, dz], [0.6, 3.0, 5.6], [0.4, 0.5, 0]);
+
+  const group = b.build();
+
+  // Two small sailboats out at sea, gently bobbing.
+  const boats = [];
+  for (const [x, z, s] of [[70, -230, 1], [-110, -330, 0.8]]) {
+    const boat = new THREE.Group();
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 2), mats.white);
+    hull.position.y = 0.6;
+    const sail = new THREE.Mesh(new THREE.ConeGeometry(2.2, 8, 3), mats.white);
+    sail.scale.z = 0.12;
+    sail.position.y = 5.3;
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 9, 6), mats.metal);
+    mast.position.y = 5.2;
+    boat.add(hull, sail, mast);
+    boat.position.set(x, 0, z);
+    boat.scale.setScalar(s);
+    boat.rotation.y = 0.6;
+    group.add(boat);
+    boats.push(boat);
+  }
+  group.userData.animate = (t) => {
+    boats.forEach((boat, i) => {
+      boat.position.y = Math.sin(t * 0.8 + i * 2) * 0.25;
+      boat.rotation.z = Math.sin(t * 0.6 + i) * 0.05;
+    });
+  };
+  return group;
 }
 
 export const BUILDERS = { home, debate, puzzle, games, about };

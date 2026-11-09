@@ -172,12 +172,15 @@ export const PAGES = [
     en: 'ABOUT',
     building: 'about',
     scene: {
-      view: { pos: [1, 1.5, 28], target: [-15, 16, 0], fov: 58, roll: -0.03 },
-      lamp: { p: [-12, 14], h: 20 },
-      cluster: { p: [-10, 9.4, 12.6], r: [0.08, 0.08, 0], size: 6.6, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
-      texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 1.0, p: [-2, 7.65, 6.06], c: 'orange' }],
-      ribbon: { p: [-14, 13.5, 8], r: [0, 0.1, 0.18], length: 26, width: 1.2, seed: 8.8 },
-      trees: [[-30, 4, 1.1], [24, 10, 1.05]],
+      // Out on the pier, looking up at the lighthouse.
+      view: { pos: [-17.8, 2.6, -30], target: [-11, 18, -66], fov: 58, roll: -0.02 },
+      // Reveal: the lighthouse beam sweeping round (see devices.js).
+      device: { type: 'beacon', p: [-21, 29.6, -66] },
+      sea: true,
+      cluster: { p: [-4, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
+      texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'orange' }],
+      ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8 },
+      trees: [],
     },
     eyebrow: 'ABOUT',
     poem: ['I build small rooms for thinking', 'and leave the lights on', 'for whoever walks by.'],
