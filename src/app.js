@@ -25,6 +25,34 @@ if (import.meta.env.DEV) {
   window.__step = (n = 60) => {
     for (let i = 0; i < n; i++) world.update(1 / 60);
   };
+  // Jump straight to a page (no flight) in day or night.
+  window.__show = (i, night = false) => {
+    world.setNight(night);
+    world.night = night ? 1 : 0;
+    document.documentElement.dataset.theme = night ? 'night' : 'day';
+    world.jumpTo(i);
+    pageEls.forEach((p, k) => p.classList.toggle('is-active', k === i));
+    pageEls.forEach((p, k) => p.classList.toggle('is-in', k === i));
+    window.__step(30);
+  };
+  // Copy the current frame into an <img> so screenshots of a background tab are accurate.
+  window.__snap = async (i = null, night = false, ui = true) => {
+    if (i !== null) window.__show(i, night);
+    window.__step(1);
+    let img = document.getElementById('__dbgimg');
+    if (!img) {
+      img = document.createElement('img');
+      img.id = '__dbgimg';
+      Object.assign(img.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', zIndex: 1, pointerEvents: 'none' });
+      document.body.appendChild(img);
+    }
+    img.src = world.canvas.toDataURL('image/png');
+    await new Promise((r) => (img.onload = r));
+    const uiEl = document.querySelector('.ui');
+    uiEl.style.zIndex = ui ? 3 : 0;
+    uiEl.style.visibility = ui ? '' : 'hidden';
+    loader.style.display = 'none';
+  };
 }
 
 /* -------------------------------------------------------------- day/night */

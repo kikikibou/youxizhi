@@ -11,24 +11,46 @@ import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
 import { createSky, SKY } from './sky.js';
-import { TextBlock, buildCluster, loadFonts } from './typography.js';
+import { TextBlock, buildCluster, loadFonts, MAX_HULL } from './typography.js';
 
 const PLAZA_RADIUS = 56;
 const UP = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
+/** Monotone-chain convex hull; returns the polygon counter-clockwise (y up). */
+function convexHull(points) {
+  const pts = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+  if (pts.length < 3) return pts;
+  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
 const gradeShader = {
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0.045 }, uVignette: { value: 0.55 } },
+  uniforms: { tDiffuse: { value: null }, uGrain: { value: 0.03 }, uVignette: { value: 0.55 } },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVignette; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uGrain; uniform float uVignette; varying vec2 vUv;
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main(){
       vec4 c = texture2D(tDiffuse, vUv);
-      float n = h(vUv * 1000.0 + fract(uTime) * 91.7);
+      // Static paper grain (animated grain read as flicker).
+      float n = h(floor(gl_FragCoord.xy));
       c.rgb += (n - 0.5) * uGrain;
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - dot(q, q) * uVignette;
@@ -144,12 +166,12 @@ export class World {
       const quat = new THREE.Quaternion().setFromRotationMatrix(m);
       quat.multiply(new THREE.Quaternion().setFromAxisAngle(Z, v.roll || 0));
 
-      const tri = {
-        a: { value: new THREE.Vector2(-1, -1) },
-        b: { value: new THREE.Vector2(-1, -1) },
-        c: { value: new THREE.Vector2(-1, -1) },
+      // On-screen outline of this page's beam, shared by all its 3D text.
+      const beam = {
+        pts: { value: Array.from({ length: MAX_HULL }, () => new THREE.Vector2()) },
+        n: { value: 0 },
       };
-      this.sites.push({ page, group, lamp, ribbon, tri, texts: [], view: { pos, quat, fov: v.fov }, activity: 0 });
+      this.sites.push({ page, group, lamp, ribbon, beam, texts: [], view: { pos, quat, fov: v.fov }, activity: 0 });
     });
   }
 
@@ -215,11 +237,11 @@ export class World {
     await loadFonts(all);
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
     for (const site of this.sites) {
-      const cluster = buildCluster(site.page.scene.cluster, site.tri, aniso);
+      const cluster = buildCluster(site.page.scene.cluster, site.beam, aniso);
       site.group.add(cluster.group);
       site.texts.push(...cluster.blocks);
       for (const spec of site.page.scene.texts) {
-        const block = new TextBlock(spec, site.tri, aniso);
+        const block = new TextBlock(spec, site.beam, aniso);
         block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
         site.group.add(block.mesh);
         site.texts.push(block);
@@ -358,53 +380,43 @@ export class World {
     this.sky.material.uniforms.uTime.value = this.time;
 
     this.bloom.strength = THREE.MathUtils.lerp(0.1, 0.45, n);
-    this.bloom.threshold = THREE.MathUtils.lerp(0.95, 0.8, n);
+    this.bloom.threshold = THREE.MathUtils.lerp(0.95, 0.9, n);
     this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.5, n);
     updateMaterials(this.mats, n);
   }
 
-  /** Project each hero lamp's beam to a screen-space triangle for the text shader. */
+  /**
+   * Project each active hero beam (a frustum from the lamp's full width down to
+   * the ground) to its on-screen outline: the convex hull of its projected top
+   * and bottom circles. The text shader uses it to recolour letters inside.
+   */
   updateBeams() {
     const size = this.renderer.getDrawingBufferSize(this._size);
     const cam = this.camera;
-    const toScreen = (v, out) => {
-      v.project(cam);
-      out.set((v.x * 0.5 + 0.5) * size.x, (v.y * 0.5 + 0.5) * size.y);
-      return out;
-    };
-    const A = new THREE.Vector2();
-    const P = new THREE.Vector2();
+    const SEG = 20;
     for (const site of this.sites) {
       if (site.activity < 0.002) continue;
       const lamp = site.lamp;
-      const apex = lamp.apexWorld(this._v);
-      toScreen(apex, A);
-      let minA = Infinity;
-      let maxA = -Infinity;
-      const L = new THREE.Vector2();
-      const R = new THREE.Vector2();
-      for (let k = 0; k < 48; k++) {
-        const th = (k / 48) * Math.PI * 2;
-        const w = lamp.group.localToWorld(this._v2.set(Math.cos(th) * lamp.beamRadius, 0, Math.sin(th) * lamp.beamRadius));
-        const ndcZ = w.clone().project(cam).z;
-        if (ndcZ > 1) continue;
-        toScreen(w, P);
-        const ang = Math.atan2(P.y - A.y, P.x - A.x);
-        if (ang < minA) {
-          minA = ang;
-          L.copy(P);
-        }
-        if (ang > maxA) {
-          maxA = ang;
-          R.copy(P);
+      const pts = [];
+      for (const [y, r] of [
+        [lamp.topY, lamp.topRadius],
+        [0, lamp.beamRadius],
+      ]) {
+        for (let k = 0; k < SEG; k++) {
+          const th = (k / SEG) * Math.PI * 2;
+          const w = lamp.group.localToWorld(this._v.set(Math.cos(th) * r, y, Math.sin(th) * r));
+          if (this._v2.copy(w).applyMatrix4(cam.matrixWorldInverse).z > -cam.near) continue; // behind camera
+          w.project(cam);
+          pts.push({ x: (w.x * 0.5 + 0.5) * size.x, y: (w.y * 0.5 + 0.5) * size.y });
         }
       }
-      // Extend the sides past the base so the split stays crisp all the way down.
-      L.sub(A).multiplyScalar(1.8).add(A);
-      R.sub(A).multiplyScalar(1.8).add(A);
-      site.tri.a.value.copy(A);
-      site.tri.b.value.copy(L);
-      site.tri.c.value.copy(R);
+      let hull = convexHull(pts);
+      if (hull.length > MAX_HULL) {
+        const stepN = Math.ceil(hull.length / MAX_HULL);
+        hull = hull.filter((_, i) => i % stepN === 0);
+      }
+      hull.forEach((p, i) => site.beam.pts.value[i].set(p.x, p.y));
+      site.beam.n.value = hull.length;
     }
   }
 
@@ -420,7 +432,7 @@ export class World {
     this.sites.forEach((site, i) => {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
-      site.lamp.update(this.time, this.night, site.activity);
+      site.lamp.update(this.night, site.activity);
       site.ribbon.update(this.time + i * 3.1);
       const fadeIn = site.activity;
       site.texts.forEach((t, k) => {
@@ -429,9 +441,8 @@ export class World {
         t.update(this.night, o);
       });
     });
-    this.plazaLamps.forEach((l) => l.update(this.time, this.night, 0));
+    this.plazaLamps.forEach((l) => l.update(this.night, 0));
     this.updateBeams();
-    this.grade.uniforms.uTime.value = this.time;
     this.composer.render(dt);
   }
 }

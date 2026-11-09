@@ -5,8 +5,11 @@ import * as THREE from 'three';
  * fonts, then mapped onto a plane. Because it is real geometry it gets
  * perspective, occlusion (the lamp pole passes in front of it) and it turns a
  * different colour wherever it sits inside the lamp's beam on screen — the
- * signature trick of the reference poster.
+ * signature trick of the reference poster. The beam's on-screen outline is a
+ * convex polygon recomputed every frame by World.updateBeams().
  */
+export const MAX_HULL = 32;
+
 export const FONTS = {
   display: { family: '"Anton", "Oswald", Impact, sans-serif', weight: 400, lh: 1.08, pad: 0.18 },
   caps: { family: '"Oswald", "Anton", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
@@ -66,42 +69,47 @@ const frag = /* glsl */ `
   uniform vec3 uIn;
   uniform vec3 uOut;
   uniform float uOpacity;
-  uniform vec2 uA;
-  uniform vec2 uB;
-  uniform vec2 uC;
+  uniform vec2 uHull[${MAX_HULL}];
+  uniform int uHullN;
   varying vec2 vUv;
-  float side(vec2 p, vec2 a, vec2 b) { return (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y); }
-  bool inTri(vec2 p) {
-    float d1 = side(p, uA, uB), d2 = side(p, uB, uC), d3 = side(p, uC, uA);
-    bool neg = d1 < 0.0 || d2 < 0.0 || d3 < 0.0;
-    bool pos = d1 > 0.0 || d2 > 0.0 || d3 > 0.0;
-    return !(neg && pos);
+  // Counter-clockwise convex polygon in window pixels.
+  bool inBeam(vec2 p) {
+    if (uHullN < 3) return false;
+    for (int i = 0; i < ${MAX_HULL}; i++) {
+      if (i >= uHullN) break;
+      vec2 a = uHull[i];
+      vec2 b = uHull[i + 1 < uHullN ? i + 1 : 0];
+      if ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) < 0.0) return false;
+    }
+    return true;
   }
   void main() {
     float a = texture2D(map, vUv).a * uOpacity;
     if (a < 0.004) discard;
-    vec3 c = inTri(gl_FragCoord.xy) ? uIn : uOut;
+    vec3 c = inBeam(gl_FragCoord.xy) ? uIn : uOut;
     gl_FragColor = vec4(c, a);
   }
 `;
 
 // Day/night colour pairs (linear, so values above 1 bloom a little at night).
 const ORANGE = new THREE.Color(0xff7d10);
+const NAVY = new THREE.Color(0x0d1f3c);
 const PALETTE = {
-  cone: { dayIn: new THREE.Color(0xffffff), dayOut: ORANGE, nightIn: new THREE.Color(0xfff0d8), nightOut: ORANGE },
+  // By day the beam is night, so letters inside it are white; by night the
+  // beam is daylight, so letters inside it turn navy.
+  cone: { dayIn: new THREE.Color(0xffffff), dayOut: ORANGE, nightIn: NAVY, nightOut: ORANGE },
   orange: { dayIn: ORANGE, dayOut: ORANGE, nightIn: ORANGE, nightOut: ORANGE },
   white: { dayIn: new THREE.Color(0xffffff), dayOut: new THREE.Color(0xffffff), nightIn: ORANGE, nightOut: ORANGE },
   // Script lettering: orange where the big letters are white (inside the beam), white elsewhere.
   inverse: { dayIn: ORANGE, dayOut: new THREE.Color(0xffffff), nightIn: ORANGE, nightOut: new THREE.Color(0xfff0d8) },
-  navy: { dayIn: new THREE.Color(0xffffff), dayOut: new THREE.Color(0x0d1f3c), nightIn: new THREE.Color(0xfff0d8), nightOut: new THREE.Color(0xf3ead8) },
 };
 
 export class TextBlock {
   /**
    * @param {object} spec  { t, f, s, p:[x,y,z], r:[x,y,z], c, align }
-   * @param {object} tri   shared { a, b, c } Vector2 uniforms of the page's beam
+   * @param {object} beam  shared { pts, n } uniforms holding the page's beam outline
    */
-  constructor(spec, tri, maxAniso = 8) {
+  constructor(spec, beam, maxAniso = 8) {
     const { canvas, px, w, h } = drawText(spec.t, spec.f, spec.align);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
@@ -121,9 +129,8 @@ export class TextBlock {
         uIn: { value: new THREE.Color() },
         uOut: { value: new THREE.Color() },
         uOpacity: { value: 0 },
-        uA: tri.a,
-        uB: tri.b,
-        uC: tri.c,
+        uHull: beam.pts,
+        uHullN: beam.n,
       },
       transparent: true,
       depthWrite: false,
@@ -162,14 +169,14 @@ export class TextBlock {
  *   T E R R I T O R Y
  *        ~ script lettering across ~
  */
-export function buildCluster(c, tri, aniso) {
+export function buildCluster(c, beam, aniso) {
   const group = new THREE.Group();
   group.position.set(...c.p);
   group.rotation.set(...(c.r || [0, 0, 0]));
   const S = c.size;
   const blocks = [];
   const add = (spec) => {
-    const b = new TextBlock(spec, tri, aniso);
+    const b = new TextBlock(spec, beam, aniso);
     group.add(b.mesh);
     blocks.push(b);
     return b;
