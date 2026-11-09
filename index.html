@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOUXIZHI · Territory of Reason</title>
+    <meta name="description" content="辩论、谜题与小游戏的个人街区" />
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+
+    <div id="loader" class="loader">
+      <div class="loader-inner">
+        <span class="loader-word">TERRITORY</span>
+        <span class="loader-bar"><i></i></span>
+      </div>
+    </div>
+
+    <div class="ui">
+      <header class="topbar">
+        <a class="brand" href="#/home" data-nav="home">
+          <span class="brand-box"></span>
+          <span class="brand-text">
+            <b>YOUXIZHI × REASON</b>
+            <small>A PERSONAL TERRITORY OF THOUGHT</small>
+          </span>
+        </a>
+        <p class="credits">
+          Debate · Puzzles · Games<br />
+          A street corner built for thinking.<br />
+          Every building is a different room of the mind.
+        </p>
+        <nav class="nav" id="nav"></nav>
+        <button class="daynight" id="daynight" type="button" aria-label="切换昼夜">
+          <span class="dn-track"><span class="dn-sun"></span><span class="dn-moon"></span></span>
+          <span class="dn-label">DAY</span>
+        </button>
+      </header>
+
+      <main class="stage" id="stage"></main>
+
+      <footer class="bottom" id="bottom"></footer>
+
+      <div class="hint" id="hint">滚轮 / ← → 切换建筑</div>
+    </div>
+
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-scrim" data-close></div>
+      <div class="drawer-panel">
+        <button class="drawer-close" type="button" data-close aria-label="关闭">×</button>
+        <div class="drawer-body" id="drawer-body"></div>
+      </div>
+    </aside>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
