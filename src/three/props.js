@@ -87,9 +87,8 @@ export class Lamp {
    *   beamRadius  radius of the light pool on the ground
    *   hero        the page's main lamp: its beam is where the scene switches to
    *               the opposite time of day (see BEAM_GLSL / World.renderBeam)
-   *   spot        add a real spotlight (night only)
    */
-  constructor(mats, { height = 14, beamRadius = null, hero = false, spot = false } = {}) {
+  constructor(mats, { height = 14, beamRadius = null, hero = false } = {}) {
     this.hero = hero;
     this.group = new THREE.Group();
     this.height = height;
@@ -135,12 +134,6 @@ export class Lamp {
     this.glow.renderOrder = 5;
     this.group.add(this.glow);
 
-    if (spot) {
-      this.spot = new THREE.SpotLight(0xffc580, 0, 46, 0.72, 0.75, 1.4);
-      this.spot.position.set(0, this.topY, 0);
-      this.spot.target.position.set(0, 0, 0);
-      this.group.add(this.spot, this.spot.target);
-    }
   }
 
   /** Called once per render pass with that pass's time of day. */
@@ -149,7 +142,6 @@ export class Lamp {
     const glow = night * 0.3 * (this.hero ? 1 - active : 1);
     this.glow.material.uniforms.uOpacity.value = glow;
     this.glow.visible = glow > 0.002;
-    if (this.spot) this.spot.intensity = night * 260;
   }
 }
 

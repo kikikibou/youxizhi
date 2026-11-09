@@ -35,10 +35,15 @@ export const SKY_GLSL = /* glsl */ `
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(skyHash(i), skyHash(i + vec2(1, 0)), u.x), mix(skyHash(i + vec2(0, 1)), skyHash(i + vec2(1, 1)), u.x), u.y);
   }
-  float skyFbm(vec2 p) {
+  // Fewer octaves for the finer layers: the sky covers half the screen and is
+  // drawn twice per frame (main view + beam), so every octave counts.
+  float skyFbm(vec2 p, int octaves) {
     float v = 0.0, a = 0.5;
     mat2 r = mat2(0.8, -0.6, 0.6, 0.8);
-    for (int i = 0; i < 6; i++) { v += a * skyNoise(p); p = r * p * 2.03 + 11.7; a *= 0.5; }
+    for (int i = 0; i < 6; i++) {
+      if (i >= octaves) break;
+      v += a * skyNoise(p); p = r * p * 2.03 + 11.7; a *= 0.5;
+    }
     return v;
   }
 
@@ -53,11 +58,11 @@ export const SKY_GLSL = /* glsl */ `
     vec2 uv = d.xz / (d.y + 0.18);
     vec2 w = uWind * uTime;
     // Large slow masses + smaller faster detail = clouds that drift AND morph.
-    float base = skyFbm(uv * 0.8 + w);
-    float detail = skyFbm(uv * 1.6 + w * 1.9 + 7.3);
+    float base = skyFbm(uv * 0.8 + w, 5);
+    float detail = skyFbm(uv * 1.6 + w * 1.9 + 7.3, 4);
     float c = base * 0.78 + detail * 0.32;
     float density = smoothstep(0.43, 0.68, c) * cloudAmt;
-    float s = skyFbm(uv * 0.8 + w + vec2(0.05, 0.035)) * 0.78 + detail * 0.32;
+    float s = skyFbm(uv * 0.8 + w + vec2(0.05, 0.035), 4) * 0.78 + detail * 0.32;
     float shade = clamp(smoothstep(0.42, 0.85, s) - smoothstep(0.43, 0.68, c) * 0.35, 0.0, 1.0);
     vec3 cloudDay = mix(vec3(1.02, 1.02, 1.0), vec3(0.66, 0.73, 0.84), shade * 0.75);
     vec3 cloudNight = mix(vec3(0.82, 0.85, 0.93), vec3(0.14, 0.18, 0.3), shade * 0.85);

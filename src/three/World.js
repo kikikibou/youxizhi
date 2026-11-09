@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { CopyShader } from 'three/addons/shaders/CopyShader.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -96,6 +97,42 @@ const beamCompositeShader = {
     }`,
 };
 
+/**
+ * Renders the scene into its own multisampled target and copies the resolved
+ * image into the post-processing chain. Keeping MSAA out of the chain's
+ * ping-pong targets avoids a resolve after every full-screen pass (measured:
+ * ~9 ms per frame on an integrated GPU).
+ */
+class SceneMsaaPass extends Pass {
+  constructor(scene, camera, target) {
+    super();
+    this.scene = scene;
+    this.camera = camera;
+    this.target = target;
+    this.needsSwap = false;
+    this.copy = new FullScreenQuad(
+      new THREE.ShaderMaterial({
+        uniforms: THREE.UniformsUtils.clone(CopyShader.uniforms),
+        vertexShader: CopyShader.vertexShader,
+        fragmentShader: CopyShader.fragmentShader,
+      }),
+    );
+  }
+
+  setSize(width, height) {
+    this.target.setSize(width, height);
+  }
+
+  render(renderer, writeBuffer, readBuffer) {
+    renderer.setRenderTarget(this.target);
+    renderer.clear();
+    renderer.render(this.scene, this.camera);
+    this.copy.material.uniforms.tDiffuse.value = this.target.texture;
+    renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
+    this.copy.render(renderer);
+  }
+}
+
 export class World {
   constructor(canvas, pages) {
     this.canvas = canvas;
@@ -119,7 +156,12 @@ export class World {
       // Dev only: lets screenshots of a backgrounded tab capture the real frame.
       preserveDrawingBuffer: import.meta.env.DEV,
     }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, this.lowPower ? 1.25 : 1.75));
+    // Adaptive resolution: start sharp, step down if this GPU can't keep up
+     // (see trackFrame). renderScale multiplies the base pixel ratio.
+     this.basePixelRatio = Math.min(window.devicePixelRatio, this.lowPower ? 1.25 : 1.5);
+     this.renderScale = 1;
+     this.perf = { frames: 0, sum: 0, settleUntil: performance.now() + 2500 };
+     r.setPixelRatio(this.basePixelRatio);
     r.setSize(window.innerWidth, window.innerHeight, false);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -152,13 +194,16 @@ export class World {
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
+    this._focus = new THREE.Vector3();
+    this._q = new THREE.Quaternion();
+    this._euler = new THREE.Euler();
     this._moon = new THREE.Color(0.55, 0.65, 1.0);
     this._hemiDay = new THREE.Color(0xc4dcf2);
     this._hemiNight = new THREE.Color(0x24345e);
     this._groundDay = new THREE.Color(0xd9c6ae);
     this._groundNight = new THREE.Color(0x8a5a32);
     this._size = new THREE.Vector2();
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', () => this.resize(true));
   }
 
   /* ------------------------------------------------------------------ */
@@ -168,13 +213,20 @@ export class World {
     this.scene.add(this.hemi);
     const sun = (this.sun = new THREE.DirectionalLight(0xfff1de, 3.2));
     sun.castShadow = true;
-    const shadowSize = this.lowPower ? 2048 : 4096;
-    sun.shadow.mapSize.set(shadowSize, shadowSize);
-    const s = 105;
+    // The shadow camera follows the view (see updateSun), so a 2048 map over
+    // ±75 m stays about as sharp as the old 4096 map over the whole plaza.
+    sun.shadow.mapSize.set(2048, 2048);
+    const s = 75;
     Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 420 });
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.04;
     this.scene.add(sun, sun.target);
+
+    // One real spotlight, moved to whichever page's lamp is on (night only).
+    // Every light is evaluated for every lit pixel, so one is much cheaper
+    // than one per building.
+    this.spot = new THREE.SpotLight(0xffc580, 0, 46, 0.72, 0.75, 1.4);
+    this.scene.add(this.spot, this.spot.target);
   }
 
   buildSites() {
@@ -188,7 +240,7 @@ export class World {
       group.updateMatrixWorld(true);
 
       const sc = page.scene;
-      const lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true, spot: true });
+      const lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true });
       lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
       group.add(lamp.group);
 
@@ -233,7 +285,7 @@ export class World {
     if (lamp) {
       Object.assign(sc.lamp, lamp);
       site.group.remove(site.lamp.group);
-      site.lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true, spot: true });
+      site.lamp = new Lamp(this.mats, { height: sc.lamp.h, hero: true });
       site.lamp.group.position.set(sc.lamp.p[0], 0, sc.lamp.p[1]);
       site.group.add(site.lamp.group);
       site.group.updateMatrixWorld(true);
@@ -290,13 +342,16 @@ export class World {
   buildComposer() {
     const r = this.renderer;
     const size = r.getDrawingBufferSize(new THREE.Vector2());
-    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: this.lowPower ? 2 : 4 });
+    const samples = this.lowPower ? 2 : 4;
+    // Post-processing ping-pong targets: no MSAA (see SceneMsaaPass).
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
     this.composer = new EffectComposer(r, rt);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.sceneRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
+    this.composer.addPass(new SceneMsaaPass(this.scene, this.camera, this.sceneRT));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.15, 0.45, 0.95);
     this.composer.addPass(this.bloom);
     // The other time of day, rendered separately and swapped in inside the beam.
-    this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: this.lowPower ? 2 : 4 });
+    this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
     this.beamPass = new ShaderPass(beamCompositeShader);
     this.beamPass.uniforms.tOther.value = this.otherRT.texture;
     this.composer.addPass(this.beamPass);
@@ -327,6 +382,55 @@ export class World {
         site.texts.push(block);
       }
     }
+  }
+
+  /**
+   * Run behind the loading screen: compile every shader (including objects
+   * that start invisible, like other pages' lettering and the night glows),
+   * upload every texture, and draw each page's view once by day and by night,
+   * so no first-time GPU work lands in the middle of a camera flight.
+   */
+  warmUp() {
+    const r = this.renderer;
+    const hidden = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    for (const site of this.sites) for (const t of site.texts) t.material.uniforms.uOpacity.value = 1;
+    r.compile(this.scene, this.camera);
+    this.scene.traverse((o) => {
+      const m = o.material;
+      if (!m) return;
+      for (const tex of [m.map, m.uniforms?.map?.value]) if (tex) r.initTexture(tex);
+    });
+    const pos = this.basePos.clone();
+    const quat = this.baseQuat.clone();
+    this.otherRT.scissorTest = false;
+    for (const site of this.sites) {
+      this.camera.position.copy(site.view.pos);
+      this.camera.quaternion.copy(site.view.quat);
+      this.camera.updateMatrixWorld();
+      for (const n of [0, 1]) {
+        this.applyTime(n);
+        r.shadowMap.needsUpdate = true;
+        r.setRenderTarget(this.otherRT);
+        r.render(this.scene, this.camera);
+      }
+    }
+    r.setRenderTarget(null);
+    // Run the post chain once with bloom on, so the first switch to night
+    // doesn't compile the bloom shaders mid-animation.
+    const bloomWas = this.bloom.enabled;
+    this.bloom.enabled = true;
+    this.composer.render(0);
+    this.bloom.enabled = bloomWas;
+    hidden.forEach((o) => (o.visible = false));
+    this.basePos.copy(pos);
+    this.baseQuat.copy(quat);
+    this.applyTime(this.night);
   }
 
   /* ------------------------------------------------------------------ */
@@ -389,15 +493,23 @@ export class World {
     return this.flight ? this.flight.t : 1;
   }
 
-  resize() {
+  resize(fromWindow = true) {
+    if (fromWindow) {
+      // New window size: start again from full sharpness.
+      this.renderScale = 1;
+      this.renderer.setPixelRatio(this.basePixelRatio);
+      this.perf.settleUntil = performance.now() + 1500;
+    }
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    // The composer keeps its own copy of the pixel ratio for its targets.
+    this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(w, h);
     const size = this.renderer.getDrawingBufferSize(this._size);
-    this.otherRT.setSize(size.x, size.y);
+    this.otherRT.setSize(size.x, size.y); // sceneRT is resized by its pass
   }
 
   /* ------------------------------------------------------------------ */
@@ -428,9 +540,7 @@ export class World {
     this.parallax.x = damp(this.parallax.x, this.pointer.x, 2.5, dt);
     this.parallax.y = damp(this.parallax.y, this.pointer.y, 2.5, dt);
     const sway = Math.sin(this.time * 0.25) * 0.004;
-    const q = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(this.parallax.y * 0.022 + sway, -this.parallax.x * 0.035, 0, 'YXZ'),
-    );
+    const q = this._q.setFromEuler(this._euler.set(this.parallax.y * 0.022 + sway, -this.parallax.x * 0.035, 0, 'YXZ'));
     this.camera.position.copy(this.basePos);
     this.camera.position.y += Math.sin(this.time * 0.4) * 0.05;
     this.camera.quaternion.copy(this.baseQuat).multiply(q);
@@ -448,8 +558,15 @@ export class World {
     const fwd = this._v.set(0, 0, -1).applyQuaternion(this.baseQuat);
     const yaw = Math.atan2(fwd.x, fwd.z) + Math.PI + 0.85;
     const elev = THREE.MathUtils.lerp(0.78, 0.95, this.night);
-    this.sun.position.set(Math.sin(yaw) * Math.cos(elev), Math.sin(elev), Math.cos(yaw) * Math.cos(elev)).multiplyScalar(180);
-    this.sun.target.position.set(0, 0, 0);
+    // Centre the shadow camera on the ground a little ahead of the view.
+    fwd.y = 0;
+    fwd.normalize();
+    const focus = this._focus.copy(this.basePos).addScaledVector(fwd, 28).setY(0);
+    this.sun.position
+      .set(Math.sin(yaw) * Math.cos(elev), Math.sin(elev), Math.cos(yaw) * Math.cos(elev))
+      .multiplyScalar(180)
+      .add(focus);
+    this.sun.target.position.copy(focus);
   }
 
   /**
@@ -468,6 +585,7 @@ export class World {
     this.sky.material.uniforms.uNight.value = n;
     this.sky.material.uniforms.uCloud.value = inBeam ? 1 - 0.65 * n : 1;
     updateMaterials(this.mats, n);
+    this.spot.intensity = n * 260 * (this.spotSite ? this.spotSite.activity : 0);
     this.sites.forEach((site) => site.lamp.update(n, site.activity));
     this.plazaLamps.forEach((l) => l.update(n, 0));
   }
@@ -478,6 +596,7 @@ export class World {
     this.bloom.strength = THREE.MathUtils.lerp(0.1, 0.45, n);
     this.bloom.threshold = THREE.MathUtils.lerp(0.95, 0.9, n);
     this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.5, n);
+    this.bloom.enabled = n > 0.02; // barely visible by day; skip the cost
     this.sky.material.uniforms.uTime.value = this.time;
   }
 
@@ -513,6 +632,14 @@ export class World {
       }
       hull.forEach((p, i) => site.beam.pts.value[i].set(p.x, p.y));
       site.beam.n.value = hull.length;
+      // Pixel bounding box: the opposite-time render is scissored to it.
+      const xs = hull.map((q) => q.x);
+      const ys = hull.map((q) => q.y);
+      const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 2);
+      const y0 = Math.max(0, Math.floor(Math.min(...ys)) - 2);
+      const x1 = Math.min(size.x, Math.ceil(Math.max(...xs)) + 2);
+      const y1 = Math.min(size.y, Math.ceil(Math.max(...ys)) + 2);
+      (site.beam.box ||= new THREE.Vector4()).set(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
 
       // Lens centre and on-screen radius, for the "lamp as sun" glow.
       const c = lamp.group.localToWorld(this._v.set(0, lamp.topY, 0)).project(cam);
@@ -578,6 +705,41 @@ export class World {
     };
   }
 
+  /** Hang the single spotlight in the most "on" hero lamp. */
+  placeSpot() {
+    const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
+    this.spotSite = site;
+    const lamp = site.lamp;
+    lamp.group.localToWorld(this.spot.position.set(0, lamp.topY, 0));
+    lamp.group.localToWorld(this.spot.target.position.set(0, 0, 0));
+    this.spot.target.updateMatrixWorld();
+  }
+
+  /**
+   * Adaptive resolution. Fed the real time between animation frames; if the
+   * average stays above ~20 ms (below ~50 fps) the render resolution steps
+   * down, never below 0.8 CSS px per pixel. It never steps back up on its own
+   * (a 60 Hz display can't show headroom), but a window resize starts over.
+   */
+  trackFrame(ms) {
+    const p = this.perf;
+    const now = performance.now();
+    if (now < p.settleUntil || this.flight || document.hidden || ms > 250) return;
+    p.frames++;
+    p.sum += ms;
+    if (p.frames < 45) return;
+    const avg = p.sum / p.frames;
+    p.frames = 0;
+    p.sum = 0;
+    const floor = Math.min(1, 0.8 / this.basePixelRatio);
+    if (avg > 20 && this.renderScale > floor + 1e-3) {
+      this.renderScale = Math.max(floor, this.renderScale * 0.82);
+      this.renderer.setPixelRatio(this.basePixelRatio * this.renderScale);
+      this.resize(false);
+      p.settleUntil = now + 1200; // let the new size settle before judging again
+    }
+  }
+
   /** Render the scene at the opposite time of day for the beam, if one is visible. */
   renderBeam() {
     const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
@@ -594,6 +756,8 @@ export class World {
 
     this.applyTime(1 - this.night, true);
     const r = this.renderer;
+    this.otherRT.scissor.copy(site.beam.box);
+    this.otherRT.scissorTest = true;
     r.setRenderTarget(this.otherRT);
     r.clear();
     r.render(this.scene, this.camera);
@@ -621,6 +785,7 @@ export class World {
     });
     this.updateBeams();
     this.updatePost(this.night);
+    this.placeSpot();
 
     this.renderer.shadowMap.needsUpdate = true;
     this.renderBeam(); // other time of day -> otherRT (also refreshes the shadow map)

@@ -189,6 +189,7 @@ stage.addEventListener('click', (e) => {
 
 let last = performance.now();
 function frame(now) {
+  world.trackFrame(now - last);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   world.update(dt);
@@ -197,6 +198,7 @@ function frame(now) {
 
 (async () => {
   await world.buildTypography();
+  world.warmUp();
   go(currentId(), 'intro');
   requestAnimationFrame((t) => {
     last = t;

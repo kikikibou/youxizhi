@@ -5,7 +5,7 @@
   --ink: #0d1f3c;
   --ink-soft: rgba(13, 31, 60, 0.72);
   --line: rgba(255, 255, 255, 0.85);
-  --paper: rgba(255, 255, 255, 0.86);
+  --paper: rgba(255, 255, 255, 0.92);
   --paper-ink: #0d1f3c;
   --paper-line: rgba(13, 31, 60, 0.14);
   --shadow: 0 1px 14px rgba(5, 15, 35, 0.35);
@@ -20,7 +20,7 @@
 html[data-theme='night'] {
   --ink: #f4ecdf;
   --ink-soft: rgba(244, 236, 223, 0.75);
-  --paper: rgba(8, 18, 40, 0.78);
+  --paper: rgba(8, 18, 40, 0.88);
   --paper-ink: #f4ecdf;
   --paper-line: rgba(255, 190, 120, 0.2);
 }
@@ -365,6 +365,11 @@ html[data-theme='night'] .dn-moon {
   transform: translate3d(0, 24px, 0);
   transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
 }
+/* Give animated elements their own layer up front, so a page switch starts
+   its transitions without first repainting them. */
+.page.is-active .reveal {
+  will-change: transform, opacity;
+}
 .page.is-active.is-in .reveal {
   opacity: 1;
   transform: none;
@@ -493,8 +498,8 @@ html[data-theme='night'] .poem {
 
 .sheet {
   background: var(--paper);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  /* No backdrop-filter: blurring a WebGL canvas that redraws every frame
+     forces the browser to re-blur it every frame (and hitches when it animates). */
   border-top: 3px solid var(--orange);
   padding: 16px 18px 8px;
   transition: background 1.2s var(--ease), color 1.2s var(--ease);
