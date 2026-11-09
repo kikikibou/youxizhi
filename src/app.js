@@ -104,7 +104,7 @@ function go(id, mode = 'fly') {
 
   if (prev >= 0) {
     const old = pageEls[prev];
-    old.classList.remove('is-in');
+    old.classList.remove('is-in', 'is-settled');
     setTimeout(() => {
       if (current !== prev) old.classList.remove('is-active');
     }, 550);
@@ -132,6 +132,11 @@ function go(id, mode = 'fly') {
     const el = pageEls[idx];
     el.classList.add('is-active');
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
+    // After the entrance, let the text drop its own compositing layer: layered
+    // text loses sub-pixel anti-aliasing on Windows and looks softer.
+    setTimeout(() => {
+      if (current === idx) el.classList.add('is-settled');
+    }, 1700);
   }, delay);
 }
 
@@ -188,12 +193,22 @@ stage.addEventListener('click', (e) => {
 /* ------------------------------------------------------------------- loop */
 
 let last = performance.now();
+let lastRaw = last;
+let due = 0;
 function frame(now) {
+  requestAnimationFrame(frame);
+  world.trackRaw(now - lastRaw);
+  lastRaw = now;
+  // Optional frame-rate cap (debug panel): skip frames until the next one is due.
+  const cap = world.quality.fpsCap;
+  if (cap) {
+    if (now < due - 3) return;
+    due = Math.max(due + 1000 / cap, now);
+  }
   world.trackFrame(now - last);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   world.update(dt);
-  requestAnimationFrame(frame);
 }
 
 (async () => {
@@ -201,8 +216,20 @@ function frame(now) {
   world.warmUp();
   go(currentId(), 'intro');
   requestAnimationFrame((t) => {
-    last = t;
+    last = lastRaw = t;
     frame(t);
     setTimeout(() => loader.classList.add('is-done'), 250);
   });
 })();
+
+/* ------------------------------------------------------------- debug panel */
+// Open the site with ?debug to show frame rate, resolution and quality
+// switches (remembered on this device; ?debug=0 turns it off again).
+try {
+  const flag = new URLSearchParams(location.search).get('debug');
+  if (flag === '0') localStorage.removeItem('youxizhi-debug');
+  else if (flag !== null) localStorage.setItem('youxizhi-debug', '1');
+  if (localStorage.getItem('youxizhi-debug')) import('./debug.js').then((m) => m.mountDebug(world));
+} catch {
+  /* storage unavailable */
+}

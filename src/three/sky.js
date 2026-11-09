@@ -84,7 +84,9 @@ const vert = /* glsl */ `
   void main() {
     vDir = normalize(position);
     vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    gl_Position = p.xyww; // stick to the far plane
+    // Just in front of the far plane: behind everything else, but clearly
+    // nearer than the reveal's depth punch, which sits exactly on it.
+    gl_Position = vec4(p.xy, p.w * 0.99999, p.w);
   }
 `;
 
@@ -107,7 +109,10 @@ export function createSky() {
     depthWrite: false,
   });
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(900, 48, 24), mat);
-  mesh.renderOrder = -10;
+  // Drawn *after* the opaque scene: the depth test then skips every pixel a
+  // building already covers, so the cloud noise only runs where sky shows
+  // (it used to run for the whole screen: ~40% of a frame's GPU time).
+  mesh.renderOrder = 1;
   mesh.frustumCulled = false;
   return mesh;
 }

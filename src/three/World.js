@@ -1,20 +1,17 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { CopyShader } from 'three/addons/shaders/CopyShader.js';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
-import { LampDevice, BeaconDevice, MASK_LAYER } from './devices.js';
+import { LampDevice, BeaconDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, MASK, MASK_GLSL } from './typography.js';
+import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
 
 const PLAZA_RADIUS = 56;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -23,96 +20,65 @@ const Z = new THREE.Vector3(0, 0, 1);
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
-const gradeShader = {
-  uniforms: { tDiffuse: { value: null }, uGrain: { value: 0.03 }, uVignette: { value: 0.55 } },
-  vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse; uniform float uGrain; uniform float uVignette; varying vec2 vUv;
-    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-    void main(){
-      vec4 c = texture2D(tDiffuse, vUv);
-      // Static paper grain (animated grain read as flicker).
-      float n = h(floor(gl_FragCoord.xy));
-      c.rgb += (n - 0.5) * uGrain;
-      vec2 q = vUv - 0.5;
-      c.rgb *= 1.0 - dot(q, q) * uVignette;
-      gl_FragColor = c;
-    }`,
-};
-
 /**
- * Wherever the reveal mask is white, the scene is shown at the *opposite* time
- * of day: tOther is a second render of the whole scene (buildings and sky) at
- * that time. See devices.js.
+ * The whole post chain in one full-screen pass, straight to the screen:
+ *   - adds the night glow (bloom) when it is on
+ *   - wherever the reveal mask is white, shows the scene at the *opposite*
+ *     time of day (tOther: a second render, see devices.js)
+ *   - the device's light source glows like a sun
+ *   - tone mapping and sRGB (three.js chunks, since this renders to the screen)
+ *   - static paper grain and a vignette
+ * (It replaces separate copy / reveal / output / grade passes: three fewer
+ * full-screen passes over a half-float image every frame.)
  */
-const revealCompositeShader = {
+const finalShader = {
   uniforms: {
-    tDiffuse: { value: null },
+    tScene: { value: null },
     tOther: { value: null },
-    tMask: { value: null },
-    uMaskRes: { value: new THREE.Vector2(1, 1) },
+    tBloom: { value: null },
+    tMask: MASK.tMask,
+    uMaskRes: MASK.uMaskRes,
+    uBloom: { value: 0 },
     uMix: { value: 0 },
     uSunPos: { value: new THREE.Vector2() },
     uSunR: { value: 10 },
     uSun: { value: 0 },
+    uGrain: { value: 0.03 },
+    uVignette: { value: 0.55 },
+    toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse;
+    uniform sampler2D tScene;
     uniform sampler2D tOther;
+    uniform sampler2D tBloom;
+    uniform float uBloom;
     uniform float uMix;
     uniform vec2 uSunPos;
     uniform float uSunR;
     uniform float uSun;
+    uniform float uGrain;
+    uniform float uVignette;
     varying vec2 vUv;
     ${MASK_GLSL}
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
+      vec3 c = texture2D(tScene, vUv).rgb;
+      if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb;
       if (uMix > 0.5) {
         float k = beamCoverage(gl_FragCoord.xy);
-        if (k > 0.0) c = mix(c, texture2D(tOther, vUv), k);
+        if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
-      // The device's light source glows like a sun.
-      c.rgb += vec3(1.0, 0.86, 0.62) * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
-      gl_FragColor = c;
+      c += vec3(1.0, 0.86, 0.62) * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
+      gl_FragColor = vec4(c, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      // Static paper grain (animated grain read as flicker) and a vignette.
+      gl_FragColor.rgb += (h(floor(gl_FragCoord.xy)) - 0.5) * uGrain;
+      vec2 q = vUv - 0.5;
+      gl_FragColor.rgb *= 1.0 - dot(q, q) * uVignette;
     }`,
 };
-
-/**
- * Renders the scene into its own multisampled target and copies the resolved
- * image into the post-processing chain. Keeping MSAA out of the chain's
- * ping-pong targets avoids a resolve after every full-screen pass (measured:
- * ~9 ms per frame on an integrated GPU).
- */
-class SceneMsaaPass extends Pass {
-  constructor(scene, camera, target) {
-    super();
-    this.scene = scene;
-    this.camera = camera;
-    this.target = target;
-    this.needsSwap = false;
-    this.copy = new FullScreenQuad(
-      new THREE.ShaderMaterial({
-        uniforms: THREE.UniformsUtils.clone(CopyShader.uniforms),
-        vertexShader: CopyShader.vertexShader,
-        fragmentShader: CopyShader.fragmentShader,
-      }),
-    );
-  }
-
-  setSize(width, height) {
-    this.target.setSize(width, height);
-  }
-
-  render(renderer, writeBuffer, readBuffer) {
-    renderer.setRenderTarget(this.target);
-    renderer.clear();
-    renderer.render(this.scene, this.camera);
-    this.copy.material.uniforms.tDiffuse.value = this.target.texture;
-    renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
-    this.copy.render(renderer);
-  }
-}
 
 export class World {
   constructor(canvas, pages) {
@@ -137,12 +103,37 @@ export class World {
       // Dev only: lets screenshots of a backgrounded tab capture the real frame.
       preserveDrawingBuffer: import.meta.env.DEV,
     }));
-    // Adaptive resolution: start sharp, step down if this GPU can't keep up
-     // (see trackFrame). renderScale multiplies the base pixel ratio.
-     this.basePixelRatio = Math.min(window.devicePixelRatio, this.lowPower ? 1.25 : 1.5);
-     this.renderScale = 1;
-     this.perf = { frames: 0, sum: 0, settleUntil: performance.now() + 2500 };
-     r.setPixelRatio(this.basePixelRatio);
+    // Resolution: in "auto" mode the pixel ratio follows the GPU's measured
+    // frame time, down when it can't keep up and back up when it has room
+    // (see trackFrame). The debug panel can pin it instead (see debug.js).
+    this.dpr = window.devicePixelRatio || 1;
+    this.pixelRatio = this.autoStartRatio;
+    this.quality = { ...QUALITY_DEFAULTS };
+    this.perf = {
+      history: [], // recent frame intervals (ms) and GPU times, for the debug graph
+      gpuHistory: [],
+      raw: [], // every animation-frame interval, for the refresh-rate estimate
+      win: [],
+      gpuWin: [],
+      winStart: 0,
+      started: 0,
+      settleUntil: 0,
+      fps: 0,
+      frameMs: 0,
+      worstMs: 0,
+      gpuMs: null,
+      refreshHz: 0,
+      calls: 0,
+      triangles: 0,
+      slow: 0,
+      fast: 0,
+      ceiling: 0,
+      ceilingAt: 0,
+      log: [],
+    };
+    r.setPixelRatio(this.pixelRatio);
+    r.info.autoReset = false; // counted per frame (all passes) for the debug panel
+    this.gpu = new GpuTimer(r);
     r.setSize(window.innerWidth, window.innerHeight, false);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -171,7 +162,7 @@ export class World {
     this.buildSites();
     this.buildPlazaFurniture();
     this.buildSkyline();
-    this.buildComposer();
+    this.buildPost();
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
@@ -187,7 +178,21 @@ export class World {
     this._box = new THREE.Box3();
     this._corners = Array.from({ length: 8 }, () => new THREE.Vector3());
     this._clear = new THREE.Color();
+    this._lastSun = new THREE.Vector3();
+    this.shadowDirty = true;
+    this.setQuality();
     window.addEventListener('resize', () => this.resize(true));
+  }
+
+  /** Pixel-ratio range for "auto": never softer than one pixel per CSS pixel on a desktop. */
+  get autoStartRatio() {
+    return Math.min(this.dpr, this.lowPower ? 1.25 : 1.5);
+  }
+  get maxPixelRatio() {
+    return Math.min(this.dpr, 2);
+  }
+  get minPixelRatio() {
+    return Math.min(this.dpr, this.lowPower ? 0.8 : 1);
   }
 
   /* ------------------------------------------------------------------ */
@@ -211,6 +216,10 @@ export class World {
     // than one per building.
     this.spot = new THREE.SpotLight(0xffc580, 0, 46, 0.72, 0.75, 1.4);
     this.scene.add(this.spot, this.spot.target);
+    // Lights are seen by every layer: the mask and depth-punch passes then
+    // keep the same light setup as the real renders, so three.js doesn't
+    // treat every lit material as changed after each of them.
+    for (const l of [this.hemi, this.sun, this.spot]) l.layers.enableAll();
   }
 
   buildSites() {
@@ -231,6 +240,7 @@ export class World {
       if (sc.sea) group.add((this.sea = createSea()));
 
       const ribbon = new Ribbon(this.mats.orange, sc.ribbon);
+      ribbon.mesh.castShadow = false; // see QUALITY_DEFAULTS.ribbonShadow
       ribbon.mesh.position.set(...sc.ribbon.p);
       ribbon.mesh.rotation.set(...sc.ribbon.r);
       group.add(ribbon.mesh);
@@ -331,31 +341,95 @@ export class World {
     this.skyline = mesh;
   }
 
-  buildComposer() {
+  buildPost() {
     const r = this.renderer;
     const size = r.getDrawingBufferSize(new THREE.Vector2());
-    const samples = this.lowPower ? 2 : 4;
-    // Post-processing ping-pong targets: no MSAA (see SceneMsaaPass).
-    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
-    this.composer = new EffectComposer(r, rt);
+    this.msaaSamples = this.lowPower ? 2 : 4;
+    const samples = this.msaaSamples;
     this.sceneRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
-    this.composer.addPass(new SceneMsaaPass(this.scene, this.camera, this.sceneRT));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.15, 0.45, 0.95);
-    this.composer.addPass(this.bloom);
-    // The other time of day, rendered separately and swapped in inside the beam.
+    // The other time of day, rendered separately and swapped in inside the reveal.
     this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
     // Reveal mask: white where the opposite time shows (drawn from MASK_LAYER).
-    this.maskRT = new THREE.WebGLRenderTarget(size.x, size.y, { samples });
+    this.maskRT = new THREE.WebGLRenderTarget(size.x, size.y, { samples, depthBuffer: false });
+    // Nothing reads these targets' depth: skip resolving it (~2 ms a frame).
+    for (const rt of [this.sceneRT, this.otherRT, this.maskRT]) {
+      rt.resolveDepthBuffer = false;
+      rt.resolveStencilBuffer = false;
+    }
     MASK.tMask.value = this.maskRT.texture;
     MASK.uMaskRes.value.copy(size);
-    this.beamPass = new ShaderPass(revealCompositeShader);
-    this.beamPass.uniforms.tOther.value = this.otherRT.texture;
-    this.beamPass.uniforms.tMask.value = this.maskRT.texture;
-    this.beamPass.uniforms.uMaskRes.value = MASK.uMaskRes.value; // shared Vector2
-    this.composer.addPass(this.beamPass);
-    this.composer.addPass(new OutputPass());
-    this.grade = new ShaderPass(gradeShader);
-    this.composer.addPass(this.grade);
+    this.bloom = new UnrealBloomPass(size.clone(), 0.15, 0.45, 0.95);
+    this.bloomQuad = new FullScreenQuad(null);
+    this.final = new FullScreenQuad(
+      new THREE.ShaderMaterial({ ...finalShader, uniforms: finalShader.uniforms, depthTest: false, depthWrite: false }),
+    );
+    const u = this.final.material.uniforms;
+    u.tScene.value = this.sceneRT.texture;
+    u.tOther.value = this.otherRT.texture;
+    u.tBloom.value = this.bloom.renderTargetsHorizontal[0].texture;
+  }
+
+  /**
+   * UnrealBloomPass without its last step: the glow is left in its own
+   * target and added in the final pass, instead of being blended back onto
+   * a copy of the scene (saves a full-screen copy).
+   */
+  renderBloom(texture) {
+    const b = this.bloom;
+    const r = this.renderer;
+    const quad = this.bloomQuad;
+    const autoClear = r.autoClear;
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    r.autoClear = false;
+    r.setClearColor(0x000000, 0);
+    b.highPassUniforms.tDiffuse.value = texture;
+    b.highPassUniforms.luminosityThreshold.value = b.threshold;
+    quad.material = b.materialHighPassFilter;
+    r.setRenderTarget(b.renderTargetBright);
+    r.clear();
+    quad.render(r);
+    let input = b.renderTargetBright;
+    for (let i = 0; i < b.nMips; i++) {
+      const m = b.separableBlurMaterials[i];
+      quad.material = m;
+      m.uniforms.colorTexture.value = input.texture;
+      m.uniforms.direction.value = UnrealBloomPass.BlurDirectionX;
+      r.setRenderTarget(b.renderTargetsHorizontal[i]);
+      r.clear();
+      quad.render(r);
+      m.uniforms.colorTexture.value = b.renderTargetsHorizontal[i].texture;
+      m.uniforms.direction.value = UnrealBloomPass.BlurDirectionY;
+      r.setRenderTarget(b.renderTargetsVertical[i]);
+      r.clear();
+      quad.render(r);
+      input = b.renderTargetsVertical[i];
+    }
+    const cm = b.compositeMaterial;
+    quad.material = cm;
+    cm.uniforms.bloomStrength.value = b.strength;
+    cm.uniforms.bloomRadius.value = b.radius;
+    cm.uniforms.bloomTintColors.value = b.bloomTintColors;
+    r.setRenderTarget(b.renderTargetsHorizontal[0]);
+    r.clear();
+    quad.render(r);
+    r.setClearColor(this._clear, alpha);
+    r.autoClear = autoClear;
+  }
+
+  /** Scene (multisampled) -> optional bloom -> one final pass to the screen. */
+  renderPost(forceBloom = false) {
+    const r = this.renderer;
+    r.setRenderTarget(this.sceneRT);
+    r.clear();
+    r.render(this.scene, this.camera);
+    const u = this.final.material.uniforms;
+    const bloom = forceBloom || (this.bloom.enabled && this.quality.bloom);
+    if (bloom) this.renderBloom(this.sceneRT.texture);
+    u.uBloom.value = bloom ? 1 : 0;
+    u.toneMappingExposure.value = r.toneMappingExposure;
+    r.setRenderTarget(null);
+    this.final.render(r);
   }
 
   async buildTypography() {
@@ -422,10 +496,7 @@ export class World {
     r.setRenderTarget(null);
     // Run the post chain once with bloom on, so the first switch to night
     // doesn't compile the bloom shaders mid-animation.
-    const bloomWas = this.bloom.enabled;
-    this.bloom.enabled = true;
-    this.composer.render(0);
-    this.bloom.enabled = bloomWas;
+    this.renderPost(true);
     hidden.forEach((o) => (o.visible = false));
     this.basePos.copy(pos);
     this.baseQuat.copy(quat);
@@ -493,24 +564,75 @@ export class World {
   }
 
   resize(fromWindow = true) {
-    if (fromWindow) {
-      // New window size: start again from full sharpness.
-      this.renderScale = 1;
-      this.renderer.setPixelRatio(this.basePixelRatio);
-      this.perf.settleUntil = performance.now() + 1500;
+    // Moving the window to another screen can change the device pixel ratio.
+    if (fromWindow && (window.devicePixelRatio || 1) !== this.dpr) {
+      this.dpr = window.devicePixelRatio || 1;
+      if (this.quality.scale === 'auto') this.pixelRatio = this.autoStartRatio;
+      this.applyScale();
+      return;
     }
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
-    // The composer keeps its own copy of the pixel ratio for its targets.
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.setSize(w, h);
     const size = this.renderer.getDrawingBufferSize(this._size);
-    this.otherRT.setSize(size.x, size.y); // sceneRT is resized by its pass
+    this.sceneRT.setSize(size.x, size.y);
+    this.otherRT.setSize(size.x, size.y);
     this.maskRT.setSize(size.x, size.y);
+    this.bloom.setSize(size.x, size.y);
     MASK.uMaskRes.value.copy(size);
+  }
+
+  setPixelRatio(pr) {
+    this.pixelRatio = pr;
+    this.renderer.setPixelRatio(pr);
+    this.resize(false);
+    this.perf.settleUntil = performance.now() + 1500; // judge the new size afresh
+    this.perf.slow = 0;
+    this.perf.fast = 0;
+  }
+
+  /** Apply quality.scale: 'auto' keeps the adaptive ratio, a number pins it. */
+  applyScale() {
+    const s = this.quality.scale;
+    const pr = s === 'auto' ? THREE.MathUtils.clamp(this.pixelRatio, this.minPixelRatio, this.maxPixelRatio) : this.dpr * s;
+    this.setPixelRatio(pr);
+  }
+
+  /** Change quality switches (see QUALITY_DEFAULTS); used by the debug panel. */
+  setQuality(patch = {}) {
+    const q = Object.assign(this.quality, patch);
+    if ('scale' in patch) {
+      if (q.scale === 'auto') this.pixelRatio = this.autoStartRatio;
+      this.applyScale();
+      this.note(q.scale === 'auto' ? '分辨率：自动' : `分辨率：固定 ${Math.round(q.scale * 100)}%`);
+    }
+    this.sun.castShadow = q.shadows;
+    const samples = q.msaa ? this.msaaSamples : 0;
+    for (const rt of [this.sceneRT, this.otherRT, this.maskRT]) {
+      if (rt.samples !== samples) {
+        rt.samples = samples;
+        rt.dispose(); // re-created with the new sample count on next use
+      }
+    }
+    for (const site of this.sites) {
+      site.ribbon.mesh.visible = q.ribbons;
+      site.ribbon.mesh.castShadow = q.ribbonShadow;
+    }
+    const u = this.final.material.uniforms;
+    u.uGrain.value = q.grain ? 0.03 : 0;
+    u.uVignette.value = q.grain ? 0.55 : 0;
+    if (!q.reveal) this.clearMask();
+    this.shadowDirty = true;
+  }
+
+  /** A line in the debug panel's log. */
+  note(msg) {
+    const p = this.perf;
+    const t = p.started ? (performance.now() - p.started) / 1000 : 0;
+    p.log.push({ t, msg });
+    if (p.log.length > 8) p.log.shift();
   }
 
   /* ------------------------------------------------------------------ */
@@ -568,6 +690,9 @@ export class World {
       .multiplyScalar(180)
       .add(focus);
     this.sun.target.position.copy(focus);
+    // Shadows only need redrawing when the sun (or a shadow caster) moves.
+    this.sunMoved = this._lastSun.distanceToSquared(this.sun.position) > 1e-8 || this.sunMoved === undefined;
+    this._lastSun.copy(this.sun.position);
   }
 
   /**
@@ -613,6 +738,26 @@ export class World {
   updateReveal(site) {
     const size = this.renderer.getDrawingBufferSize(this._size);
     const cam = this.camera;
+    if (site.device.screenBox) site.device.screenBox(size, site.box);
+    else this.maskBox(site, size);
+
+    const g = site.device.glow;
+    if (!g) return null;
+    const c = site.group.localToWorld(this._v.copy(g.pos));
+    const e = this._v2.copy(cam.position).sub(c).cross(cam.up).normalize().multiplyScalar(g.radius).add(c);
+    c.project(cam);
+    e.project(cam);
+    return {
+      x: (c.x * 0.5 + 0.5) * size.x,
+      y: (c.y * 0.5 + 0.5) * size.y,
+      r: Math.max(4, Math.hypot((e.x - c.x) * 0.5 * size.x, (e.y - c.y) * 0.5 * size.y)),
+      visible: c.z < 1,
+    };
+  }
+
+  /** Pixel bbox of a 3D mask (its Box3 corners, clipped against the near plane). */
+  maskBox(site, size) {
+    const cam = this.camera;
     const box = this._box.setFromObject(site.device.mask);
     // Box corners in view space, clipped against the near plane (a steeply
     // up-looking camera often has the bottom of a beam behind it).
@@ -653,19 +798,18 @@ export class World {
       y1 = Math.min(size.y, Math.ceil(y1) + 2);
       site.box.set(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
     }
+  }
 
-    const g = site.device.glow;
-    if (!g) return null;
-    const c = site.group.localToWorld(this._v.copy(g.pos));
-    const e = this._v2.copy(cam.position).sub(c).cross(cam.up).normalize().multiplyScalar(g.radius).add(c);
-    c.project(cam);
-    e.project(cam);
-    return {
-      x: (c.x * 0.5 + 0.5) * size.x,
-      y: (c.y * 0.5 + 0.5) * size.y,
-      r: Math.max(4, Math.hypot((e.x - c.x) * 0.5 * size.x, (e.y - c.y) * 0.5 * size.y)),
-      visible: c.z < 1,
-    };
+  /** Empty mask (reveal switched off): lettering reads it too. */
+  clearMask() {
+    const r = this.renderer;
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.maskRT);
+    r.clear();
+    r.setRenderTarget(null);
+    r.setClearColor(this._clear, alpha);
   }
 
   /** Draw every visible device mask into maskRT (white = show the other time). */
@@ -742,38 +886,104 @@ export class World {
     this.spot.target.updateMatrixWorld();
   }
 
+  /** Every animation-frame interval (rendered or skipped by an fps cap). */
+  trackRaw(ms) {
+    const r = this.perf.raw;
+    r.push(ms);
+    if (r.length > 240) r.shift();
+  }
+
   /**
-   * Adaptive resolution. Fed the real time between animation frames; if the
-   * average stays above ~20 ms (below ~50 fps) the render resolution steps
-   * down, never below 0.8 CSS px per pixel. It never steps back up on its own
-   * (a 60 Hz display can't show headroom), but a window resize starts over.
+   * Called after each rendered frame with the time since the previous one.
+   * Keeps one-second statistics for the debug panel and, in "auto" mode,
+   * adapts the resolution. With a GPU timer the decision uses the GPU's own
+   * time (a slow moment on the main thread, e.g. while the page is still
+   * loading, no longer drops the resolution for good), and it can step back
+   * up when there is room. Without one it only steps down, after two slow
+   * seconds in a row.
    */
   trackFrame(ms) {
     const p = this.perf;
     const now = performance.now();
-    if (now < p.settleUntil || this.flight || document.hidden || ms > 250) return;
-    p.frames++;
-    p.sum += ms;
-    if (p.frames < 45) return;
-    const avg = p.sum / p.frames;
-    p.frames = 0;
-    p.sum = 0;
-    const floor = Math.min(1, 0.8 / this.basePixelRatio);
-    if (avg > 20 && this.renderScale > floor + 1e-3) {
-      this.renderScale = Math.max(floor, this.renderScale * 0.82);
-      this.renderer.setPixelRatio(this.basePixelRatio * this.renderScale);
-      this.resize(false);
-      p.settleUntil = now + 1200; // let the new size settle before judging again
+    const gpu = this.gpu.take();
+    p.history.push(ms);
+    if (p.history.length > 180) p.history.shift();
+    for (const g of gpu) {
+      p.gpuHistory.push(g);
+      if (p.gpuHistory.length > 180) p.gpuHistory.shift();
     }
+    if (!p.started) {
+      p.started = now;
+      p.winStart = now;
+      p.settleUntil = now + 2500;
+    }
+    if (document.hidden || ms > 250) {
+      p.win.length = 0;
+      p.gpuWin.length = 0;
+      p.winStart = now;
+      return;
+    }
+    p.win.push(ms);
+    p.gpuWin.push(...gpu);
+    if (now - p.winStart < 1000 || p.win.length < 20) return;
+
+    const win = p.win.slice().sort((a, b) => a - b);
+    const sum = win.reduce((a, b) => a + b, 0);
+    p.fps = (win.length * 1000) / sum;
+    p.frameMs = sum / win.length;
+    p.worstMs = win[win.length - 1];
+    const median = win[win.length >> 1];
+    const gpuAvg = p.gpuWin.length ? p.gpuWin.reduce((a, b) => a + b, 0) / p.gpuWin.length : null;
+    if (gpuAvg !== null) p.gpuMs = gpuAvg;
+    const raw = p.raw.slice().sort((a, b) => a - b);
+    if (raw.length > 30) p.refreshHz = 1000 / raw[Math.floor(raw.length * 0.1)];
+    p.win.length = 0;
+    p.gpuWin.length = 0;
+    p.winStart = now;
+
+    if (this.quality.scale === 'auto' && now > p.settleUntil && !this.flight) this.adapt(median, gpuAvg, now);
+  }
+
+  adapt(median, gpu, now) {
+    const p = this.perf;
+    const budget = 1000 / Math.min(60, this.quality.fpsCap || 60); // ms per frame we aim for
+    let next = this.pixelRatio;
+    let why = '';
+    if (gpu !== null) {
+      // GPU time grows roughly with the number of pixels (ratio squared).
+      p.slow = gpu > budget * 0.95 ? p.slow + 1 : 0;
+      p.fast = gpu < budget * 0.5 ? p.fast + 1 : 0;
+      if (p.slow >= 2) {
+        next = this.pixelRatio * THREE.MathUtils.clamp(Math.sqrt((budget * 0.75) / gpu), 0.7, 0.92);
+        why = `GPU 每帧 ${gpu.toFixed(1)} ms，偏慢`;
+        p.ceiling = this.pixelRatio;
+        p.ceilingAt = now;
+      } else if (p.fast >= 3) {
+        // Don't climb straight back to a ratio that was too slow a moment ago.
+        const top = p.ceiling && now - p.ceilingAt < 30000 ? Math.min(this.maxPixelRatio, p.ceiling * 0.95) : this.maxPixelRatio;
+        next = Math.max(this.pixelRatio, Math.min(top, this.pixelRatio * Math.min(1.15, Math.sqrt((budget * 0.7) / gpu))));
+        why = `GPU 每帧 ${gpu.toFixed(1)} ms，有余量`;
+      }
+    } else {
+      p.slow = median > Math.max(21, budget * 1.25) ? p.slow + 1 : 0;
+      if (p.slow >= 2) {
+        next = this.pixelRatio * 0.85;
+        why = `帧间隔 ${median.toFixed(1)} ms`;
+      }
+    }
+    next = THREE.MathUtils.clamp(next, this.minPixelRatio, this.maxPixelRatio);
+    if (Math.abs(next - this.pixelRatio) < 0.03) return;
+    this.note(`自动分辨率 ${this.pixelRatio.toFixed(2)} → ${next.toFixed(2)}（${why}）`);
+    this.setPixelRatio(next);
   }
 
   /** Render the mask and, if anything is revealed, the scene at the opposite time of day. */
   renderBeam() {
     const site = this.sites.reduce((best, x) => (x.activity > best.activity ? x : best));
-    const u = this.beamPass.uniforms;
+    const u = this.final.material.uniforms;
     u.uMix.value = 0;
     u.uSun.value = 0;
-    if (site.activity < 0.002) return;
+    if (site.activity < 0.002 || !this.quality.reveal) return;
     const glow = this.updateReveal(site);
     this.renderMask();
     u.uMix.value = 1;
@@ -789,12 +999,27 @@ export class World {
     this.otherRT.scissor.copy(site.box);
     this.otherRT.scissorTest = true;
     r.setRenderTarget(this.otherRT);
+    // Only pixels inside the reveal are worth shading: clear depth to "near"
+    // so everything fails the depth test, then punch the device's shape back
+    // to "far" (PUNCH_LAYER), then draw the scene.
+    const depth = r.state.buffers.depth;
+    r.state.buffers.color.setMask(true);
+    depth.setClear(0);
     r.clear();
+    depth.setClear(1);
+    const autoClear = r.autoClear;
+    r.autoClear = false;
+    const layers = this.camera.layers.mask;
+    this.camera.layers.set(PUNCH_LAYER);
     r.render(this.scene, this.camera);
+    this.camera.layers.mask = layers;
+    r.render(this.scene, this.camera);
+    r.autoClear = autoClear;
     r.setRenderTarget(null);
   }
 
   update(dt) {
+    this.renderer.info.reset();
     this.time += dt;
     this.night = damp(this.night, this.nightTarget, 2.2, dt);
     if (Math.abs(this.night - this.nightTarget) < 0.001) this.night = this.nightTarget;
@@ -806,7 +1031,7 @@ export class World {
     this.sites.forEach((site, i) => {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
-      site.ribbon.update(this.time + i * 3.1);
+      if (this.quality.ribbons) site.ribbon.update(this.time + i * 3.1);
       site.device.update(this.time, dt, this.night, site.activity, this.camera);
       site.group.userData.animate?.(this.time, dt, this.night);
       site.texts.forEach((t, k) => {
@@ -819,9 +1044,20 @@ export class World {
     if (this.sea) this.sea.material.uniforms.uSunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     this.placeSpot();
 
-    this.renderer.shadowMap.needsUpdate = true;
-    this.renderBeam(); // other time of day -> otherRT (also refreshes the shadow map)
+    // Both time-of-day renders share one shadow map, redrawn only when a
+    // shadow moves: the sun follows the camera's heading and the time of day.
+    const q = this.quality;
+    if (this.sunMoved || this.shadowDirty || (q.ribbonShadow && q.ribbons)) {
+      this.renderer.shadowMap.needsUpdate = true;
+      this.shadowDirty = false;
+    }
+    this.gpu.begin();
+    this.renderBeam(); // other time of day -> otherRT
     this.applyTime(this.night);
-    this.composer.render(dt);
+    this.renderPost();
+    this.gpu.end();
+    const info = this.renderer.info.render;
+    this.perf.calls = info.calls;
+    this.perf.triangles = info.triangles;
   }
 }

@@ -367,7 +367,7 @@ html[data-theme='night'] .dn-moon {
 }
 /* Give animated elements their own layer up front, so a page switch starts
    its transitions without first repainting them. */
-.page.is-active .reveal {
+.page.is-active:not(.is-settled) .reveal {
   will-change: transform, opacity;
 }
 .page.is-active.is-in .reveal {
