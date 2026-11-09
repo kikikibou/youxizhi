@@ -109,7 +109,7 @@ export class Lamp {
   constructor(mats, { height = 14, beam = false, beamRadius = null, spot = false } = {}) {
     this.group = new THREE.Group();
     this.height = height;
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, height + 0.3, 14), mats.metal);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, height + 0.3, 14), mats.lampPole);
     pole.position.y = (height + 0.3) / 2;
     pole.castShadow = true;
     this.group.add(pole);
@@ -121,12 +121,16 @@ export class Lamp {
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, 0.2, 24), mats.lampHead);
     cap.position.y = height + 0.4;
     this.group.add(cap);
-    const bulb = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.04, 56), mats.bulb);
-    bulb.position.y = height - 0.04;
+    // The lens hangs clearly *below* the head (head underside is at height - 0.06).
+    // When the two discs shared a plane they z-fought, and the 56 wedge segments
+    // flickered like a spinning fan whenever the camera swayed.
+    const bulb = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.08, 56), mats.bulb);
+    bulb.position.y = height - 0.1;
     this.group.add(bulb);
+    for (const m of [pole, head, cap, bulb]) m.renderOrder = 7; // after the beam (4/5) and text (6)
 
     // The beam leaves the whole width of the lamp, not a single point.
-    this.topY = height - 0.08;
+    this.topY = height - 0.14; // underside of the lens
     this.topRadius = 1.25;
     this.beamRadius = beamRadius ?? height * 0.42;
     const beamGeo = new THREE.CylinderGeometry(this.topRadius, this.beamRadius, this.topY, 72, 1, true);

@@ -40,12 +40,17 @@ export function createMaterials() {
     emissiveIntensity: 0.6,
   });
   const metal = new THREE.MeshStandardMaterial({ color: 0x6f757c, roughness: 0.45, metalness: 0.7 });
-  const lampHead = new THREE.MeshStandardMaterial({ color: 0xc9ccd0, roughness: 0.35, metalness: 0.8 });
+  // Lamp parts are flagged transparent (at full opacity) only so they can be
+  // drawn *after* the beam: the lamp stays visible as the source of its light.
+  const lampHead = new THREE.MeshStandardMaterial({ color: 0xc9ccd0, roughness: 0.35, metalness: 0.8, transparent: true });
+  const lampPole = metal.clone();
+  lampPole.transparent = true;
   const bulb = new THREE.MeshStandardMaterial({
     color: 0xfff1d6,
     roughness: 0.3,
     emissive: new THREE.Color(0xffe2b0),
     emissiveIntensity: 1.2,
+    transparent: true,
   });
   const orange = new THREE.MeshStandardMaterial({
     color: 0xff7a12,
@@ -57,7 +62,7 @@ export function createMaterials() {
   const leaf = new THREE.MeshStandardMaterial({ color: 0x2e4630, roughness: 0.95, flatShading: true });
   const trunk = new THREE.MeshStandardMaterial({ color: 0x3a2f28, roughness: 0.9 });
 
-  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampHead, bulb, orange, leaf, trunk };
+  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, leaf, trunk };
 }
 
 export function updateMaterials(m, night) {
