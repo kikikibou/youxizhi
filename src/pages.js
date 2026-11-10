@@ -141,12 +141,20 @@ export const PAGES = [
     en: 'GAMES',
     building: 'games',
     scene: {
-      view: { pos: [-9, 1.5, 27], target: [-25, 16, 0], fov: 58, roll: -0.03 },
-      lamp: { p: [-24, 12], h: 20 },
-      cluster: { p: [-22, 11.8, 10.6], r: [0.08, 0.08, 0], size: 5.4, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research' },
+      view: { pos: [-8, 1.6, 30], target: [-11, 22, -10], fov: 60, roll: -0.02 },
+      // Two wide ribbons of the other time of day flowing through the park:
+      // one high across the sky, one crossing the drum and the wheel.
+      device: {
+        type: 'ribbons',
+        ribbons: [
+          { p: [-36, 29, -6], r: [0, 0.05, 0.08], length: 58, width: 6, seed: 1.2 },
+          { p: [-21, 10.5, 4], r: [0, -0.15, 0.34], length: 46, width: 5, seed: 3.7, amp: 0.8 },
+        ],
+      },
+      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 4.6, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research' },
       texts: [],
-      ribbon: { p: [8, 19, 6], r: [0, -0.15, -0.12], length: 24, width: 1.2, seed: 6.2 },
-      trees: [[-40, 6, 1.1], [26, 8, 1.0]],
+      ribbon: null,
+      trees: [[-44, 6, 1.1], [32, 8, 1.0]],
     },
     eyebrow: 'GAMES',
     poem: ['Play is the oldest laboratory.', 'Nobody told the children', 'they were doing research.'],

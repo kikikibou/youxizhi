@@ -445,6 +445,169 @@ export class SlideDevice extends Device {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 04 · Ribbons: two wide ribbons of the other time, flowing through the park  */
+/* -------------------------------------------------------------------------- */
+/*
+ * Each ribbon is a long, wide band that waves and twists; inside it the
+ * scene shows the other time of day, and a thin orange line runs along both
+ * edges. Like the other masks it is drawn over everything (no depth), as a
+ * graphic laid on the picture, and so are its edge lines.
+ */
+class FlowStrip {
+  /**
+   * Geometry of one waving band, rebuilt every frame from the same centre
+   * line: `offsets` are the across-band positions (in units of half-width)
+   * of its two long sides, e.g. [-1, 1] for the band itself.
+   */
+  constructor(segments, offsets) {
+    this.segments = segments;
+    this.offsets = offsets;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array((segments + 1) * 2 * 3), 3));
+    const idx = [];
+    for (let i = 0; i < segments; i++) {
+      const a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    g.setIndex(idx);
+    this.geometry = g;
+  }
+}
+
+export class RibbonDevice extends Device {
+  /**
+   * @param {object} cfg
+   *   ribbons  [{ p, r, length, width, seed, amp }]  (local position/rotation)
+   *   edge     width of the orange edge lines (m)
+   */
+  constructor({ ribbons, edge = 0.28, color = 0xff7d10 }) {
+    super();
+    this.edgeMat = new THREE.MeshBasicMaterial({
+      color,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      fog: false,
+    });
+    this.ribbons = ribbons.map((cfg) => {
+      const holder = (parent) => {
+        const h = new THREE.Group();
+        h.position.set(...cfg.p);
+        h.rotation.set(...(cfg.r || [0, 0, 0]));
+        parent.add(h);
+        return h;
+      };
+      const segs = 140;
+      const band = new FlowStrip(segs, [-1, 1]);
+      const punch = new FlowStrip(segs, [-1.08, 1.08]);
+      const e = edge / (cfg.width / 2);
+      const edges = [new FlowStrip(segs, [-1 - e, -1]), new FlowStrip(segs, [1, 1 + e])];
+      this.addMask(band.geometry, holder(this.mask));
+      const pm = new THREE.Mesh(punch.geometry, (this.punchMat ??= punchMaterial()));
+      pm.layers.set(PUNCH_LAYER);
+      pm.frustumCulled = false;
+      const punchHolder = holder(this.punch);
+      punchHolder.add(pm);
+      const eh = holder(this.group);
+      const lines = edges.map((s) => {
+        const m = new THREE.Mesh(s.geometry, this.edgeMat);
+        m.frustumCulled = false;
+        m.renderOrder = 8;
+        eh.add(m);
+        return m;
+      });
+      return { cfg, band, punch, punchHolder, strips: [band, ...edges], lines };
+    });
+    this._cam = new THREE.Vector3();
+    this._c = { x: 0, y: 0, z: 0, tw: 0, w: 0 };
+    this._t = new THREE.Vector3();
+    this._v = new THREE.Vector3();
+    this._n = new THREE.Vector3();
+    this.update(0, 0, 0, 0);
+  }
+
+  /**
+   * The depth punch (see World.renderBeam) must cover every pixel the band
+   * touches. A twisting band seen edge-on is only a pixel wide, so a punch
+   * of the same shape would miss its anti-aliased edge: instead the punch is
+   * a strip along the same centre line that always faces the camera, as wide
+   * as the band plus a margin, so it covers the band however it turns.
+   */
+  updatePunch(r, time, camera) {
+    const segs = r.punch.segments;
+    const pos = r.punch.geometry.attributes.position.array;
+    r.punchHolder.updateWorldMatrix(true, false);
+    const cam = r.punchHolder.worldToLocal(this._cam.copy(camera.position));
+    const c = this._c;
+    const a = { x: 0, y: 0, z: 0, tw: 0, w: 0 };
+    const b = { x: 0, y: 0, z: 0, tw: 0, w: 0 };
+    for (let i = 0; i <= segs; i++) {
+      const u = i / segs;
+      this.shape(r.cfg, u, time, c);
+      this.shape(r.cfg, Math.max(0, u - 0.004), time, a);
+      this.shape(r.cfg, Math.min(1, u + 0.004), time, b);
+      const t = this._t.set(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
+      const v = this._v.set(cam.x - c.x, cam.y - c.y, cam.z - c.z).normalize();
+      const n = this._n.crossVectors(t, v).normalize();
+      const half = c.w + 0.6;
+      const k = i * 6;
+      pos[k] = c.x - n.x * half;
+      pos[k + 1] = c.y - n.y * half;
+      pos[k + 2] = c.z - n.z * half;
+      pos[k + 3] = c.x + n.x * half;
+      pos[k + 4] = c.y + n.y * half;
+      pos[k + 5] = c.z + n.z * half;
+    }
+    r.punch.geometry.attributes.position.needsUpdate = true;
+    r.punch.geometry.computeBoundingBox();
+  }
+
+  /** Centre line, twist and width of a ribbon at u (0..1) and time t. */
+  shape(cfg, u, t, out) {
+    const s = cfg.seed || 0;
+    const amp = cfg.amp ?? 1;
+    const L = cfg.length;
+    out.x = -L / 2 + u * L;
+    out.y = (Math.sin(u * 5.0 + t * 0.42 + s) * 3.2 + Math.sin(u * 11.0 - t * 0.31 + s * 2) * 0.9) * amp;
+    out.z = Math.sin(u * 3.3 + t * 0.37 + s) * 5.5 * amp;
+    out.tw = Math.sin(u * 3.8 + t * 0.4 + s) * 1.15 + u * 1.4 + s;
+    // narrower at the two ends, so they trail off
+    out.w = (cfg.width / 2) * Math.min(1, Math.sin(Math.PI * u) * 1.6);
+    return out;
+  }
+
+  update(time, dt, night, activity, camera) {
+    this.setReveal(activity);
+    this.edgeMat.opacity = activity;
+    const p = { x: 0, y: 0, z: 0, tw: 0, w: 0 };
+    for (const r of this.ribbons) {
+      if (camera) this.updatePunch(r, time, camera);
+      for (const strip of r.strips) {
+        const pos = strip.geometry.attributes.position.array;
+        const [o0, o1] = strip.offsets;
+        for (let i = 0; i <= strip.segments; i++) {
+          this.shape(r.cfg, i / strip.segments, time, p);
+          const cy = Math.cos(p.tw) * p.w;
+          const cz = Math.sin(p.tw) * p.w;
+          const k = i * 6;
+          pos[k] = p.x;
+          pos[k + 1] = p.y + cy * o0;
+          pos[k + 2] = p.z + cz * o0;
+          pos[k + 3] = p.x;
+          pos[k + 4] = p.y + cy * o1;
+          pos[k + 5] = p.z + cz * o1;
+        }
+        strip.geometry.attributes.position.needsUpdate = true;
+        strip.geometry.computeBoundingBox(); // the World sizes the reveal from it
+      }
+      for (const l of r.lines) l.visible = activity > 0.01;
+    }
+    this.mask.updateMatrixWorld(true);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* 05 · Lighthouse beacon: a flat wedge of light sweeping out of the lantern   */
 /* -------------------------------------------------------------------------- */
 /*

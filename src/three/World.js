@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
-import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
+import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, RibbonDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, MASK, MASK_GLSL } from './typography.js';
@@ -239,11 +239,15 @@ export class World {
       group.add(device.group);
       if (sc.sea) group.add((this.sea = createSea()));
 
-      const ribbon = new Ribbon(this.mats.orange, sc.ribbon);
-      ribbon.mesh.castShadow = false; // see QUALITY_DEFAULTS.ribbonShadow
-      ribbon.mesh.position.set(...sc.ribbon.p);
-      ribbon.mesh.rotation.set(...sc.ribbon.r);
-      group.add(ribbon.mesh);
+      // The small decorative ribbon (optional: Games has big ones as its device).
+      let ribbon = null;
+      if (sc.ribbon) {
+        ribbon = new Ribbon(this.mats.orange, sc.ribbon);
+        ribbon.mesh.castShadow = false; // see QUALITY_DEFAULTS.ribbonShadow
+        ribbon.mesh.position.set(...sc.ribbon.p);
+        ribbon.mesh.rotation.set(...sc.ribbon.r);
+        group.add(ribbon.mesh);
+      }
 
       for (const [x, z, s] of sc.trees) {
         const t = createTree(this.mats, s);
@@ -262,6 +266,7 @@ export class World {
     if (sc.device?.type === 'beacon') return new BeaconDevice(sc.device);
     if (sc.device?.type === 'split') return new SplitDevice(sc.device);
     if (sc.device?.type === 'slide') return new SlideDevice(this.mats.orange, sc.device);
+    if (sc.device?.type === 'ribbons') return new RibbonDevice(sc.device);
     return new LampDevice(this.mats, sc.lamp);
   }
 
@@ -619,6 +624,7 @@ export class World {
       }
     }
     for (const site of this.sites) {
+      if (!site.ribbon) continue;
       site.ribbon.mesh.visible = q.ribbons;
       site.ribbon.mesh.castShadow = q.ribbonShadow;
     }
@@ -1033,7 +1039,7 @@ export class World {
     this.sites.forEach((site, i) => {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
-      if (this.quality.ribbons) site.ribbon.update(this.time + i * 3.1);
+      if (this.quality.ribbons) site.ribbon?.update(this.time + i * 3.1);
       site.device.update(this.time, dt, this.night, site.activity, this.camera);
       site.group.userData.animate?.(this.time, dt, this.night);
       site.texts.forEach((t, k) => {

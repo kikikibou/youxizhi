@@ -481,7 +481,7 @@ function puzzle(mats) {
   const piece = new THREE.Group();
   const s = cell - 0.4;
   const body = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mats.orange);
-  body.castShadow = true;
+  // (no shadow: it turns, and the shadow map is only redrawn when the sun moves)
   const win = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 0.12), mats.glass);
   win.position.z = s / 2 + 0.02;
   piece.add(body, win);
@@ -496,39 +496,179 @@ function puzzle(mats) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* 04 · GAMES — a ribbon-windowed drum in front of a tall block              */
+/* 04 · GAMES — "The Arcade Park": a drum wrapped in a spiral slide, a      */
+/* Ferris wheel turning beside it, and a tower of stacked toy blocks.        */
 /* ------------------------------------------------------------------------ */
 function games(mats) {
   const b = new Builder(mats);
-  const cz = -15;
-  const R = 15;
+
+  /* --- The drum, with a spiral ramp (a slide) wrapped round it --- */
+  const cz = -14;
+  const R = 13;
   b.cyl('warm', 0, cz, 0, 4, R - 1.4, 64);
   b.cyl('strip', 0, cz, 3.85, 4.0, R - 0.2, 64);
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 14) {
-    b.cyl('white', Math.sin(a) * (R - 0.5), cz + Math.cos(a) * (R - 0.5), 0, 4, 0.22, 10);
-  }
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) b.cyl('white', Math.sin(a) * (R - 0.5), cz + Math.cos(a) * (R - 0.5), 0, 4, 0.22, 10);
   const fh = 3.6;
-  for (let i = 0; i < 4; i++) {
+  const floors = 3;
+  for (let i = 0; i < floors; i++) {
     const y = 4 + i * fh;
     b.cyl('white', 0, cz, y, y + 1.15, R, 72);
-    b.cyl(i === 2 ? 'glassDark' : 'glass', 0, cz, y + 1.15, y + fh, R - 0.55, 72);
+    b.cyl(i === 1 ? 'glassDark' : 'glass', 0, cz, y + 1.15, y + fh, R - 0.55, 72);
   }
-  const top = 4 + 4 * fh;
-  b.cyl('white', 0, cz, top, top + 2.6, R, 72);
-  b.cyl('whiteShade', 0, cz, top + 2.6, top + 2.9, R + 0.15, 72);
+  const top = 4 + floors * fh;
+  b.cyl('white', 0, cz, top, top + 2.2, R, 72);
+  b.cyl('whiteShade', 0, cz, top + 2.2, top + 2.5, R + 0.15, 72);
 
-  // Low arcade on the left, under the lamp's beam.
-  b.box('white', [-44, 6.6, -16], [-14, 8.2, -1.5]);
-  b.box('strip', [-43.5, 6.52, -15.5], [-14.5, 6.6, -2]);
-  b.box('warm', [-43, 0, -15], [-15, 6.6, -14.4]);
-  for (let x = -42.5; x <= -16; x += 3.3) b.cyl('white', x, -2.6, 0, 6.6, 0.32, 14);
+  // Spiral ramp: 1.4 turns from the ground to the roof, with an orange
+  // parapet on its outer edge (it reads as a slide).
+  const rr = R + 1.9; // ramp centre line radius
+  const turns = 1.4;
+  const segs = 64;
+  const a0 = Math.PI * 0.15; // starts at the front right
+  const rampTop = top + 2.2;
+  const segLen = ((Math.PI * 2 * turns) / segs) * rr;
+  const pitch = Math.atan2(rampTop / segs, segLen);
+  for (let i = 0; i < segs; i++) {
+    const a = a0 + ((i + 0.5) / segs) * Math.PI * 2 * turns;
+    const y = ((i + 0.5) / segs) * rampTop;
+    // Box length (local z) along the circle's tangent, (cos a, 0, -sin a),
+    // tilted up: yaw a + 90°, then a negative turn about x.
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-pitch, a + Math.PI / 2, 0, 'YXZ'));
+    const place = (key, w, h, len, off, dy) => {
+      const g = new THREE.BoxGeometry(w, h, len);
+      g.applyQuaternion(q);
+      const r = rr + off;
+      g.translate(Math.sin(a) * r, y + dy, cz + Math.cos(a) * r);
+      b.geo(key, g);
+    };
+    // (each piece as long as its own arc: the outer parapet's arc is longer)
+    place('white', 2.6, 0.3, (segLen * (rr + 1.3)) / rr + 0.05, 0, 0);
+    place('orange', 0.18, 0.9, (segLen * (rr + 1.35)) / rr + 0.08, 1.35, 0.45);
+  }
+  // Ramp columns every few segments.
+  for (let i = 4; i < segs; i += 8) {
+    const a = a0 + ((i + 0.5) / segs) * Math.PI * 2 * turns;
+    const y = ((i + 0.5) / segs) * rampTop;
+    b.cyl('white', Math.sin(a) * rr, cz + Math.cos(a) * rr, 0, y - 0.15, 0.18, 10);
+  }
 
-  // Tall block behind.
-  b.box('white', [2, 0, -40], [21, 36, -22]);
-  for (let y = 22; y < 34; y += 3.4) b.winX(y % 2 ? 'glass' : 'glassDark', -38, -24, y, y + 1.3, 21);
-  b.box('orange', [21, 6, -27], [21.5, 33, -25]);
-  b.box('whiteShade', [1.8, 36, -40.2], [21.2, 36.4, -21.8]);
-  return b.build();
+  /* --- Ferris wheel: legs (static) --- */
+  const W = { x: -27, y: 17, z: -10, r: 13 };
+  for (const dz of [-2.4, 2.4]) {
+    for (const dx of [-6.5, 6.5]) {
+      const len = Math.hypot(dx, W.y);
+      const g = new THREE.BoxGeometry(0.45, len, 0.45);
+      g.rotateZ(Math.atan2(dx, W.y));
+      g.translate(W.x + dx / 2, W.y / 2, W.z + dz);
+      b.geo('white', g);
+    }
+  }
+  b.box('white', [W.x - 0.3, W.y - 0.3, W.z - 2.6], [W.x + 0.3, W.y + 0.3, W.z + 2.6]); // axle
+  b.box('concrete', [W.x - 9, 0, W.z - 4], [W.x + 9, 0.5, W.z + 4]);
+  // Ticket booth.
+  b.box('white', [W.x + 9.5, 0, W.z - 1], [W.x + 13, 3, W.z + 2]);
+  b.box('orange', [W.x + 9.3, 3, W.z - 1.2], [W.x + 13.2, 3.4, W.z + 2.2]);
+  b.winZ('warm', W.x + 10.2, W.x + 12.3, 0.9, 2.3, W.z + 2);
+
+  /* --- Toy-block tower behind the drum --- */
+  const T = { x: 22, z: -32 };
+  const blocks = [
+    // [w, h, d, yaw, key, dx, dz]
+    [14, 9, 11, 0, 'white', 0, 0],
+    [10, 6, 10, 0.26, 'orange', -0.5, 0.5],
+    [12, 7, 8, -0.18, 'white', 0.8, -0.3],
+    [7, 7, 7, 0.45, 'glass', -0.6, 0.4],
+    [9, 4, 9, 0.05, 'white', 0.4, 0],
+  ];
+  let ty = 0;
+  for (const [w, h, d, yaw, key, dx, dz] of blocks) {
+    const g = new THREE.BoxGeometry(w, h, d);
+    g.rotateY(yaw);
+    g.translate(T.x + dx, ty + h / 2, T.z + dz);
+    b.geo(key, g);
+    if (key === 'white') {
+      // a row of windows on the block's front
+      const wg = new THREE.BoxGeometry(w * 0.7, h * 0.28, 0.12);
+      wg.translate(0, 0, d / 2 + 0.02);
+      wg.rotateY(yaw);
+      wg.translate(T.x + dx, ty + h * 0.55, T.z + dz);
+      b.geo('glassDark', wg);
+    }
+    ty += h;
+  }
+  // A ball on top, like the last piece of the stack.
+  b.geo('orange', new THREE.SphereGeometry(2.4, 24, 16), T.x, ty + 2.3, T.z);
+
+  /* --- Plaza edge --- */
+  for (let x = -22; x <= 30; x += 4.8) if (x < -12 || x > 12) b.bollard(x, 10);
+  b.bench(-6, 11);
+  b.bench(16, 11);
+
+  const group = b.build();
+
+  /* --- Ferris wheel: the turning part --- */
+  const wheel = new THREE.Group();
+  wheel.position.set(W.x, W.y, W.z);
+  const wheelGeos = [];
+  for (const dz of [-1.2, 1.2]) {
+    const rim = new THREE.TorusGeometry(W.r, 0.22, 8, 120);
+    rim.translate(0, 0, dz);
+    wheelGeos.push(rim);
+    const inner = new THREE.TorusGeometry(W.r * 0.55, 0.12, 6, 80);
+    inner.translate(0, 0, dz);
+    wheelGeos.push(inner);
+  }
+  const N = 16;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    for (const dz of [-1.2, 1.2]) {
+      const s = new THREE.BoxGeometry(0.14, W.r, 0.14);
+      s.translate(0, W.r / 2, dz);
+      s.rotateZ(a);
+      wheelGeos.push(s);
+    }
+    const c = new THREE.BoxGeometry(0.16, 0.16, 2.4); // cross bar at the rim
+    c.translate(-Math.sin(a) * W.r, Math.cos(a) * W.r, 0); // where spoke i meets the rim
+    wheelGeos.push(c);
+  }
+  const frame = new THREE.Mesh(mergeGeometries(wheelGeos.map((g) => (g.index ? g.toNonIndexed() : g))), mats.white);
+  wheelGeos.forEach((g) => g.dispose());
+  wheel.add(frame);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3.2, 24).rotateX(Math.PI / 2), mats.orange);
+  wheel.add(hub);
+  group.add(wheel);
+
+  // Cabins hang from the rim and stay upright as it turns (one draw call).
+  const cabinGeo = new THREE.BoxGeometry(2.2, 2.0, 2.0);
+  const cabins = new THREE.InstancedMesh(cabinGeo, mats.orange, N);
+  const roofGeo = new THREE.BoxGeometry(2.5, 0.25, 2.3);
+  const roofs = new THREE.InstancedMesh(roofGeo, mats.white, N);
+  group.add(cabins, roofs);
+  // Moving parts don't cast shadows: the shadow map is only redrawn when
+  // the sun moves (see World.update), so their shadows would go stale.
+  for (const m of [frame, hub, cabins, roofs]) m.castShadow = false;
+
+  const m4 = new THREE.Matrix4();
+  const spin = (t) => {
+    const rot = t * 0.07;
+    wheel.rotation.z = rot;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2 + rot;
+      const x = W.x - Math.sin(a) * W.r;
+      const y = W.y + Math.cos(a) * W.r;
+      m4.makeTranslation(x, y - 1.55, W.z);
+      cabins.setMatrixAt(i, m4);
+      m4.makeTranslation(x, y - 0.42, W.z);
+      roofs.setMatrixAt(i, m4);
+    }
+    cabins.instanceMatrix.needsUpdate = true;
+    roofs.instanceMatrix.needsUpdate = true;
+    cabins.computeBoundingSphere();
+    roofs.computeBoundingSphere();
+  };
+  spin(0);
+  group.userData.animate = spin;
+  return group;
 }
 
 /* ------------------------------------------------------------------------ */
