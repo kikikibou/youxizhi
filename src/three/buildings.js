@@ -335,47 +335,160 @@ function debate(mats) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* 03 · PUZZLE — a grid cube lifted on pilotis                               */
+/* 03 · PUZZLE — "The Cube Lab": a cube of 4×4 modules pushed in and out,    */
+/* its top corner module missing (it floats above the roof); a zigzag stair  */
+/* climbs the side and keeps going into the air; a low wing wears a maze.    */
 /* ------------------------------------------------------------------------ */
+// Module grid on the cube's front: cell (0,0) has its lower-left corner at
+// CUBE.x0, CUBE.y0; the slide device in pages.js uses the same grid.
+export const CUBE = { x0: -10, y0: 4, z: 0, cell: 5, n: 4 };
+
 function puzzle(mats) {
   const b = new Builder(mats);
-  for (const x of [-9, -3, 3, 9]) for (const z of [-2, -11, -20]) b.cyl('white', x, z, 0, 4.5, 0.36, 20);
-  b.box('warm', [-7, 0, -18], [7, 4.5, -7]);
-  b.box('strip', [-10.5, 4.42, -21.5], [10.5, 4.5, -0.5]);
-  b.mullionsZ('metal', -7, 7, 0, 4.5, -6.9, 2.0);
+  const { x0, y0, z: Z, cell, n } = CUBE;
+  const x1 = x0 + cell * n;
+  const top = y0 + cell * n;
+  const back = Z - cell * n;
 
-  const y0 = 4.5;
-  const size = 22;
-  b.box('white', [-11, y0, -22], [11, y0 + size, 0]);
-  const n = 4;
-  const cell = size / n;
-  const lit = [1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0];
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      const cx = -11 + cell * (i + 0.5);
-      const cy = y0 + cell * (j + 0.5);
-      const h = 1.45;
-      b.winZ(lit[i * n + j] ? 'glass' : 'glassDark', cx - h, cx + h, cy - h, cy + h, 0);
-      // Deep frames make every window a little stage of light and shadow.
-      const f = 0.22;
-      const dz = 0.9;
-      b.box('white', [cx - h - f, cy + h, 0], [cx + h + f, cy + h + f, dz]);
-      b.box('white', [cx - h - f, cy - h - f, 0], [cx + h + f, cy - h, dz]);
-      b.box('white', [cx - h - f, cy - h, 0], [cx - h, cy + h, dz]);
-      b.box('white', [cx + h, cy - h, 0], [cx + h + f, cy + h, dz]);
+  // Pilotis and a recessed warm lobby.
+  for (const x of [x0 + 2, x0 + 7.5, x1 - 7.5, x1 - 2]) for (const z of [Z - 2, Z - 10, Z - 18]) b.cyl('white', x, z, 0, y0, 0.35, 20);
+  b.box('warm', [x0 + 4, 0, back + 4], [x1 - 4, y0, Z - 5]);
+  b.box('strip', [x0 + 0.5, y0 - 0.08, back + 0.5], [x1 - 0.5, y0, Z - 0.5]);
+  b.mullionsZ('metal', x0 + 4, x1 - 4, 0, y0, Z - 4.9, 2.0);
+
+  // Cube body (set back a little so the modules can stand proud or sink),
+  // with the top right corner cut out where the missing module was.
+  const hole = { x: x1 - cell, y: top - cell, z: Z - 6 };
+  b.box('white', [x0, y0, back], [x1, top, hole.z]);
+  b.box('white', [x0, y0, hole.z], [x1, hole.y, Z - 1.4]);
+  b.box('white', [x0, hole.y, hole.z], [hole.x, top, Z - 1.4]);
+
+  // Front modules: depth offset (+ out, - in) and a window style each.
+  // Row 0 is the bottom row; [n-1][n-1] (top right) is missing.
+  const depth = [
+    [0.6, -0.8, 1.4, 0],
+    [1.4, 0, -0.8, 0.8],
+    [-0.8, 1.2, 0, 1.4],
+    [0, 1.4, -0.8, null],
+  ];
+  const style = [
+    ['square', 'slots', 'orange', 'square'],
+    ['blank', 'square', 'band', 'slots'],
+    ['slots', 'band', 'square', 'blank'],
+    ['band', 'square', 'slots', null],
+  ];
+  const g = 0.12; // seam between modules
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const mx0 = x0 + c * cell + g;
+      const mx1 = x0 + (c + 1) * cell - g;
+      const my0 = y0 + r * cell + g;
+      const my1 = y0 + (r + 1) * cell - g;
+      const d = depth[r][c];
+      if (d === null) {
+        // The missing piece: a dark hollow where the module should be.
+        b.box('glassDark', [mx0, my0, hole.z], [mx1, my1, hole.z + 0.1]);
+        continue;
+      }
+      const front = Z + d;
+      b.box('white', [mx0, my0, Z - 1.6], [mx1, my1, front]);
+      const cx = (mx0 + mx1) / 2;
+      const cy = (my0 + my1) / 2;
+      const s = style[r][c];
+      if (s === 'square') b.winZ('glass', cx - 1.4, cx + 1.4, cy - 1.4, cy + 1.4, front);
+      if (s === 'slots') for (const ox of [-1.5, 0, 1.5]) b.winZ('glassDark', cx + ox - 0.3, cx + ox + 0.3, cy - 1.65, cy + 1.65, front);
+      if (s === 'band') b.winZ('glass', mx0 + 0.6, mx1 - 0.6, cy - 0.5, cy + 0.5, front);
+      if (s === 'orange') b.winZ('orange', mx0 + 0.45, mx1 - 0.45, my0 + 0.45, my1 - 0.45, front);
     }
   }
-  b.box('whiteShade', [-11.2, y0 + size, -22.2], [11.2, y0 + size + 0.4, 0.2]);
-  // An orange "missing piece" on the roof.
-  b.box('orange', [3.5, y0 + size + 0.4, -9], [8.5, y0 + size + 5.4, -4]);
+  b.box('whiteShade', [x0 - 0.2, top, back - 0.2], [x1 + 0.2, top + 0.4, hole.z]);
+  b.box('whiteShade', [x0 - 0.2, top, hole.z], [hole.x, top + 0.4, Z - 1.2]);
 
-  // Side cube and a ramp.
-  b.box('white', [13, 0, -18], [34, 11, -6]);
-  b.winZ('glass', 14, 33, 6.5, 8, -6);
-  b.winZ('warm', 15, 32, 0.4, 3.4, -6);
-  b.boxRot('white', [-15, 2.2, 3], [3, 0.4, 16], [0.29, 0, 0]);
-  b.boxRot('metal', [-16.45, 3.3, 3], [0.08, 1.1, 16], [0.29, 0, 0]);
-  return b.build();
+  // The right side: a plain grid of square windows.
+  for (let r = 0; r < n; r++) for (let k = 0; k < 4; k++) {
+    const zc = Z - 2.5 - k * cell;
+    const yc = y0 + r * cell + cell / 2;
+    b.winX(k % 2 === r % 2 ? 'glass' : 'glassDark', zc - 1.1, zc + 1.1, yc - 1.1, yc + 1.1, x1);
+  }
+
+  // Zigzag stair up the right side: three flights with landings, then a
+  // last flight across the roof that rises into the air and stops.
+  const rise = 0.36;
+  const going = 0.5;
+  const flight = (xa, xb, zStart, yStart, dir, steps) => {
+    for (let i = 0; i < steps; i++) {
+      const za = zStart + dir * i * going;
+      const zb = za + dir * going;
+      b.box('white', [xa, yStart + i * rise - 0.25, za], [xb, yStart + (i + 1) * rise, zb]);
+    }
+    const len = steps * going;
+    const ang = Math.atan2(steps * rise, len);
+    const zc = zStart + (dir * len) / 2;
+    const yc = yStart + (steps * rise) / 2 + 0.55;
+    // (rotating +z up by ang is a negative turn about x)
+    for (const xr of [xa + 0.05, xb - 0.05]) b.boxRot('metal', [xr, yc, zc], [0.06, 0.06, Math.hypot(len, steps * rise)], [-dir * ang, 0, 0]);
+    return { z: zStart + dir * len, y: yStart + steps * rise };
+  };
+  const sx0 = x1 + 0.2;
+  const sx1 = x1 + 1.8;
+  const steps = Math.round(top / 3 / rise);
+  let p = flight(sx0, sx1, Z + 1, 0, -1, steps);
+  b.box('white', [sx0, p.y - 0.3, p.z - 2], [sx1 + 1.7, p.y, p.z]);
+  p = flight(sx1 + 0.1, sx1 + 1.7, p.z, p.y, 1, steps);
+  b.box('white', [sx0, p.y - 0.3, p.z], [sx1 + 1.7, p.y, p.z + 2]);
+  p = flight(sx0, sx1, p.z, p.y, -1, steps);
+  b.box('white', [x1 - 4, p.y - 0.3, p.z - 2.5], [sx1, top + 0.45, p.z]); // (not flush with the roof)
+  // Across the roof and up into nothing, towards the floating piece.
+  flight(x1 - 3.6, x1 - 2, p.z - 2.5 + 0.01, top + 0.4, 1, 12);
+
+  // Low wing to the right, its front a maze in relief.
+  const wx0 = 17;
+  const wx1 = 37;
+  const wz = -6;
+  b.box('white', [wx0, 0, -20], [wx1, 11, wz]);
+  b.winZ('warm', wx0 + 1, wx1 - 1, 0.4, 3.2, wz);
+  b.box('white', [wx0, 3.6, wz], [wx1, 4.0, wz + 1.2]);
+  b.box('strip', [wx0 + 0.5, 3.52, wz + 0.2], [wx1 - 0.5, 3.6, wz + 1.1]);
+  // Maze walls on a 2 m grid between y 4.6 and 10.4.
+  const maze = [
+    'H.H.HHH.HH',
+    '.V..V...V.',
+    'HH.H.HH.H.',
+  ];
+  maze.forEach((row, j) => {
+    [...row].forEach((ch, i) => {
+      const mx = wx0 + 0.5 + i * 1.9;
+      const my = 10.2 - j * 2;
+      const key = (i + j) % 3 === 0 ? 'orange' : 'white';
+      if (ch === 'H') b.box(key, [mx, my - 0.15, wz], [mx + 1.9, my + 0.15, wz + 0.55]);
+      if (ch === 'V') b.box(key, [mx - 0.15, my - 2, wz], [mx + 0.15, my, wz + 0.55]);
+    });
+  });
+  b.box('whiteShade', [wx0 - 0.2, 11, -20.2], [wx1 + 0.2, 11.4, wz + 0.2]);
+
+  // Plaza edge.
+  for (let x = -18; x <= 38; x += 4.8) b.bollard(x, 9);
+  b.bench(-10, 8.5);
+  b.bench(22, 8.5);
+
+  const group = b.build();
+
+  // The missing module, floating and slowly turning above the roof.
+  const piece = new THREE.Group();
+  const s = cell - 0.4;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mats.orange);
+  body.castShadow = true;
+  const win = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 0.12), mats.glass);
+  win.position.z = s / 2 + 0.02;
+  piece.add(body, win);
+  const home = new THREE.Vector3(x0 + 3.5 * cell, top + 6.5, Z - 3);
+  piece.position.copy(home);
+  group.add(piece);
+  group.userData.animate = (t) => {
+    piece.rotation.set(0.35 + Math.sin(t * 0.3) * 0.08, t * 0.22, 0.25);
+    piece.position.y = home.y + Math.sin(t * 0.7) * 0.4;
+  };
+  return group;
 }
 
 /* ------------------------------------------------------------------------ */

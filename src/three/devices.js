@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Lamp } from './props.js';
 
 /**
@@ -269,6 +270,174 @@ export class SplitDevice extends Device {
     const u = this.line.material.uniforms;
     u.uOpacity.value = 0.95 * activity;
     this.line.visible = u.uOpacity.value > 0.002;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 03 · Sliding tiles: four tiles of the other time, moving like a 15-puzzle  */
+/* -------------------------------------------------------------------------- */
+/*
+ * Four tiles on the cube's module grid (in front of its face and up into the
+ * sky above it) show the other time of day, each framed in orange. Every few
+ * seconds one tile slides into a free neighbouring cell. Moves that would
+ * split the group are not allowed, so the four always form a tetromino and
+ * the shape keeps turning into another; moves that keep it near the
+ * roofline (half facade, half sky) are preferred.
+ */
+function rng(seed) {
+  // mulberry32: small, deterministic
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+export class SlideDevice extends Device {
+  /**
+   * @param {THREE.Material} frameMat  material for the tile frames
+   * @param {object} cfg
+   *   origin   lower-left corner of cell (0, 0), local [x, y, z] (z: the tiles' plane)
+   *   cell     cell size (m)
+   *   region   [c0, c1, r0, r1]: the cells the tiles may use (inclusive)
+   *   start    four [col, row] cells, connected
+   *   aim      [col, row] the group's centre likes to stay near
+   *   step     seconds between moves;  slide  seconds a move takes
+   */
+  constructor(frameMat, { origin, cell = 6, region = [0, 4, 1, 5], start, aim = [2, 3.6], step = 2.6, slide = 0.8, seed = 11 }) {
+    super();
+    this.origin = new THREE.Vector3(...origin);
+    this.cellSize = cell;
+    this.region = region;
+    this.aim = aim;
+    this.stepTime = step;
+    this.slideTime = slide;
+    this.random = rng(seed);
+    this.cells = start.map(([c, r]) => ({ c, r }));
+    this.timer = 0;
+    this.moving = null; // { i, from, to, t }
+    this.last = null; // { i, from }: don't undo the previous move straight away
+
+    const quad = new THREE.PlaneGeometry(cell, cell);
+    // Orange frame: four bars around the tile.
+    const f = 0.16;
+    const bars = [
+      [0, cell / 2 - f / 2, cell, f],
+      [0, -cell / 2 + f / 2, cell, f],
+      [-cell / 2 + f / 2, 0, f, cell],
+      [cell / 2 - f / 2, 0, f, cell],
+    ].map(([x, y, w, h]) => new THREE.BoxGeometry(w, h, 0.12).translate(x, y, 0.06));
+    const frameGeo = mergeGeometries(bars);
+    bars.forEach((g) => g.dispose());
+
+    this.tiles = this.cells.map(() => {
+      const mask = this.addMask(quad);
+      const punch = this.addPunch(quad);
+      punch.scale.set(1.04, 1.04, 1);
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+      this.group.add(frame);
+      return { mask, punch, frame };
+    });
+    this.place();
+  }
+
+  key(c, r) {
+    return `${c},${r}`;
+  }
+
+  connected(cells) {
+    const set = new Set(cells.map((x) => this.key(x.c, x.r)));
+    const seen = new Set([this.key(cells[0].c, cells[0].r)]);
+    const stack = [cells[0]];
+    while (stack.length) {
+      const { c, r } = stack.pop();
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const k = this.key(c + dc, r + dr);
+        if (set.has(k) && !seen.has(k)) {
+          seen.add(k);
+          stack.push({ c: c + dc, r: r + dr });
+        }
+      }
+    }
+    return seen.size === cells.length;
+  }
+
+  pickMove() {
+    const [c0, c1, r0, r1] = this.region;
+    const occupied = new Set(this.cells.map((x) => this.key(x.c, x.r)));
+    const moves = [];
+    let undo = null;
+    this.cells.forEach((from, i) => {
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const to = { c: from.c + dc, r: from.r + dr };
+        if (to.c < c0 || to.c > c1 || to.r < r0 || to.r > r1 || occupied.has(this.key(to.c, to.r))) continue;
+        const next = this.cells.map((x, j) => (j === i ? to : x));
+        if (!this.connected(next)) continue;
+        const mc = next.reduce((a, x) => a + x.c, 0) / 4 - this.aim[0];
+        const mr = next.reduce((a, x) => a + x.r, 0) / 4 - this.aim[1];
+        const move = { i, from, to, w: Math.exp(-(mc * mc + mr * mr) * 0.55) };
+        // Undoing the last move straight away looks indecisive: only when
+        // it is the one move left (some shapes, like an L, have no other).
+        if (this.last && this.last.i === i && this.last.from.c === to.c && this.last.from.r === to.r) undo = move;
+        else moves.push(move);
+      }
+    });
+    if (!moves.length) return undo;
+    let roll = this.random() * moves.reduce((a, m) => a + m.w, 0);
+    for (const m of moves) if ((roll -= m.w) <= 0) return m;
+    return moves[moves.length - 1];
+  }
+
+  /** Position every tile (the moving one part-way along its slide). */
+  place() {
+    const s = this.cellSize;
+    this.cells.forEach((cell, i) => {
+      let c = cell.c;
+      let r = cell.r;
+      const m = this.moving;
+      if (m && m.i === i) {
+        const k = ease(Math.min(1, m.t));
+        c = m.from.c + (m.to.c - m.from.c) * k;
+        r = m.from.r + (m.to.r - m.from.r) * k;
+      }
+      const x = this.origin.x + (c + 0.5) * s;
+      const y = this.origin.y + (r + 0.5) * s;
+      const t = this.tiles[i];
+      t.mask.position.set(x, y, this.origin.z);
+      t.punch.position.set(x, y, this.origin.z);
+      t.frame.position.set(x, y, this.origin.z);
+    });
+  }
+
+  update(time, dt, night, activity) {
+    this.setReveal(activity);
+    if (activity > 0.01) {
+      if (this.moving) {
+        this.moving.t += dt / this.slideTime;
+        if (this.moving.t >= 1) {
+          const { i, from, to } = this.moving;
+          this.cells[i] = to;
+          this.last = { i, from };
+          this.moving = null;
+          this.timer = 0;
+        }
+      } else if ((this.timer += dt) >= this.stepTime) {
+        const m = this.pickMove();
+        this.moving = m ? { ...m, t: 0 } : null;
+        this.timer = 0;
+      }
+    }
+    this.place();
+    // Frames grow in with the page and shrink away when it is left.
+    const k = THREE.MathUtils.smoothstep(activity, 0.05, 0.9);
+    for (const t of this.tiles) {
+      t.frame.scale.setScalar(Math.max(0.001, k));
+      t.frame.visible = k > 0.01;
+    }
+    this.mask.updateMatrixWorld(true);
   }
 }
 
