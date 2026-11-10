@@ -477,14 +477,60 @@ function puzzle(mats) {
 
   const group = b.build();
 
-  // The missing module, floating and slowly turning above the roof.
+  // The missing module, floating and slowly turning above the roof: an
+  // orange cube with a white frame on its twelve edges, and each face in a
+  // different module style (like the facade it fell out of). The underside,
+  // which the street sees most, is a light square that glows at night.
   const piece = new THREE.Group();
   const s = cell - 0.4;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mats.orange);
-  // (no shadow: it turns, and the shadow map is only redrawn when the sun moves)
-  const win = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 0.12), mats.glass);
-  win.position.z = s / 2 + 0.02;
-  piece.add(body, win);
+  const h = s / 2;
+  const parts = { orange: [new THREE.BoxGeometry(s, s, s)], white: [], glass: [], glassDark: [], strip: [] };
+  const t = 0.32;
+  for (const axis of [0, 1, 2]) {
+    for (const p of [-1, 1]) {
+      for (const q of [-1, 1]) {
+        const size = [t, t, t];
+        size[axis] = s + t;
+        const pos = axis === 0 ? [0, p * h, q * h] : axis === 1 ? [p * h, 0, q * h] : [p * h, q * h, 0];
+        parts.white.push(new THREE.BoxGeometry(...size).translate(...pos));
+      }
+    }
+  }
+  // An inset on a face, in that face's own (u right, v up) coordinates.
+  const d = 0.08;
+  const face = (f, u, v, w, hh, key) => {
+    const o = h + d / 2;
+    const g = {
+      pz: () => new THREE.BoxGeometry(w, hh, d).translate(u, v, o),
+      nz: () => new THREE.BoxGeometry(w, hh, d).translate(-u, v, -o),
+      px: () => new THREE.BoxGeometry(d, hh, w).translate(o, v, -u),
+      nx: () => new THREE.BoxGeometry(d, hh, w).translate(-o, v, u),
+      py: () => new THREE.BoxGeometry(w, d, hh).translate(u, o, -v),
+      ny: () => new THREE.BoxGeometry(w, d, hh).translate(u, -o, v),
+    }[f]();
+    parts[key].push(g);
+  };
+  // front: a square window with a white cross
+  face('pz', 0, 0, 2.6, 2.6, 'glass');
+  parts.white.push(new THREE.BoxGeometry(2.6, 0.12, 0.06).translate(0, 0, h + d + 0.03), new THREE.BoxGeometry(0.12, 2.6, 0.06).translate(0, 0, h + d + 0.03));
+  // back: three slots
+  for (const u of [-1.15, 0, 1.15]) face('nz', u, 0, 0.5, 2.9, 'glassDark');
+  // sides: a band, and a 2 × 2 grid
+  face('px', 0, 0.3, 3.4, 0.9, 'glass');
+  face('px', 0, -0.75, 3.4, 0.12, 'white');
+  for (const u of [-0.75, 0.75]) for (const v of [-0.75, 0.75]) face('nx', u, v, 1.1, 1.1, 'glassDark');
+  // top: a white disc
+  parts.white.push(new THREE.CylinderGeometry(1.25, 1.25, d, 40).translate(0, h + d / 2, 0));
+  // underside: a light square round a dark centre
+  face('ny', 0, 0, 2.0, 2.0, 'glassDark');
+  for (const [u, v, w, hh] of [[0, 1.2, 2.6, 0.22], [0, -1.2, 2.6, 0.22], [1.2, 0, 0.22, 2.6], [-1.2, 0, 0.22, 2.6]]) face('ny', u, v, w, hh, 'strip');
+  for (const [key, geos] of Object.entries(parts)) {
+    if (!geos.length) continue;
+    const m = new THREE.Mesh(mergeGeometries(geos), mats[key]);
+    geos.forEach((g) => g.dispose());
+    // (no shadow: it turns, and the shadow map is only redrawn when the sun moves)
+    piece.add(m);
+  }
   const home = new THREE.Vector3(x0 + 3.5 * cell, top + 6.5, Z - 3);
   piece.position.copy(home);
   group.add(piece);
@@ -553,7 +599,9 @@ function games(mats) {
   }
 
   /* --- Ferris wheel: legs (static) --- */
-  const W = { x: -27, y: 17, z: -10, r: 13 };
+  // (centre far enough left that the turning rim and cabins clear the
+  // spiral ramp, whose outer edge reaches x ≈ -15.8 at this depth)
+  const W = { x: -33, y: 17, z: -10, r: 13 };
   for (const dz of [-2.4, 2.4]) {
     for (const dx of [-6.5, 6.5]) {
       const len = Math.hypot(dx, W.y);

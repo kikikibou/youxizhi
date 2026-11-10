@@ -308,7 +308,7 @@ export class SlideDevice extends Device {
    *   step     seconds between moves;  slide  seconds a move takes
    *   frame    draw an orange frame round each tile
    */
-  constructor(frameMat, { origin, cell = 6, region = [0, 4, 1, 5], start, aim = [2, 3.6], step = 2.6, slide = 0.8, seed = 11, frame = true }) {
+  constructor(frameMat, { origin, cell = 6, region = [0, 4, 1, 5], start, aim = [2, 3.6], step = 2.6, slide = 0.8, seed = (Math.random() * 2 ** 31) | 0, frame = true }) {
     super();
     this.origin = new THREE.Vector3(...origin);
     this.cellSize = cell;
@@ -321,6 +321,8 @@ export class SlideDevice extends Device {
     this.timer = 0;
     this.moving = null; // { i, from, to, t }
     this.last = null; // { i, from }: don't undo the previous move straight away
+    this.recent = []; // shapes seen lately (keys): moves back to them are less likely
+    this.wait = step;
 
     const quad = new THREE.PlaneGeometry(cell, cell);
     // Orange frame: four bars around the tile.
@@ -381,7 +383,13 @@ export class SlideDevice extends Device {
         if (!this.connected(next)) continue;
         const mc = next.reduce((a, x) => a + x.c, 0) / 4 - this.aim[0];
         const mr = next.reduce((a, x) => a + x.r, 0) / 4 - this.aim[1];
-        const move = { i, from, to, w: Math.exp(-(mc * mc + mr * mr) * 0.55) };
+        // Weights: a loose pull towards the aim; a different tile from last
+        // time and a shape not seen lately are both preferred, so the group
+        // wanders instead of rocking one tile back and forth.
+        let w = Math.exp(-(mc * mc + mr * mr) * 0.3);
+        if (this.last && this.last.i === i) w *= 0.3;
+        if (this.recent.includes(this.shapeKey(next))) w *= 0.25;
+        const move = { i, from, to, w };
         // Undoing the last move straight away looks indecisive: only when
         // it is the one move left (some shapes, like an L, have no other).
         if (this.last && this.last.i === i && this.last.from.c === to.c && this.last.from.r === to.r) undo = move;
@@ -392,6 +400,13 @@ export class SlideDevice extends Device {
     let roll = this.random() * moves.reduce((a, m) => a + m.w, 0);
     for (const m of moves) if ((roll -= m.w) <= 0) return m;
     return moves[moves.length - 1];
+  }
+
+  shapeKey(cells) {
+    return cells
+      .map((x) => this.key(x.c, x.r))
+      .sort()
+      .join(' ');
   }
 
   /** Position every tile (the moving one part-way along its slide). */
@@ -427,10 +442,14 @@ export class SlideDevice extends Device {
           this.moving = null;
           this.timer = 0;
         }
-      } else if ((this.timer += dt) >= this.stepTime) {
+      } else if ((this.timer += dt) >= this.wait) {
+        this.recent.push(this.shapeKey(this.cells));
+        if (this.recent.length > 6) this.recent.shift();
         const m = this.pickMove();
         this.moving = m ? { ...m, t: 0 } : null;
         this.timer = 0;
+        // An uneven rhythm, too.
+        this.wait = this.stepTime * (0.65 + this.random() * 0.7);
       }
     }
     this.place();
@@ -502,7 +521,8 @@ export class RibbonDevice extends Device {
       const band = new FlowStrip(segs, [-1, 1]);
       const punch = new FlowStrip(segs, [-1.08, 1.08]);
       const e = edge / (cfg.width / 2);
-      const edges = [new FlowStrip(segs, [-1 - e, -1]), new FlowStrip(segs, [1, 1 + e])];
+      // edge = 0: no edge lines (Games uses plain ribbons)
+      const edges = edge > 0 ? [new FlowStrip(segs, [-1 - e, -1]), new FlowStrip(segs, [1, 1 + e])] : [];
       this.addMask(band.geometry, holder(this.mask));
       const pm = new THREE.Mesh(punch.geometry, (this.punchMat ??= punchMaterial()));
       pm.layers.set(PUNCH_LAYER);
