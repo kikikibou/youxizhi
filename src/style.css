@@ -568,13 +568,16 @@ html[data-theme='night'] .poem {
 .panel {
   position: absolute;
   right: clamp(18px, 4vw, 70px);
-  bottom: 128px;
+  /* clear of the footer column below it (its height is measured in ui.js),
+     plus the footer's bottom padding and a gap */
+  bottom: calc(var(--foot-right, 98px) + 40px);
   width: min(400px, 92vw);
   color: var(--paper-ink);
 }
 .page[data-side='left'] .panel {
   right: auto;
   left: clamp(18px, 4vw, 70px);
+  bottom: calc(var(--foot-left, 98px) + 40px);
 }
 
 .brush {
@@ -802,21 +805,6 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   opacity: 0.7;
-}
-/* A rubber stamp. */
-.ft-stamp {
-  display: inline-block;
-  margin: 6px 2px 6px 0;
-  padding: 2px 6px 1px 9px;
-  border: 2px solid var(--orange);
-  border-radius: 3px;
-  color: var(--orange);
-  font-family: var(--caps);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  transform: rotate(-4deg);
-  text-shadow: none;
 }
 
 .hint {

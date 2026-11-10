@@ -70,6 +70,15 @@ function footLines(lines, rowStyle, lead = '') {
   return `<div class="ft-lines ft-${rowStyle}">${head}${lines.map(row).join('')}</div>`;
 }
 
+// The content panel sits just above the footer column on its side, however
+// tall that column's copy makes it (see .panel in style.css).
+const footSizes = new ResizeObserver((entries) => {
+  for (const e of entries) {
+    const side = e.target.classList.contains('ft-left') ? 'left' : 'right';
+    document.documentElement.style.setProperty(`--foot-${side}`, `${Math.ceil(e.target.offsetHeight)}px`);
+  }
+});
+
 export function renderFooter(page, el) {
   const f = page.footer;
   el.innerHTML = `
@@ -84,9 +93,11 @@ export function renderFooter(page, el) {
     </div>
     <div class="ft-right">
       <div class="ft-title">${esc(f.right.title)}</div>
-      <div class="${f.right.stamp ? 'ft-stamp' : 'ft-sub'}">${esc(f.right.sub)}</div>
+      <div class="ft-sub">${esc(f.right.sub)}</div>
       ${footLines(f.right.lines, 'pairs')}
     </div>`;
+  footSizes.disconnect();
+  el.querySelectorAll('.ft-left, .ft-right').forEach((c) => footSizes.observe(c));
 }
 
 export class Drawer {

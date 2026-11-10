@@ -15,12 +15,6 @@
  * scene.ribbon  the flowing orange ribbon
  * scene.trees   [x, z, scale]
  */
-// The address line under the home title follows the domain the site is
-// served from (yxzxy.com, yxzxy.xyz, …); anywhere else (local preview,
-// GitHub Pages) it reads YXZXY.COM.
-const HOST = typeof location === 'undefined' ? '' : location.hostname.replace(/^www\./, '');
-const DOMAIN = (/^yxzxy\.[a-z]+$/i.test(HOST) ? HOST : 'yxzxy.com').toUpperCase();
-
 export const PAGES = [
   {
     id: 'home',
@@ -34,8 +28,8 @@ export const PAGES = [
       lamp: { p: [6.5, 13], h: 20 },
       // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: DOMAIN },
-      texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 2.3, p: [-5.8, 7.0, -0.85], c: 'sign' }],
+      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'CITRUS × PARADISI' },
+      texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
     },
@@ -60,7 +54,7 @@ export const PAGES = [
       // on the left, a "name: value" line on the right)
       left: { title: 'Ingredients', stars: 3, lines: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Taste', '≤0.6%']] },
       center: { script: 'Material', lines: ['Variations in humorousness', 'are inherent to the material', 'and not considered defects.'] },
-      right: { title: 'Inspection Panel', sub: 'PASSED, LOOSELY', stamp: true, lines: [['Inspected by', 'a botanist'], ['Classification', 'berry'], ['Shipped', 'anyway']] },
+      right: { title: 'Inspection Panel', sub: 'PASSED, LOOSELY', lines: [['Inspected by', 'a botanist'], ['Classification', 'berry'], ['Shipped', 'anyway']] },
     },
   },
   {
