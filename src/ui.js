@@ -38,7 +38,7 @@ function fitPoems() {
     if (!poem || !panel) continue;
     const a = poem.getBoundingClientRect();
     const b = panel.getBoundingClientRect();
-    const meet = a.width > 0 && a.left < b.right && b.left < a.right && a.bottom + 12 > b.top;
+    const meet = a.width > 0 && a.left < b.right && b.left < a.right && a.bottom + 6 > b.top;
     page.classList.toggle('is-crowded', meet);
   }
 }
@@ -56,9 +56,9 @@ export function renderPages(pages, el) {
         <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
       </div>
       <div class="panel">
-        <div class="brush reveal" style="--d:3">
+        <div class="brush reveal${p.label.compact ? ' is-compact' : ''}" style="--d:3">
           <div class="brush-title">${esc(p.label.title)}<em>${esc(p.label.script)}</em>${esc(p.label.title2)}</div>
-          <div class="brush-lines">${p.label.lines.map(esc).join('<br>')}</div>
+          <div class="brush-lines">${p.label.lines.map(esc).join(p.label.compact ? ' · ' : '<br>')}</div>
         </div>
         <div class="sheet reveal" style="--d:4">
           ${[].concat(p.intro).map((t) => `<p class="intro">${esc(t)}</p>`).join('')}
