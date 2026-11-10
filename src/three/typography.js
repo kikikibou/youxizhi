@@ -209,11 +209,11 @@ export function buildCluster(c, aniso) {
     // (cnShift: how far left of the title's right end the Chinese name ends,
     // in title sizes; keeps it clear of whatever stands in front, e.g. a lamp)
     if (c.cn) add({ t: c.cn, f: 'cn', s: S * (c.cnSize ?? 0.62), p: [half - S * (c.cnShift ?? 0), rowY + S * 0.24, 0.05], anchor: 'right', c: 'cone' });
-    // A decorative script line across the title, as on the other pages.
-    // (over the title's right half and into the lamp's beam: white script
-    // needs the coral letters or the beam behind it, not the white building)
+    // A motto in script under the title, in the same ink as "Jeu de" and
+    // right-aligned with the Chinese name above it: the two script lines
+    // frame the title on a diagonal.
     if (c.decor) {
-      const d = add({ t: c.decor, f: 'script', s: S * 0.42, p: [S * 1.9, -S * 0.08, 0.35], r: [0, 0, -0.18], c: 'inverse' });
+      const d = add({ t: c.decor, f: 'script', s: S * 0.34, p: [half - S * (c.cnShift ?? 0), -cap / 2 - S * 0.38, 0.3], anchor: 'right', c: 'ink' });
       d.mesh.renderOrder = 6.5; // over the title letters (sorting by distance put it under), before the lamp (7)
     }
     // caption under the title (above it would meet the header)
