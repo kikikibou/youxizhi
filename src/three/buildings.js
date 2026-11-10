@@ -406,7 +406,9 @@ function puzzle(mats) {
 
   // The right side: a plain grid of square windows.
   for (let r = 0; r < n; r++) for (let k = 0; k < 4; k++) {
-    const zc = Z - 2.5 - k * cell;
+    // (inset from the front: a window reaching the corner shared a plane with
+    // the cube's front face and flickered along that edge)
+    const zc = Z - 3 - k * cell;
     const yc = y0 + r * cell + cell / 2;
     b.winX(k % 2 === r % 2 ? 'glass' : 'glassDark', zc - 1.1, zc + 1.1, yc - 1.1, yc + 1.1, x1);
   }
@@ -461,7 +463,9 @@ function puzzle(mats) {
       const my = 10.2 - j * 2;
       const key = (i + j) % 3 === 0 ? 'orange' : 'white';
       if (ch === 'H') b.box(key, [mx, my - 0.15, wz], [mx + 1.9, my + 0.15, wz + 0.55]);
-      if (ch === 'V') b.box(key, [mx - 0.15, my - 2, wz], [mx + 0.15, my, wz + 0.55]);
+      // (vertical walls sit a little further back, so where they meet a
+      // horizontal wall their fronts don't share a plane)
+      if (ch === 'V') b.box(key, [mx - 0.15, my - 2, wz], [mx + 0.15, my, wz + 0.48]);
     });
   });
   b.box('whiteShade', [wx0 - 0.2, 11, -20.2], [wx1 + 0.2, 11.4, wz + 0.2]);

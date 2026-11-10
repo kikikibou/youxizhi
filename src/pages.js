@@ -103,8 +103,10 @@ export const PAGES = [
       view: { pos: [18, 1.6, 30], target: [-6, 20.5, -6], fov: 60, roll: -0.02 },
       // Four sliding tiles on the cube's module grid (CUBE in buildings.js),
       // roaming its upper half and the sky above it.
-      device: { type: 'slide', origin: [-10, 4, 1.7], cell: 5, region: [0, 4, 1, 5], start: [[1, 4], [2, 4], [3, 4], [2, 3]], aim: [2, 3.7] },
-      cluster: { p: [-10, 25, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light' },
+      // Four sliding tiles on a 7 m grid 5 m in front of the cube, straddling
+      // its left edge (half building, half sky) below the title.
+      device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
+      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light' },
       texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 0.5, p: [27, 3.8, -4.74], c: 'orange' }],
       ribbon: { p: [-14, 20, 2], r: [0, -0.2, 0.15], length: 24, width: 1.1, seed: 4.3 },
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
@@ -179,7 +181,9 @@ export const PAGES = [
       // Out on the pier, looking up at the lighthouse.
       view: { pos: [-17.8, 2.6, -30], target: [-11, 18, -66], fov: 58, roll: -0.02 },
       // Reveal: the lighthouse beam sweeping round (see devices.js).
-      device: { type: 'beacon', p: [-21, 29.6, -66] },
+      // Upper half of the lantern glass: seen from the pier the gallery deck
+      // hides the lower half, and a beam from there seemed to come out of the deck.
+      device: { type: 'beacon', p: [-21, 30.4, -66], source: 0.7 },
       sea: true,
       cluster: { p: [-4, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
       texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'orange' }],

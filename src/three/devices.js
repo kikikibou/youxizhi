@@ -306,8 +306,9 @@ export class SlideDevice extends Device {
    *   start    four [col, row] cells, connected
    *   aim      [col, row] the group's centre likes to stay near
    *   step     seconds between moves;  slide  seconds a move takes
+   *   frame    draw an orange frame round each tile
    */
-  constructor(frameMat, { origin, cell = 6, region = [0, 4, 1, 5], start, aim = [2, 3.6], step = 2.6, slide = 0.8, seed = 11 }) {
+  constructor(frameMat, { origin, cell = 6, region = [0, 4, 1, 5], start, aim = [2, 3.6], step = 2.6, slide = 0.8, seed = 11, frame = true }) {
     super();
     this.origin = new THREE.Vector3(...origin);
     this.cellSize = cell;
@@ -333,13 +334,15 @@ export class SlideDevice extends Device {
     const frameGeo = mergeGeometries(bars);
     bars.forEach((g) => g.dispose());
 
+    this.framed = frame;
     this.tiles = this.cells.map(() => {
       const mask = this.addMask(quad);
       const punch = this.addPunch(quad);
       punch.scale.set(1.04, 1.04, 1);
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      this.group.add(frame);
-      return { mask, punch, frame };
+      const f = new THREE.Mesh(frameGeo, frameMat);
+      f.visible = frame;
+      this.group.add(f);
+      return { mask, punch, frame: f };
     });
     this.place();
   }
@@ -435,7 +438,7 @@ export class SlideDevice extends Device {
     const k = THREE.MathUtils.smoothstep(activity, 0.05, 0.9);
     for (const t of this.tiles) {
       t.frame.scale.setScalar(Math.max(0.001, k));
-      t.frame.visible = k > 0.01;
+      t.frame.visible = this.framed && k > 0.01;
     }
     this.mask.updateMatrixWorld(true);
   }
@@ -525,11 +528,12 @@ export class BeaconDevice extends Device {
    *   speed    turning speed on screen while the beam shows (radians/s)
    *   angle    starting angle on screen (0 = pointing right, π/2 = up)
    */
-  constructor({ p, source = 0.95, glass = 1.95, spread = 0.085, speed = 0.3, angle = 0.25 }) {
+  constructor({ p, source = 0.95, glass = 1.95, gallery = 5.4, spread = 0.085, speed = 0.3, angle = 0.25 }) {
     super();
     this.p = new THREE.Vector3(...p);
     this.source = source;
     this.glass = glass;
+    this.gallery = gallery; // reveal fully on beyond this radius (deck edge at 3.7 m)
     this.spread = spread;
     this.speed = speed;
     this.angle = angle;
@@ -637,7 +641,7 @@ export class BeaconDevice extends Device {
     // On the left it bows out once it has come round to about horizontal
     // (pointing further down-left read oddly).
     const deg = THREE.MathUtils.radToDeg(phi);
-    if (deg > 90 && deg < 270) vis = Math.min(vis, 1 - THREE.MathUtils.smoothstep(deg, 170, 194));
+    if (deg > 90 && deg < 270) vis = Math.min(vis, 1 - THREE.MathUtils.smoothstep(deg, 155, 182));
     this.angle = (phi + dt * this.speed * (1 + 1.5 * (1 - vis) ** 2)) % (Math.PI * 2);
 
     const s = this.shape;
@@ -650,10 +654,15 @@ export class BeaconDevice extends Device {
     let far = 0;
     for (const [cx, cy] of [[-aspect, -1], [aspect, -1], [-aspect, 1], [aspect, 1]]) far = Math.max(far, Math.hypot(cx - ox, cy - oy));
     s.uLen.value = far + 0.5;
-    const start = this.glass * unit;
+    // The reveal fades in from just outside the glass and is complete only
+    // beyond the gallery railing: otherwise the curved deck and railing,
+    // which stick out under the lantern, showed through the start of the
+    // beam in the other time of day (an odd arc-shaped notch). The halo
+    // still starts at the glass, so the light leaves the lantern itself.
+    const start = this.glass * 1.15 * unit;
     this.maskMat.uniforms.uStart.value = start;
     this.punchMat.uniforms.uStart.value = start * 0.8;
-    this.maskMat.uniforms.uFeather.value = Math.max(0.01, start * 0.6);
+    this.maskMat.uniforms.uFeather.value = Math.max(0.01, (this.gallery - this.glass * 1.15) * unit);
 
     this.fade = vis;
     this.setReveal(activity * vis);
