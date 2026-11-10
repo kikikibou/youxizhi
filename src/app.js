@@ -3,6 +3,7 @@ import { World } from './three/World.js';
 import { renderNav, renderPages, renderFooter, Drawer } from './ui.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
+import { PALETTES, paletteById, paletteCss } from './palettes.js';
 
 const TOOLS = { timer: mountTimer, daily: mountDaily };
 const ids = PAGES.map((p) => p.id);
@@ -19,6 +20,66 @@ renderNav(PAGES, nav);
 renderPages(PAGES, stage);
 
 const world = new World($('#gl'), PAGES);
+
+/* ---------------------------------------------------------- colour scheme */
+// A switcher for comparing colour schemes (palettes.js); the choice is
+// remembered on this device. P cycles through them.
+const paletteStyle = document.createElement('style');
+document.head.appendChild(paletteStyle);
+const palEl = $('#palette');
+const palMenu = palEl.querySelector('.pal-menu');
+const swatches = (p) => [p.sky.dayTop, p.building, p.accent, p.ink].map((c) => `<i style="background:${c}"></i>`).join('');
+palMenu.innerHTML = PALETTES.map(
+  (p) => `<button class="pal-item" type="button" role="menuitem" data-pal="${p.id}">
+    <span class="pal-sw">${swatches(p)}</span><b>${p.name}<small>${p.en}</small></b><span>${p.note}</span></button>`,
+).join('');
+function applyPalette(id, persist) {
+  const p = paletteById(id);
+  paletteStyle.textContent = paletteCss(p);
+  world.setPalette(p);
+  palEl.querySelector('.pal-dots').innerHTML = swatches(p);
+  palEl.querySelector('.pal-name').textContent = p.name;
+  palMenu.querySelectorAll('.pal-item').forEach((b) => b.classList.toggle('is-on', b.dataset.pal === p.id));
+  if (persist) {
+    try {
+      localStorage.setItem('youxizhi-palette', p.id);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+}
+let savedPalette = null;
+try {
+  savedPalette = new URLSearchParams(location.search).get('palette') || localStorage.getItem('youxizhi-palette');
+} catch {
+  /* storage unavailable */
+}
+applyPalette(savedPalette || 'poster', false);
+const setPalOpen = (open) => {
+  palEl.classList.toggle('is-open', open);
+  palEl.querySelector('.pal-btn').setAttribute('aria-expanded', String(open));
+};
+palEl.querySelector('.pal-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  setPalOpen(!palEl.classList.contains('is-open'));
+});
+palMenu.addEventListener('click', (e) => {
+  const item = e.target.closest('.pal-item');
+  if (!item) return;
+  applyPalette(item.dataset.pal, true);
+  setPalOpen(false);
+});
+document.addEventListener('click', (e) => {
+  if (!palEl.contains(e.target)) setPalOpen(false);
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'p' && e.key !== 'P') return;
+  if (e.target.closest?.('input, textarea, [contenteditable]')) return;
+  const i = PALETTES.findIndex((p) => p.id === world.palette?.id);
+  applyPalette(PALETTES[(i + 1) % PALETTES.length].id, true);
+});
+// Scrolling or swiping over the menu shouldn't change pages.
+for (const ev of ['wheel', 'touchstart', 'touchend']) palEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
 if (import.meta.env.DEV) {
   // Debug helpers for driving the scene from devtools.
   window.__world = world;

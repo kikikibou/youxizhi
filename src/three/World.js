@@ -9,8 +9,8 @@ import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
 import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, RibbonDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
-import { createSky, SKY } from './sky.js';
-import { TextBlock, buildCluster, loadFonts, MASK, MASK_GLSL } from './typography.js';
+import { createSky, SKY, SKY_SHARED } from './sky.js';
+import { TextBlock, buildCluster, loadFonts, setTextColors, MASK, MASK_GLSL } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
 
 const PLAZA_RADIUS = 56;
@@ -45,6 +45,7 @@ const finalShader = {
     uSun: { value: 0 },
     uGrain: { value: 0.03 },
     uVignette: { value: 0.55 },
+    uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.62) },
     toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -57,6 +58,7 @@ const finalShader = {
     uniform vec2 uSunPos;
     uniform float uSunR;
     uniform float uSun;
+    uniform vec3 uSunColor;
     uniform float uGrain;
     uniform float uVignette;
     varying vec2 vUv;
@@ -69,7 +71,7 @@ const finalShader = {
         float k = beamCoverage(gl_FragCoord.xy);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
-      c += vec3(1.0, 0.86, 0.62) * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
+      c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -158,7 +160,8 @@ export class World {
     this.buildLights();
     this.sky = createSky();
     this.scene.add(this.sky);
-    this.scene.add(createGround());
+    this.ground = createGround();
+    this.scene.add(this.ground);
     this.buildSites();
     this.buildPlazaFurniture();
     this.buildSkyline();
@@ -170,6 +173,7 @@ export class World {
     this._q = new THREE.Quaternion();
     this._euler = new THREE.Euler();
     this._moon = new THREE.Color(0.55, 0.65, 1.0);
+    this._sunDay = new THREE.Color(1, 0.94, 0.87);
     this._hemiDay = new THREE.Color(0xc4dcf2);
     this._hemiNight = new THREE.Color(0x24345e);
     this._groundDay = new THREE.Color(0xd9c6ae);
@@ -182,6 +186,56 @@ export class World {
     this.shadowDirty = true;
     this.setQuality();
     window.addEventListener('resize', () => this.resize(true));
+  }
+
+  /**
+   * Apply a colour scheme (see palettes.js) to everything in the scene:
+   * materials, sky, clouds, sea, lights, lettering and reveal devices.
+   */
+  setPalette(p) {
+    const m = this.mats;
+    const set = (mat, base, glow) => {
+      mat.color.set(base);
+      if (glow) mat.emissive.set(glow);
+    };
+    set(m.white, p.building);
+    set(m.whiteShade, p.buildingShade);
+    set(m.concrete, p.concrete);
+    set(m.metal, p.metal);
+    set(m.lampPole, p.metal);
+    set(m.glass, p.glass, p.glassGlow);
+    set(m.glassDark, p.glassDark, p.glassDarkGlow);
+    set(m.warm, p.warm, p.warmGlow);
+    set(m.strip, p.strip, p.stripGlow);
+    set(m.bulb, p.bulb, p.bulbGlow);
+    set(m.orange, p.accent, p.accentGlow);
+    set(m.leaf, p.leaf);
+    set(m.trunk, p.trunk);
+    this.ground.material.color.set(p.groundTint);
+    // Sky colours are shared Color objects (sky dome, sea, fog).
+    SKY.dayTop.set(p.sky.dayTop);
+    SKY.dayHor.set(p.sky.dayHor);
+    SKY.nightTop.set(p.sky.nightTop);
+    SKY.nightHor.set(p.sky.nightHor);
+    SKY_SHARED.uCloudDayHi.value.fromArray(p.clouds.dayHi);
+    SKY_SHARED.uCloudDayLo.value.fromArray(p.clouds.dayLo);
+    SKY_SHARED.uCloudNightHi.value.fromArray(p.clouds.nightHi);
+    SKY_SHARED.uCloudNightLo.value.fromArray(p.clouds.nightLo);
+    SKY_SHARED.uSeaDay.value.fromArray(p.sea.day);
+    SKY_SHARED.uSeaNight.value.fromArray(p.sea.night);
+    const l = p.lights;
+    this._hemiDay.set(l.hemiDay);
+    this._hemiNight.set(l.hemiNight);
+    this._groundDay.set(l.groundDay);
+    this._groundNight.set(l.groundNight);
+    this._sunDay.set(l.sun);
+    this._moon.setRGB(...l.moon);
+    this.spot.color.set(l.spot);
+    Lamp.glowColor.set(l.lampGlow);
+    this.final.material.uniforms.uSunColor.value.fromArray(l.sourceGlow);
+    setTextColors(p);
+    for (const site of this.sites) site.device.setColors?.(p);
+    this.palette = p;
   }
 
   /** Pixel-ratio range for "auto": never softer than one pixel per CSS pixel on a desktop. */
@@ -710,7 +764,7 @@ export class World {
    */
   applyTime(n, inBeam = false) {
     this.sun.intensity = THREE.MathUtils.lerp(3.3, 0.35, n);
-    this.sun.color.setRGB(1, 0.94, 0.87).lerp(this._moon, n);
+    this.sun.color.copy(this._sunDay).lerp(this._moon, n);
     this.hemi.intensity = THREE.MathUtils.lerp(1.25, 0.55, n);
     this.hemi.color.copy(this._hemiDay).lerp(this._hemiNight, n);
     this.hemi.groundColor.copy(this._groundDay).lerp(this._groundNight, n);

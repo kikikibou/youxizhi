@@ -96,17 +96,28 @@ const frag = /* glsl */ `
 `;
 
 // Day/night colour pairs (linear, so values above 1 bloom a little at night).
+// (Shared objects: setTextColors() changes them in place for a colour scheme.)
 const ORANGE = new THREE.Color(0xff7d10);
 const NAVY = new THREE.Color(0x0d1f3c);
+const WHITE = new THREE.Color(0xffffff);
+const CREAM = new THREE.Color(0xfff0d8);
 const PALETTE = {
   // By day the beam is night, so letters inside it are white; by night the
   // beam is daylight, so letters inside it turn navy.
-  cone: { dayIn: new THREE.Color(0xffffff), dayOut: ORANGE, nightIn: NAVY, nightOut: ORANGE },
+  cone: { dayIn: WHITE, dayOut: ORANGE, nightIn: NAVY, nightOut: ORANGE },
   orange: { dayIn: ORANGE, dayOut: ORANGE, nightIn: ORANGE, nightOut: ORANGE },
-  white: { dayIn: new THREE.Color(0xffffff), dayOut: new THREE.Color(0xffffff), nightIn: ORANGE, nightOut: ORANGE },
+  white: { dayIn: WHITE, dayOut: WHITE, nightIn: ORANGE, nightOut: ORANGE },
   // Script lettering: orange where the big letters are white (inside the beam), white elsewhere.
-  inverse: { dayIn: ORANGE, dayOut: new THREE.Color(0xffffff), nightIn: ORANGE, nightOut: new THREE.Color(0xfff0d8) },
+  inverse: { dayIn: ORANGE, dayOut: WHITE, nightIn: ORANGE, nightOut: CREAM },
 };
+
+/** Lettering colours for a colour scheme (see palettes.js). */
+export function setTextColors({ accent, ink, light, cream }) {
+  ORANGE.set(accent);
+  NAVY.set(ink);
+  WHITE.set(light);
+  CREAM.set(cream);
+}
 
 export class TextBlock {
   /**

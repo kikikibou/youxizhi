@@ -26,6 +26,8 @@ const frag = /* glsl */ `
   uniform vec3 uDayHor;
   uniform vec3 uNightTop;
   uniform vec3 uNightHor;
+  uniform vec3 uSeaDay;
+  uniform vec3 uSeaNight;
   uniform vec3 uSunDir;
   varying vec3 vWorld;
   #include <fog_pars_fragment>
@@ -43,7 +45,7 @@ const frag = /* glsl */ `
     vec3 skyDay = mix(uDayHor, uDayTop, pow(h, 0.45));
     vec3 skyNight = mix(uNightHor, uNightTop, pow(h, 0.4));
     vec3 sky = mix(skyDay, skyNight, uNight);
-    vec3 deep = mix(vec3(0.02, 0.1, 0.18), vec3(0.004, 0.012, 0.035), uNight);
+    vec3 deep = mix(uSeaDay, uSeaNight, uNight);
     float fres = 0.04 + 0.96 * pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 5.0);
     vec3 col = mix(deep, sky * 0.9, fres);
     float spec = pow(clamp(dot(R, normalize(uSunDir)), 0.0, 1.0), 220.0);

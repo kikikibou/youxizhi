@@ -81,6 +81,9 @@ const glowFrag = /* glsl */ `
 `;
 
 export class Lamp {
+  /** Glow colour shared by every lamp (set per colour scheme). */
+  static glowColor = new THREE.Color(0xffc98c);
+
   /**
    * @param {object} opts
    *   height      pole height (m)
@@ -125,7 +128,7 @@ export class Lamp {
       new THREE.ShaderMaterial({
         vertexShader: beamVert,
         fragmentShader: glowFrag,
-        uniforms: { uOpacity: { value: 0 }, uColor: { value: new THREE.Color(0xffc98c) } },
+        uniforms: { uOpacity: { value: 0 }, uColor: { value: Lamp.glowColor } },
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

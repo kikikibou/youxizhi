@@ -19,6 +19,14 @@ export const SKY_SHARED = {
   uDayHor: { value: SKY.dayHor },
   uNightTop: { value: SKY.nightTop },
   uNightHor: { value: SKY.nightHor },
+  // Cloud tints (lit / shaded side, day and night) and the sea's deep colour:
+  // set per colour scheme (see palettes.js, World.setPalette).
+  uCloudDayHi: { value: new THREE.Vector3(1.02, 1.02, 1.0) },
+  uCloudDayLo: { value: new THREE.Vector3(0.66, 0.73, 0.84) },
+  uCloudNightHi: { value: new THREE.Vector3(0.82, 0.85, 0.93) },
+  uCloudNightLo: { value: new THREE.Vector3(0.14, 0.18, 0.3) },
+  uSeaDay: { value: new THREE.Vector3(0.02, 0.1, 0.18) },
+  uSeaNight: { value: new THREE.Vector3(0.004, 0.012, 0.035) },
 };
 
 export const SKY_GLSL = /* glsl */ `
@@ -28,6 +36,12 @@ export const SKY_GLSL = /* glsl */ `
   uniform vec3 uDayHor;
   uniform vec3 uNightTop;
   uniform vec3 uNightHor;
+  uniform vec3 uCloudDayHi;
+  uniform vec3 uCloudDayLo;
+  uniform vec3 uCloudNightHi;
+  uniform vec3 uCloudNightLo;
+  uniform vec3 uSeaDay;
+  uniform vec3 uSeaNight;
 
   float skyHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
   float skyNoise(vec2 p) {
@@ -64,8 +78,8 @@ export const SKY_GLSL = /* glsl */ `
     float density = smoothstep(0.43, 0.68, c) * cloudAmt;
     float s = skyFbm(uv * 0.8 + w + vec2(0.05, 0.035), 4) * 0.78 + detail * 0.32;
     float shade = clamp(smoothstep(0.42, 0.85, s) - smoothstep(0.43, 0.68, c) * 0.35, 0.0, 1.0);
-    vec3 cloudDay = mix(vec3(1.02, 1.02, 1.0), vec3(0.66, 0.73, 0.84), shade * 0.75);
-    vec3 cloudNight = mix(vec3(0.82, 0.85, 0.93), vec3(0.14, 0.18, 0.3), shade * 0.85);
+    vec3 cloudDay = mix(uCloudDayHi, uCloudDayLo, shade * 0.75);
+    vec3 cloudNight = mix(uCloudNightHi, uCloudNightLo, shade * 0.85);
     float fade = smoothstep(0.02, 0.22, d.y);
     col = mix(col, mix(cloudDay, cloudNight, night), density * fade);
 

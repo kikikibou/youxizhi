@@ -223,6 +223,10 @@ export class SplitDevice extends Device {
     this.mask.visible = this.punch.visible = v > 0.002;
   }
 
+  setColors(p) {
+    this.line.material.uniforms.uColor.value.set(p.accent);
+  }
+
   update(time, dt, night, activity, camera) {
     this.group.updateWorldMatrix(true, false);
     // Pushed to and fro between the two towers, like a tug of war (on a
@@ -583,6 +587,10 @@ export class RibbonDevice extends Device {
     r.punch.geometry.computeBoundingBox();
   }
 
+  setColors(p) {
+    this.edgeMat.color.set(p.accent);
+  }
+
   /** Centre line, twist and width of a ribbon at u (0..1) and time t. */
   shape(cfg, u, t, out) {
     const s = cfg.seed || 0;
@@ -881,6 +889,10 @@ export class BeaconDevice extends Device {
     x1 = Math.min(size.x, Math.ceil(x1 * size.x) + 2);
     y1 = Math.min(size.y, Math.ceil(y1 * size.y) + 2);
     return out.set(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+  }
+
+  setColors(p) {
+    this.halo.material.uniforms.uColor.value.set(p.lights.halo);
   }
 
   applyTime(night, activity) {
