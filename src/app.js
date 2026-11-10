@@ -3,7 +3,7 @@ import { World } from './three/World.js';
 import { renderNav, renderPages, renderFooter, Drawer } from './ui.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
-import { PALETTES, paletteById, paletteCss } from './palettes.js';
+import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
 
 const TOOLS = { timer: mountTimer, daily: mountDaily };
 const ids = PAGES.map((p) => p.id);
@@ -24,8 +24,13 @@ const world = new World($('#gl'), PAGES);
 /* ---------------------------------------------------------- colour scheme */
 // A switcher for comparing colour schemes (palettes.js); the choice is
 // remembered on this device. P cycles through them.
-const paletteStyle = document.createElement('style');
-document.head.appendChild(paletteStyle);
+// (main.js already applied the page colours before the passphrase screen)
+let paletteStyle = document.getElementById('palette-css');
+if (!paletteStyle) {
+  paletteStyle = document.createElement('style');
+  paletteStyle.id = 'palette-css';
+  document.head.appendChild(paletteStyle);
+}
 const palEl = $('#palette');
 const palMenu = palEl.querySelector('.pal-menu');
 const swatches = (p) => [p.sky.dayTop, p.building, p.accent, p.ink].map((c) => `<i style="background:${c}"></i>`).join('');
@@ -48,13 +53,7 @@ function applyPalette(id, persist) {
     }
   }
 }
-let savedPalette = null;
-try {
-  savedPalette = new URLSearchParams(location.search).get('palette') || localStorage.getItem('youxizhi-palette');
-} catch {
-  /* storage unavailable */
-}
-applyPalette(savedPalette || 'poster', false);
+applyPalette(initialPaletteId(), false);
 const setPalOpen = (open) => {
   palEl.classList.toggle('is-open', open);
   palEl.querySelector('.pal-btn').setAttribute('aria-expanded', String(open));

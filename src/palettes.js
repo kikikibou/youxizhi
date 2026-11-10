@@ -29,17 +29,19 @@ export const PALETTES = [
     id: 'grapefruit',
     name: '西柚',
     en: 'Grapefruit',
-    note: '果肉的珊瑚粉 · 果皮的柚黄 · 白瓤 · 薄荷色天空 · 夜里是深李子色',
+    note: '果肉的珊瑚粉 · 天蓝色天空 · 白瓤般的楼 · 窗光是果肉的粉橘、灯带是果皮的柚黄 · 夜里是深李子色',
     accent: '#f2545b', accentGlow: '#ff4e5a', accentDeep: '#d93d47',
     ink: '#3b1b2e', light: '#fff7f0', cream: '#ffe9de',
     building: '#fbf2ea', buildingShade: '#f1e0d4', concrete: '#d2bdb0', metal: '#7b6f75', groundTint: '#fbece4',
-    glass: '#2c2433', glassGlow: '#ffb08a', glassDark: '#251d2b', glassDarkGlow: '#c98fb5',
-    warm: '#f2b25c', warmGlow: '#ffb347', strip: '#ffe8c6', stripGlow: '#ffc890', bulb: '#fff1e6', bulbGlow: '#ffe2cc',
+    glass: '#2c2433', glassGlow: '#ffb39c', glassDark: '#251d2b', glassDarkGlow: '#c98fb5',
+    // Two warm tones at night: interiors and windows in the flesh's pink-peach,
+    // strip lights in the rind's pale yellow.
+    warm: '#f4a28c', warmGlow: '#ff8a70', strip: '#fff1c4', stripGlow: '#ffe08a', bulb: '#fff1e6', bulbGlow: '#fff0c8',
     leaf: '#3c6e57', trunk: '#4a3530',
-    sky: { dayTop: '#5fb3ae', dayHor: '#d3ede6', nightTop: '#170b1e', nightHor: '#42203f' },
-    clouds: { dayHi: [1.03, 1.0, 0.98], dayLo: [0.86, 0.74, 0.76], nightHi: [0.86, 0.74, 0.84], nightLo: [0.2, 0.1, 0.2] },
-    sea: { day: [0.02, 0.16, 0.16], night: [0.02, 0.005, 0.02] },
-    lights: { hemiDay: '#d4eee8', hemiNight: '#3a2140', groundDay: '#f0d2c4', groundNight: '#8a3f4a', sun: '#fff0e6', moon: [0.75, 0.6, 0.95], spot: '#ffb59a', lampGlow: '#ffb89a', halo: '#ffc9b0', sourceGlow: [1.0, 0.78, 0.7] },
+    sky: { dayTop: '#3896de', dayHor: '#bfe2f6', nightTop: '#170b1e', nightHor: '#42203f' },
+    clouds: { dayHi: [1.03, 1.02, 1.01], dayLo: [0.78, 0.81, 0.91], nightHi: [0.86, 0.74, 0.84], nightLo: [0.2, 0.1, 0.2] },
+    sea: { day: [0.02, 0.12, 0.22], night: [0.02, 0.005, 0.02] },
+    lights: { hemiDay: '#cfe6f6', hemiNight: '#3a2140', groundDay: '#f0d2c4', groundNight: '#8a3f4a', sun: '#fff0e6', moon: [0.75, 0.6, 0.95], spot: '#ffb59a', lampGlow: '#ffb89a', halo: '#ffc9b0', sourceGlow: [1.0, 0.78, 0.7] },
     ui: { bg: '#2a1324', shade: '34, 14, 30', paperNight: '34, 14, 30', lineNight: '255, 160, 150', drawer: '#fdf3ec', drawerNight: '#2a1324', moonShade: '#e8c6dc' },
   },
   {
@@ -95,7 +97,19 @@ export const PALETTES = [
   },
 ];
 
-export const paletteById = (id) => PALETTES.find((p) => p.id === id) || PALETTES[0];
+/** The scheme used until another is chosen (西柚, chosen 2026-11-10). */
+export const DEFAULT_PALETTE = 'grapefruit';
+
+export const paletteById = (id) => PALETTES.find((p) => p.id === id) || PALETTES.find((p) => p.id === DEFAULT_PALETTE);
+
+/** The scheme this device should start with (?palette=…, then the saved choice). */
+export function initialPaletteId() {
+  try {
+    return new URLSearchParams(location.search).get('palette') || localStorage.getItem('youxizhi-palette') || DEFAULT_PALETTE;
+  } catch {
+    return DEFAULT_PALETTE;
+  }
+}
 
 const rgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
