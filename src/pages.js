@@ -28,7 +28,7 @@ export const PAGES = [
       lamp: { p: [6.5, 13], h: 20 },
       // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-2.6, 11.3, 11.4], portrait: { p: [3.4, 12.8, 11.4], scale: 0.8 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', script: 'Jeu de', caps: 'CLEFT IN THE DAY' },
+      cluster: { p: [-2.6, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'The Territory of Thought', caps: 'CLEFT IN THE DAY' },
       texts: [{ t: 'THE TRACE OF REASON', f: 'display', s: 2.3, p: [-12.5, 7.0, -0.85], c: 'orange' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],

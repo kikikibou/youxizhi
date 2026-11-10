@@ -206,7 +206,16 @@ export function buildCluster(c, aniso) {
     // title like a signature, the Chinese name sits top right, a caption
     // line top left.
     if (c.script) add({ t: c.script, f: 'script', s: S * 0.72, p: [-half - S * 0.05, rowY * 0.8, 0.3], r: [0, 0, 0.12], anchor: 'left', c: c.scriptColor || 'ink' });
-    if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.62, p: [half, rowY + S * 0.24, 0.05], anchor: 'right', c: 'cone' });
+    // (cnShift: how far left of the title's right end the Chinese name ends,
+    // in title sizes; keeps it clear of whatever stands in front, e.g. a lamp)
+    if (c.cn) add({ t: c.cn, f: 'cn', s: S * (c.cnSize ?? 0.62), p: [half - S * (c.cnShift ?? 0), rowY + S * 0.24, 0.05], anchor: 'right', c: 'cone' });
+    // A decorative script line across the title, as on the other pages.
+    // (over the title's right half and into the lamp's beam: white script
+    // needs the coral letters or the beam behind it, not the white building)
+    if (c.decor) {
+      const d = add({ t: c.decor, f: 'script', s: S * 0.42, p: [S * 1.9, -S * 0.08, 0.35], r: [0, 0, -0.18], c: 'inverse' });
+      d.mesh.renderOrder = 6.5; // over the title letters (sorting by distance put it under), before the lamp (7)
+    }
     // caption under the title (above it would meet the header)
     if (c.caps) add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.08, -cap / 2 - S * 0.28, 0.05], anchor: 'left', c: 'cone' });
     return { group, blocks };

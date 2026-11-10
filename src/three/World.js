@@ -500,6 +500,7 @@ export class World {
       { t: sc.cluster.cn, f: 'cn' },
       { t: sc.cluster.caps, f: 'caps' },
       { t: sc.cluster.script, f: 'script' },
+      { t: sc.cluster.decor || '', f: 'script' },
     ]);
     await loadFonts(all);
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
