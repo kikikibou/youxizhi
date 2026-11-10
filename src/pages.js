@@ -29,7 +29,7 @@ export const PAGES = [
       // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
       cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'CLEFT IN THE DAY' },
-      texts: [{ t: 'THE TRACE OF REASON', f: 'display', s: 2.3, p: [-12.5, 7.0, -0.85], c: 'orange' }],
+      texts: [{ t: 'THE TRACE OF REASON', f: 'display', s: 2.3, p: [-12.5, 7.0, -0.85], c: 'sign' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
     },
@@ -67,8 +67,8 @@ export const PAGES = [
       // The split line pivots in the gap between the two bridge arms
       // (FORUM.gap in buildings.js); the right-hand side shows the other time.
       device: { type: 'split', p: [1, 23.05, -3], side: 1 },
-      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 5.2, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement' },
-      texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 0.45, p: [-13, 4.9, -1.33], c: 'orange' }],
+      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 5.2, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement', scriptTilt: -0.15, scriptShift: [0.4, 0.1] },
+      texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 0.45, p: [-13, 4.9, -1.33], c: 'sign' }],
       ribbon: { p: [1, 15.5, 1], r: [0, 0, 0.08], length: 24, width: 1.1, seed: 2.1 },
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
@@ -108,8 +108,8 @@ export const PAGES = [
       // Four sliding tiles on a 7 m grid 5 m in front of the cube, straddling
       // its left edge (half building, half sky) below the title.
       device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
-      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light' },
-      texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 0.5, p: [27, 3.8, -4.74], c: 'orange' }],
+      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light', scriptTilt: -0.36, scriptShift: [-0.3, -0.16] },
+      texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 0.5, p: [27, 3.8, -4.74], c: 'sign' }],
       ribbon: { p: [-14, 20, 2], r: [0, -0.2, 0.15], length: 24, width: 1.1, seed: 4.3 },
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
@@ -155,7 +155,7 @@ export const PAGES = [
           { p: [-8, 12, 4], r: [0, -0.12, 0.16], length: 130, width: 5.5, seed: 3.7, amp: 0.8 },
         ],
       },
-      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 4.6, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research' },
+      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 4.6, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
       texts: [],
       ribbon: null,
       trees: [[-44, 6, 1.1], [32, 8, 1.0]],
@@ -197,8 +197,8 @@ export const PAGES = [
       // hides the lower half, and a beam from there seemed to come out of the deck.
       device: { type: 'beacon', p: [-21, 30.4, -66], source: 0.7 },
       sea: true,
-      cluster: { p: [-4, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner' },
-      texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'orange' }],
+      cluster: { p: [-4, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
+      texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'sign' }],
       ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8 },
       trees: [],
     },

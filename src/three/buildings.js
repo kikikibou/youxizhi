@@ -157,7 +157,7 @@ function home(mats) {
   for (let z = -10.5; z <= 2.6; z += 1.45) b.box('white', [4, 12.2, z - 0.09], [4.75, 19.4, z + 0.09]);
   b.box('whiteShade', [-30.2, 21.5, -14.2], [4.2, 21.9, 4.8]);
   // An orange light tube down the front corner.
-  b.box('orange', [3.15, 10.3, 4.6], [3.75, 21.1, 5.0]);
+  b.box('tube', [3.15, 10.3, 4.6], [3.75, 21.1, 5.0]);
   // Roof: railing, stair hut and vent boxes, so the skyline isn't a flat line.
   b.railingX('metal', -29.5, 3.8, 4.4, 21.9, 1.0, 1.6);
   b.box('white', [-14, 21.9, -11], [-6, 25.2, -5]);

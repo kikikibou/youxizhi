@@ -85,12 +85,26 @@ const frag = /* glsl */ `
   uniform vec3 uIn;
   uniform vec3 uOut;
   uniform float uOpacity;
+  uniform vec2 uHalo; // light-box halo: x outside the beam, y inside it
+  uniform vec3 uHaloCol;
   varying vec2 vUv;
   ${MASK_GLSL}
   void main() {
-    float a = texture2D(map, vUv).a * uOpacity;
+    float cov = beamCoverage(gl_FragCoord.xy);
+    float a = texture2D(map, vUv).a;
+    vec3 c = mix(uOut, uIn, cov);
+    float glow = mix(uHalo.x, uHalo.y, cov);
+    if (glow > 0.0) {
+      // Blurred copies of the letters (coarse mip levels) make a soft halo
+      // in the sign's own colour around the lighter, lit letters.
+      float h = textureLod(map, vUv, 4.0).a * 0.5 + textureLod(map, vUv, 5.5).a * 0.6;
+      float ha = clamp(h, 0.0, 1.0) * 0.55 * glow * (1.0 - a);
+      float total = a + ha;
+      c = (c * a + uHaloCol * ha) / max(total, 1e-4);
+      a = total;
+    }
+    a *= uOpacity;
     if (a < 0.004) discard;
-    vec3 c = mix(uOut, uIn, beamCoverage(gl_FragCoord.xy));
     gl_FragColor = vec4(c, a);
   }
 `;
@@ -101,6 +115,7 @@ const ORANGE = new THREE.Color(0xff7d10);
 const NAVY = new THREE.Color(0x0d1f3c);
 const WHITE = new THREE.Color(0xffffff);
 const CREAM = new THREE.Color(0xfff0d8);
+const SIGN = new THREE.Color(0xffa45c); // a lit sign: the accent, lighter
 const PALETTE = {
   // By day the beam is night, so letters inside it are white; by night the
   // beam is daylight, so letters inside it turn navy.
@@ -111,6 +126,9 @@ const PALETTE = {
   inverse: { dayIn: ORANGE, dayOut: WHITE, nightIn: ORANGE, nightOut: CREAM },
   // Ink: the scheme's dark ink by day, cream by night (and swapped inside the beam).
   ink: { dayIn: WHITE, dayOut: NAVY, nightIn: NAVY, nightOut: CREAM },
+  // Facade signs are light boxes: accent by day, lit (brighter, with a halo)
+  // wherever it is night, i.e. outside the reveal at night and inside it by day.
+  sign: { dayIn: SIGN, dayOut: ORANGE, nightIn: ORANGE, nightOut: SIGN },
   // Motto: ink outside the beam, accent inside it, so that where it crosses
   // the title's letters it never takes their colour (they are white/navy there).
   motto: { dayIn: ORANGE, dayOut: NAVY, nightIn: ORANGE, nightOut: CREAM },
@@ -122,6 +140,7 @@ export function setTextColors({ accent, ink, light, cream }) {
   NAVY.set(ink);
   WHITE.set(light);
   CREAM.set(cream);
+  SIGN.set(accent).lerp(WHITE, 0.3);
 }
 
 export class TextBlock {
@@ -148,6 +167,8 @@ export class TextBlock {
         uIn: { value: new THREE.Color() },
         uOut: { value: new THREE.Color() },
         uOpacity: { value: 0 },
+        uHalo: { value: new THREE.Vector2() },
+        uHaloCol: { value: new THREE.Color() },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
       },
@@ -171,7 +192,15 @@ export class TextBlock {
     const p = this.palette;
     u.uIn.value.copy(p.dayIn).lerp(p.nightIn, night);
     u.uOut.value.copy(p.dayOut).lerp(p.nightOut, night);
-    if (night > 0) {
+    if (this.spec.c === 'sign') {
+      // Lit where it is night: lighter, brighter letters (much more washes
+      // the colour out in the tone mapping) in a halo of the accent colour.
+      const lit = 1.15;
+      u.uOut.value.multiplyScalar(1 + (lit - 1) * night);
+      u.uIn.value.multiplyScalar(1 + (lit - 1) * (1 - night));
+      u.uHalo.value.set(night, 1 - night);
+      u.uHaloCol.value.copy(ORANGE).multiplyScalar(1.1);
+    } else if (night > 0) {
       const k = 1 + (this.glow - 1) * night;
       u.uOut.value.multiplyScalar(k);
     }
@@ -230,7 +259,9 @@ export function buildCluster(c, aniso) {
   if (c.caps)
     add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.25, rowY + S * 0.62, 0.05], r: [0, 0, -0.08], anchor: 'left', c: 'cone' });
   if (c.script) {
-    const sc = add({ t: c.script, f: 'script', s: S * 0.34, p: [S * 0.15, rowY * 0.55, 0.3], r: [0, 0, -0.26], c: 'inverse' });
+    // Each page may tilt and shift it a little (scriptTilt, scriptShift in title sizes).
+    const [dx, dy] = c.scriptShift || [0, 0];
+    const sc = add({ t: c.script, f: 'script', s: S * 0.34, p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'inverse' });
     sc.mesh.renderOrder = 6.5; // over the big letters (sorting by distance used to put it under)
   }
   return { group, blocks };

@@ -209,6 +209,9 @@ export class World {
     set(m.strip, p.strip, p.stripGlow);
     set(m.bulb, p.bulb, p.bulbGlow);
     set(m.orange, p.accent, p.accentGlow);
+    m.tube.userData.day.set(p.accent);
+    m.tube.userData.night.set(p.strip);
+    m.tube.emissive.set(p.stripGlow);
     set(m.leaf, p.leaf);
     set(m.trunk, p.trunk);
     this.ground.material.color.set(p.groundTint);
@@ -810,6 +813,11 @@ export class World {
     const haze = Math.pow(Math.sin(Math.PI * n), 1.5);
     this.bloom.strength = 0.45 * n + 0.42 * haze;
     this.bloom.threshold = THREE.MathUtils.lerp(0.9, 0.78, haze);
+    // At night a soft knee: lights only a little over the threshold (the
+    // long strip lights) glow gently instead of in full, so their haze
+    // doesn't wash out the lettering near them, while small bright lights
+    // still bloom fully. The transition haze keeps the hard knee.
+    this.bloom.highPassUniforms.smoothWidth.value = THREE.MathUtils.lerp(0.9, 0.01, haze);
     this.bloom.radius = THREE.MathUtils.lerp(0.4, 0.6, Math.max(n, haze));
     this.bloom.enabled = this.bloom.strength > 0.004;
     this.sky.material.uniforms.uTime.value = this.time;

@@ -59,10 +59,14 @@ export function createMaterials() {
     emissiveIntensity: 0.35,
     side: THREE.DoubleSide,
   });
+  // A light tube on a facade: an accent stripe by day, a pale glowing tube
+  // at night (so it doesn't read as one more piece of accent lettering).
+  const tube = new THREE.MeshStandardMaterial({ color: 0xff7a12, roughness: 0.5, emissive: new THREE.Color(0xffe08a), emissiveIntensity: 0 });
+  tube.userData = { day: new THREE.Color(0xff7a12), night: new THREE.Color(0xfff1c4) };
   const leaf = new THREE.MeshStandardMaterial({ color: 0x2e4630, roughness: 0.95, flatShading: true });
   const trunk = new THREE.MeshStandardMaterial({ color: 0x3a2f28, roughness: 0.9 });
 
-  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, leaf, trunk };
+  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk };
 }
 
 export function updateMaterials(m, night) {
@@ -72,4 +76,6 @@ export function updateMaterials(m, night) {
   m.strip.emissiveIntensity = 0.5 + night * 1.2;
   m.bulb.emissiveIntensity = 1.0 + night * 5.0;
   m.orange.emissiveIntensity = 0.3 + night * 0.8;
+  m.tube.color.copy(m.tube.userData.day).lerp(m.tube.userData.night, night);
+  m.tube.emissiveIntensity = night * 1.8;
 }
