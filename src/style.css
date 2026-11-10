@@ -212,12 +212,27 @@ a {
   justify-self: start;
 }
 .brand-box {
-  width: 22px;
-  height: 26px;
+  position: relative;
+  width: 26px;
+  height: 31px;
   border: 2.5px solid #fff;
-  border-bottom-width: 6px;
+  border-bottom-width: 7px;
   border-radius: 2px;
   box-shadow: var(--shadow);
+  overflow: hidden;
+}
+/* The "photo" in the polaroid: 游, tilted and larger than the frame, so its
+   edges are cut off by the frame and only its middle shows. */
+.brand-box i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-style: normal;
+  font-family: var(--cn);
+  font-weight: 900;
+  font-size: 33px;
+  line-height: 1;
+  transform: translate(-50%, -50%) rotate(-12deg);
 }
 .brand-text {
   display: grid;
@@ -244,6 +259,16 @@ a {
   text-align: center;
   letter-spacing: 0.02em;
   opacity: 0.9;
+}
+/* A blacked-out word (in the text's own colour, like ████). */
+.redact {
+  display: inline-block;
+  width: 3.4em;
+  height: 0.95em;
+  margin-left: 0.1em;
+  vertical-align: -0.1em;
+  background: currentColor;
+  box-shadow: var(--shadow);
 }
 
 .nav {
@@ -744,6 +769,54 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .ft-lines {
   font-size: 15px;
   line-height: 1.2;
+}
+/* [name, value] rows on the left: an ingredients table with dotted leaders. */
+.ft-table {
+  display: grid;
+  gap: 2px;
+  width: 230px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.7);
+}
+.ft-table .ft-row {
+  display: flex;
+  align-items: baseline;
+}
+.ft-table i {
+  flex: 1;
+  margin: 0 6px;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.55);
+}
+.ft-table b {
+  font-family: var(--caps);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+/* [name, value] rows elsewhere: the name in small caps. */
+.ft-pairs span {
+  font-family: var(--caps);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+/* A rubber stamp. */
+.ft-stamp {
+  display: inline-block;
+  margin: 6px 2px 6px 0;
+  padding: 2px 6px 1px 9px;
+  border: 2px solid var(--orange);
+  border-radius: 3px;
+  color: var(--orange);
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  transform: rotate(-4deg);
+  text-shadow: none;
 }
 
 .hint {

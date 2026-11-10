@@ -51,22 +51,41 @@ export function renderPages(pages, el) {
     .join('');
 }
 
+/**
+ * Footer lines: plain strings, or [name, value] rows, set as a table with
+ * dotted leaders ('table') or as "name: value" ('pairs').
+ */
+function footLines(lines, rowStyle, lead = '') {
+  if (!lines.some(Array.isArray)) {
+    return `<div class="ft-lines">${[lead, ...lines].filter(Boolean).map(esc).join('<br>')}</div>`;
+  }
+  const row = (l) => {
+    if (!Array.isArray(l)) return `<div class="ft-row">${esc(l)}</div>`;
+    const [k, v] = l;
+    return rowStyle === 'table'
+      ? `<div class="ft-row"><span>${esc(k)}</span><i></i><b>${esc(v)}</b></div>`
+      : `<div class="ft-row"><span>${esc(k)}:</span> ${esc(v)}</div>`;
+  };
+  const head = lead ? `<div class="ft-row">${esc(lead)}</div>` : '';
+  return `<div class="ft-lines ft-${rowStyle}">${head}${lines.map(row).join('')}</div>`;
+}
+
 export function renderFooter(page, el) {
   const f = page.footer;
   el.innerHTML = `
     <div class="ft-left">
       <div class="ft-title">${esc(f.left.title)}</div>
       <div class="ft-stars">${'★'.repeat(f.left.stars)}${'☆'.repeat(5 - f.left.stars)}</div>
-      <div class="ft-lines">${esc(f.left.sub)}<br>${f.left.lines.map(esc).join('<br>')}</div>
+      ${footLines(f.left.lines, 'table', f.left.sub)}
     </div>
     <div class="ft-center">
       <div class="ft-script">${esc(f.center.script)}</div>
-      <div class="ft-lines">${f.center.lines.map(esc).join('<br>')}</div>
+      ${footLines(f.center.lines, 'pairs')}
     </div>
     <div class="ft-right">
       <div class="ft-title">${esc(f.right.title)}</div>
-      <div class="ft-sub">${esc(f.right.sub)}</div>
-      <div class="ft-lines">${f.right.lines.map(esc).join('<br>')}</div>
+      <div class="${f.right.stamp ? 'ft-stamp' : 'ft-sub'}">${esc(f.right.sub)}</div>
+      ${footLines(f.right.lines, 'pairs')}
     </div>`;
 }
 
