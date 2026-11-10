@@ -111,6 +111,9 @@ const PALETTE = {
   inverse: { dayIn: ORANGE, dayOut: WHITE, nightIn: ORANGE, nightOut: CREAM },
   // Ink: the scheme's dark ink by day, cream by night (and swapped inside the beam).
   ink: { dayIn: WHITE, dayOut: NAVY, nightIn: NAVY, nightOut: CREAM },
+  // Motto: ink outside the beam, accent inside it, so that where it crosses
+  // the title's letters it never takes their colour (they are white/navy there).
+  motto: { dayIn: ORANGE, dayOut: NAVY, nightIn: ORANGE, nightOut: CREAM },
 };
 
 /** Lettering colours for a colour scheme (see palettes.js). */
@@ -213,7 +216,9 @@ export function buildCluster(c, aniso) {
     // right-aligned with the Chinese name above it: the two script lines
     // frame the title on a diagonal.
     if (c.decor) {
-      const d = add({ t: c.decor, f: 'script', s: S * 0.34, p: [half - S * (c.cnShift ?? 0), -cap / 2 - S * 0.38, 0.3], anchor: 'right', c: 'ink' });
+      // Tilted like "Jeu de" (the two run parallel); it starts just below the
+      // title and rises across the foot of its last letters.
+      const d = add({ t: c.decor, f: 'script', s: S * 0.36, p: [half - S * (c.cnShift ?? 0), -cap * 0.3, 0.3], r: [0, 0, 0.11], anchor: 'right', c: 'motto' });
       d.mesh.renderOrder = 6.5; // over the title letters (sorting by distance put it under), before the lamp (7)
     }
     // caption under the title (above it would meet the header)
@@ -224,7 +229,9 @@ export function buildCluster(c, aniso) {
   if (c.of) add({ t: c.of, f: 'display', s: S * 0.46, p: [half, rowY - S * 0.04, 0.05], anchor: 'right', c: 'cone' });
   if (c.caps)
     add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.25, rowY + S * 0.62, 0.05], r: [0, 0, -0.08], anchor: 'left', c: 'cone' });
-  if (c.script)
-    add({ t: c.script, f: 'script', s: S * 0.34, p: [S * 0.15, rowY * 0.55, 0.3], r: [0, 0, -0.26], c: 'inverse' });
+  if (c.script) {
+    const sc = add({ t: c.script, f: 'script', s: S * 0.34, p: [S * 0.15, rowY * 0.55, 0.3], r: [0, 0, -0.26], c: 'inverse' });
+    sc.mesh.renderOrder = 6.5; // over the big letters (sorting by distance used to put it under)
+  }
   return { group, blocks };
 }
