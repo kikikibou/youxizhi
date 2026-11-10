@@ -109,6 +109,8 @@ const PALETTE = {
   white: { dayIn: WHITE, dayOut: WHITE, nightIn: ORANGE, nightOut: ORANGE },
   // Script lettering: orange where the big letters are white (inside the beam), white elsewhere.
   inverse: { dayIn: ORANGE, dayOut: WHITE, nightIn: ORANGE, nightOut: CREAM },
+  // Ink: the scheme's dark ink by day, cream by night (and swapped inside the beam).
+  ink: { dayIn: WHITE, dayOut: NAVY, nightIn: NAVY, nightOut: CREAM },
 };
 
 /** Lettering colours for a colour scheme (see palettes.js). */
@@ -199,6 +201,16 @@ export function buildCluster(c, aniso) {
   const half = title.glyphWidth / 2;
   const cap = S * 0.74; // Anton cap height
   const rowY = cap / 2 + S * 0.5;
+  if (c.layout === 'name') {
+    // The site's name (home page): "Jeu de" in script leads into the big
+    // title like a signature, the Chinese name sits top right, a caption
+    // line top left.
+    if (c.script) add({ t: c.script, f: 'script', s: S * 0.72, p: [-half - S * 0.05, rowY * 0.8, 0.3], r: [0, 0, 0.12], anchor: 'left', c: c.scriptColor || 'ink' });
+    if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.62, p: [half, rowY + S * 0.24, 0.05], anchor: 'right', c: 'cone' });
+    // caption under the title (above it would meet the header)
+    if (c.caps) add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.08, -cap / 2 - S * 0.28, 0.05], anchor: 'left', c: 'cone' });
+    return { group, blocks };
+  }
   if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });
   if (c.of) add({ t: c.of, f: 'display', s: S * 0.46, p: [half, rowY - S * 0.04, 0.05], anchor: 'right', c: 'cone' });
   if (c.caps)

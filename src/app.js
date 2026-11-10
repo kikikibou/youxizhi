@@ -21,9 +21,23 @@ renderPages(PAGES, stage);
 
 const world = new World($('#gl'), PAGES);
 
+// Debug mode ("back office"): open the site once with ?debug (?debug=0 turns
+// it off again); remembered on this device. Shows the performance panel and
+// the colour-scheme switcher.
+let debugOn = false;
+try {
+  const flag = new URLSearchParams(location.search).get('debug');
+  if (flag === '0') localStorage.removeItem('youxizhi-debug');
+  else if (flag !== null) localStorage.setItem('youxizhi-debug', '1');
+  debugOn = !!localStorage.getItem('youxizhi-debug');
+} catch {
+  /* storage unavailable */
+}
+
 /* ---------------------------------------------------------- colour scheme */
 // A switcher for comparing colour schemes (palettes.js); the choice is
-// remembered on this device. P cycles through them.
+// remembered on this device. P cycles through them. Visitors only ever see
+// the default scheme (西柚): the switcher shows in debug mode only.
 // (main.js already applied the page colours before the passphrase screen)
 let paletteStyle = document.getElementById('palette-css');
 if (!paletteStyle) {
@@ -32,6 +46,7 @@ if (!paletteStyle) {
   document.head.appendChild(paletteStyle);
 }
 const palEl = $('#palette');
+palEl.hidden = !debugOn;
 const palMenu = palEl.querySelector('.pal-menu');
 const swatches = (p) => [p.sky.dayTop, p.building, p.accent, p.ink].map((c) => `<i style="background:${c}"></i>`).join('');
 palMenu.innerHTML = PALETTES.map(
@@ -72,7 +87,7 @@ document.addEventListener('click', (e) => {
   if (!palEl.contains(e.target)) setPalOpen(false);
 });
 window.addEventListener('keydown', (e) => {
-  if (e.key !== 'p' && e.key !== 'P') return;
+  if (!debugOn || (e.key !== 'p' && e.key !== 'P')) return;
   if (e.target.closest?.('input, textarea, [contenteditable]')) return;
   const i = PALETTES.findIndex((p) => p.id === world.palette?.id);
   applyPalette(PALETTES[(i + 1) % PALETTES.length].id, true);
@@ -117,29 +132,66 @@ if (import.meta.env.DEV) {
 
 /* -------------------------------------------------------------- day/night */
 
+// Day or night follows the visitor's own clock (day from 06:00 to 19:00).
+// The toggle overrides it, but only until the clock next changes over
+// (the next 06:00 or 19:00); then it follows the clock again. While the
+// page is open it switches by itself at those times.
 const root = document.documentElement;
-function applyTheme(night, persist) {
+const DAY_FROM = 6;
+const NIGHT_FROM = 19;
+const clockSaysNight = (d = new Date()) => d.getHours() >= NIGHT_FROM || d.getHours() < DAY_FROM;
+/** The next 06:00 or 19:00 after `d` (ms). */
+function nextChange(d = new Date()) {
+  const n = new Date(d);
+  n.setMinutes(0, 0, 0);
+  for (let i = 0; i < 25; i++) {
+    n.setHours(n.getHours() + 1);
+    if (n.getHours() === DAY_FROM || n.getHours() === NIGHT_FROM) return n.getTime();
+  }
+  return d.getTime() + 12 * 3600e3;
+}
+function readOverride() {
+  try {
+    const o = JSON.parse(localStorage.getItem('theme-override') || 'null');
+    if (o && Date.now() < o.until) return o.night;
+    localStorage.removeItem('theme-override');
+  } catch {
+    /* storage unavailable */
+  }
+  return null;
+}
+function applyTheme(night) {
   root.dataset.theme = night ? 'night' : 'day';
   dnBtn.querySelector('.dn-label').textContent = night ? 'NIGHT' : 'DAY';
   world.setNight(night);
-  if (persist) {
-    try {
-      localStorage.setItem('theme', night ? 'night' : 'day');
-    } catch {
-      /* storage unavailable */
-    }
-  }
 }
-let saved = null;
+const wantedNight = () => readOverride() ?? clockSaysNight();
 try {
-  saved = localStorage.getItem('theme');
+  localStorage.removeItem('theme'); // the old "forever" choice
 } catch {
   /* storage unavailable */
 }
-const hour = new Date().getHours();
-applyTheme(saved ? saved === 'night' : hour >= 19 || hour < 6, false);
+applyTheme(wantedNight());
 world.night = world.nightTarget;
-dnBtn.addEventListener('click', () => applyTheme(root.dataset.theme !== 'night', true));
+dnBtn.addEventListener('click', () => {
+  const night = root.dataset.theme !== 'night';
+  applyTheme(night);
+  try {
+    localStorage.setItem('theme-override', JSON.stringify({ night, until: nextChange() }));
+  } catch {
+    /* storage unavailable */
+  }
+});
+// Check once a minute (and on coming back to the tab) whether the clock has
+// changed over.
+const followClock = () => {
+  const night = wantedNight();
+  if ((root.dataset.theme === 'night') !== night) applyTheme(night);
+};
+setInterval(followClock, 60e3);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) followClock();
+});
 
 /* ----------------------------------------------------------------- router */
 
@@ -160,7 +212,7 @@ function go(id, mode = 'fly') {
   lastNav = performance.now();
 
   nav.querySelectorAll('a').forEach((a) => a.classList.toggle('is-active', a.dataset.nav === id));
-  document.title = `${PAGES[idx].nav} · YOUXIZHI`;
+  document.title = `${PAGES[idx].nav} · 游戏之西柚`;
 
   if (prev >= 0) {
     const old = pageEls[prev];
@@ -283,13 +335,5 @@ function frame(now) {
 })();
 
 /* ------------------------------------------------------------- debug panel */
-// Open the site with ?debug to show frame rate, resolution and quality
-// switches (remembered on this device; ?debug=0 turns it off again).
-try {
-  const flag = new URLSearchParams(location.search).get('debug');
-  if (flag === '0') localStorage.removeItem('youxizhi-debug');
-  else if (flag !== null) localStorage.setItem('youxizhi-debug', '1');
-  if (localStorage.getItem('youxizhi-debug')) import('./debug.js').then((m) => m.mountDebug(world));
-} catch {
-  /* storage unavailable */
-}
+// Frame rate, resolution and quality switches (debug mode, see above).
+if (debugOn) import('./debug.js').then((m) => m.mountDebug(world));

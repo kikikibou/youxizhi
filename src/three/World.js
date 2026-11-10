@@ -496,7 +496,7 @@ export class World {
   async buildTypography() {
     const all = this.sites.flatMap(({ page: { scene: sc } }) => [
       ...sc.texts,
-      { t: sc.cluster.title + sc.cluster.of, f: 'display' },
+      { t: sc.cluster.title + (sc.cluster.of || ''), f: 'display' },
       { t: sc.cluster.cn, f: 'cn' },
       { t: sc.cluster.caps, f: 'caps' },
       { t: sc.cluster.script, f: 'script' },
@@ -515,6 +515,7 @@ export class World {
         site.texts.push(block);
       }
     }
+    this.fitClusters();
   }
 
   /**
@@ -636,6 +637,7 @@ export class World {
     const h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.fitClusters();
     this.renderer.setSize(w, h, false);
     const size = this.renderer.getDrawingBufferSize(this._size);
     this.sceneRT.setSize(size.x, size.y);
@@ -643,6 +645,25 @@ export class World {
     this.maskRT.setSize(size.x, size.y);
     this.bloom.setSize(size.x, size.y);
     MASK.uMaskRes.value.copy(size);
+  }
+
+  /**
+   * Title stacks with a `portrait` setting move (and shrink) towards it as
+   * the screen gets narrower: a phone held upright sees only the middle of
+   * a view composed for a wide screen.
+   */
+  fitClusters() {
+    const t = 1 - THREE.MathUtils.smoothstep(this.camera.aspect, 0.62, 1.1); // 0 wide … 1 upright
+    for (const site of this.sites) {
+      const c = site.page.scene.cluster;
+      if (!site.cluster) continue;
+      const p = c.portrait;
+      site.cluster.position.fromArray(c.p);
+      site.cluster.scale.setScalar(1);
+      if (!p || t <= 0) continue;
+      site.cluster.position.lerp(this._v.fromArray(p.p), t);
+      site.cluster.scale.setScalar(THREE.MathUtils.lerp(1, p.scale ?? 1, t));
+    }
   }
 
   setPixelRatio(pr) {
