@@ -43,8 +43,9 @@ export async function loadFonts(texts) {
   await Promise.all(jobs);
 }
 
-function drawText(text, fontKey, align = 'left') {
-  const f = FONTS[fontKey];
+function drawText(text, fontKey, align = 'left', tracking) {
+  // (tracking: letter spacing in em, instead of the font's own)
+  const f = { ...FONTS[fontKey], spacing: tracking ?? FONTS[fontKey].spacing };
   const px = 200;
   const lines = String(text).split('\n');
   const canvas = document.createElement('canvas');
@@ -151,7 +152,7 @@ export class TextBlock {
    * @param {object} spec  { t, f, s, p:[x,y,z], r:[x,y,z], c, align }
    */
   constructor(spec, maxAniso = 8) {
-    const { canvas, px, w, h } = drawText(spec.t, spec.f, spec.align);
+    const { canvas, px, w, h } = drawText(spec.t, spec.f, spec.align, spec.tracking);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
     tex.generateMipmaps = true;
@@ -277,7 +278,10 @@ export function buildCluster(c, aniso) {
       d.mesh.renderOrder = 6.5; // over the title letters (sorting by distance put it under), before the lamp (7)
     }
     // caption under the title (above it would meet the header)
-    if (c.caps) add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.08, -cap / 2 - S * 0.28, 0.05], anchor: 'left', c: 'cone' });
+    // (capsSize / capsTracking: a short line, such as an address, reads
+    // better a little larger and more widely spaced)
+    const cs = S * (c.capsSize ?? 0.16);
+    if (c.caps) add({ t: c.caps, f: 'caps', s: cs, tracking: c.capsTracking, p: [-half + S * 0.08, -cap / 2 - S * 0.2 - cs * 0.5, 0.05], anchor: 'left', c: 'cone' });
     return { group, blocks };
   }
   if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });

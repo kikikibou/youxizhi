@@ -26,6 +26,25 @@ function cardHtml(c, i) {
     </li>`;
 }
 
+/**
+ * On a short screen a page's poem (top right) and its content panel can
+ * meet when both sit on the right: then the poem steps aside, so it never
+ * covers the panel's copy.
+ */
+function fitPoems() {
+  for (const page of document.querySelectorAll('.page')) {
+    const poem = page.querySelector('.poem');
+    const panel = page.querySelector('.panel');
+    if (!poem || !panel) continue;
+    const a = poem.getBoundingClientRect();
+    const b = panel.getBoundingClientRect();
+    const meet = a.width > 0 && a.left < b.right && b.left < a.right && a.bottom + 12 > b.top;
+    page.classList.toggle('is-crowded', meet);
+  }
+}
+const panelSizes = new ResizeObserver(() => fitPoems());
+window.addEventListener('resize', fitPoems);
+
 export function renderPages(pages, el) {
   el.innerHTML = pages
     .map(
@@ -42,13 +61,14 @@ export function renderPages(pages, el) {
           <div class="brush-lines">${p.label.lines.map(esc).join('<br>')}</div>
         </div>
         <div class="sheet reveal" style="--d:4">
-          <p class="intro">${esc(p.intro)}</p>
+          ${[].concat(p.intro).map((t) => `<p class="intro">${esc(t)}</p>`).join('')}
           <ul class="cards">${p.cards.map(cardHtml).join('')}</ul>
         </div>
       </div>
     </section>`,
     )
     .join('');
+  el.querySelectorAll('.poem, .panel').forEach((n) => panelSizes.observe(n));
 }
 
 /**
@@ -77,6 +97,7 @@ const footSizes = new ResizeObserver((entries) => {
     const side = e.target.classList.contains('ft-left') ? 'left' : 'right';
     document.documentElement.style.setProperty(`--foot-${side}`, `${Math.ceil(e.target.offsetHeight)}px`);
   }
+  fitPoems(); // (the panels moved)
 });
 
 export function renderFooter(page, el) {

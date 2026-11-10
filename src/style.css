@@ -503,6 +503,9 @@ html[data-theme='night'] .dn-moon {
 }
 
 /* Poem block with corner brackets — echoes "ARTIFICIAL" in the poster */
+.page.is-crowded .poem {
+  visibility: hidden; /* see fitPoems() in ui.js */
+}
 .poem {
   position: absolute;
   top: 12.5vh;

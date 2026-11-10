@@ -28,7 +28,7 @@ export const PAGES = [
       lamp: { p: [6.5, 13], h: 20 },
       // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'CITRUS × PARADISI' },
+      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZXY.COM', capsSize: 0.21, capsTracking: 0.2 },
       texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
@@ -42,8 +42,11 @@ export const PAGES = [
       title2: '一座为思考而建的街区》',
       lines: ['DEBATE · PUZZLES · GAMES', 'A STREET CORNER OF REASON'],
     },
-    intro:
-      '这里收着我的辩论笔记与工具、几道让人睡不着的智力题，以及一些可以直接在网页上玩的小游戏。每一栋建筑是一个分区——沿着广场走走看。',
+    // (an array: one paragraph each)
+    intro: [
+      '这里放着那些我喜欢的、我拼装的、同时也定义了我的东西。',
+      '我相信在不远的未来，人们会拥有更强大的工具来寻找与自己共鸣的灵魂。于是，我决定抢先一步把自己所有的名片塞进这个漂流瓶。但愿「它」能让你喜欢。Cheers~',
+    ],
     cards: [
       { no: 'A', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
       { no: 'B', title: '谜题', en: 'Puzzles', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
@@ -54,7 +57,7 @@ export const PAGES = [
       // on the left, a "name: value" line on the right)
       left: { title: 'Ingredients', stars: 3, lines: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Taste', '≤0.6%']] },
       center: { script: 'Material', lines: ['Variations in humorousness', 'are inherent to the material', 'and not considered defects.'] },
-      right: { title: 'Inspection Panel', sub: 'PASSED, LOOSELY', lines: [['Inspected by', 'a botanist'], ['Classification', 'berry'], ['Shipped', 'anyway']] },
+      right: { title: 'Inspection Panel', sub: 'PASSED, LOOSELY', lines: [['Inspected by', '35,000,000 bananas'], ['Classification', 'berry'], ['Shipped', 'anyway']] },
     },
   },
   {
@@ -141,7 +144,7 @@ export const PAGES = [
     id: 'games',
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '04',
-    nav: '游戏',
+    nav: '玩乐',
     en: 'GAMES',
     building: 'games',
     scene: {
