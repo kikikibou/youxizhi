@@ -128,9 +128,7 @@ export class LampDevice extends Device {
  * The beam is drawn in screen space, like a graphic laid over the picture:
  * a wedge that leaves the lantern glass and always runs past the edge of the
  * screen (a 3D cone would show its far end, converging on the horizon).
- * The lamp still turns in 3D: its heading decides which way the wedge points
- * on screen, how wide it opens, and when it fades (it hides while it points
- * at the camera or away behind the tower).
+ * It turns round the lantern on screen (see BeaconDevice.update).
  *
  * Wedge space: "aspect NDC" — x scaled by the aspect ratio so lengths are
  * equal in both directions; the screen spans ±aspect × ±1.
@@ -204,19 +202,19 @@ export class BeaconDevice extends Device {
    *   source   half-height of the light as it leaves the glass (m)
    *   glass    lantern glass radius (m): the reveal starts there
    *   spread   how fast the wedge opens on screen (half-width per unit length)
-   *   speed    turning speed (radians/s)
-   *   tilt     downward tilt (radians)
+   *   speed    turning speed on screen while the beam shows (radians/s)
+   *   angle    starting angle on screen (0 = pointing right, π/2 = up)
    */
-  constructor({ p, source = 0.95, glass = 1.95, spread = 0.085, speed = 0.3, tilt = 0.02, phase = 2.2 }) {
+  constructor({ p, source = 0.95, glass = 1.95, spread = 0.085, speed = 0.3, angle = 0.25 }) {
     super();
     this.p = new THREE.Vector3(...p);
     this.source = source;
     this.glass = glass;
     this.spread = spread;
     this.speed = speed;
-    this.tilt = tilt;
-    this.phase = phase;
+    this.angle = angle;
     this.fade = 0;
+    this.flash = 0;
 
     // Shared wedge shape (both materials read the same uniform objects).
     this.shape = {
@@ -266,7 +264,6 @@ export class BeaconDevice extends Device {
     this._D = new THREE.Vector3();
     this._o = new THREE.Vector3();
     this._e = new THREE.Vector3();
-    this._toCam = new THREE.Vector3();
   }
 
   setReveal(v) {
@@ -274,29 +271,16 @@ export class BeaconDevice extends Device {
     this.mask.visible = this.punch.visible = v > 0.002;
   }
 
+  /*
+   * The beam turns like a clock hand on screen: right, up through the sky
+   * (that's the stretch where it swings towards the viewer, so it opens
+   * wider and brighter), left, then on round underneath, where it would
+   * dip into the sea, so it fades out *while still turning* and comes back
+   * on the other side. It turns a little faster while it is hidden.
+   */
   update(time, dt, night, activity, camera) {
-    const theta = this.phase + time * this.speed;
     this.group.updateWorldMatrix(true, false);
-    const m = this.group.matrixWorld;
-    const L = this._L.copy(this.p).applyMatrix4(m);
-    const D = this._D.set(Math.cos(theta), -Math.tan(this.tilt), -Math.sin(theta)).normalize().transformDirection(m);
-
-    // Where is the lamp pointing relative to the camera?
-    //   c: 1 = straight at the camera, -1 = straight away
-    //   s: +1 = towards the right of the screen, -1 = the left
-    const hd = Math.max(1e-6, Math.hypot(D.x, D.z));
-    const toCam = this._toCam.copy(camera.position).sub(L).setY(0).normalize();
-    const c = (D.x * toCam.x + D.z * toCam.z) / hd;
-    const right = this._e.set(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize();
-    const side = (D.x * right.x + D.z * right.z) / hd;
-    // Hidden only while it points (nearly) at the camera or away from it.
-    const vis = THREE.MathUtils.smoothstep(Math.abs(side), 0.22, 0.55);
-    this.heading = c;
-    // On screen the beam always leaves the lantern sideways: rising a little
-    // as it swings towards the viewer, dipping a little as it turns away,
-    // but never down past the horizon into the sea.
-    const elev = THREE.MathUtils.degToRad(c < 0 ? THREE.MathUtils.lerp(4, -7, -c) : THREE.MathUtils.lerp(4, 24, c));
-
+    const L = this._L.copy(this.p).applyMatrix4(this.group.matrixWorld);
     // Lantern on screen; behind the camera (mid-flight) there is nothing to draw.
     const viewZ = this._o.copy(L).applyMatrix4(camera.matrixWorldInverse).z;
     if (viewZ > -camera.near) {
@@ -306,19 +290,38 @@ export class BeaconDevice extends Device {
     }
     const aspect = camera.aspect;
     const o = this._o.copy(L).project(camera);
-    const dx = Math.sign(side || 1) * Math.cos(elev);
-    const dy = Math.sin(elev);
-    // Screen units per metre at the lantern's distance.
-    const unit = 1 / (-viewZ * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
     const ox = o.x * aspect;
     const oy = o.y;
+    // Screen units per metre at the lantern's distance.
+    const unit = 1 / (-viewZ * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    const w0 = this.source * unit;
+    // The horizon on screen (eye level, straight ahead).
+    const fwd = this._e.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const horizon = this._D.copy(camera.position).addScaledVector(fwd, 1000).project(camera).y;
+
+    const phi = this.angle;
+    const dx = Math.cos(phi);
+    const dy = Math.sin(phi);
+    this.flash = Math.max(dy, 0); // pointing up = swinging towards the viewer
+    const spread = this.spread * (1 + 2.2 * this.flash * this.flash);
+
+    // Visible while the beam's lower edge stays above the horizon all the way
+    // to the edge of the screen; fades out as it gets close.
+    let vis = 1;
+    if (dy < 0) {
+      const tx = dx > 1e-6 ? (aspect - ox) / dx : dx < -1e-6 ? (-aspect - ox) / dx : Infinity;
+      const t = Math.max(0, Math.min(tx, (-1 - oy) / dy));
+      const low = oy + dy * t - Math.abs(dx) * (w0 + t * spread);
+      vis = THREE.MathUtils.smoothstep(low - horizon, 0.02, 0.3);
+    }
+    this.angle = (phi + dt * this.speed * (1 + 1.5 * (1 - vis) ** 2)) % (Math.PI * 2);
+
     const s = this.shape;
     s.uOrigin.value.set(ox, oy);
     s.uDir.value.set(dx, dy);
     s.uAspect.value = aspect;
-    s.uW0.value = this.source * unit;
-    // Swinging towards the camera the beam opens up; turning away it narrows.
-    s.uSpread.value = this.spread * (1 + 0.9 * Math.max(c, 0) - 0.3 * Math.max(-c, 0));
+    s.uW0.value = w0;
+    s.uSpread.value = spread;
     // Long enough to pass the farthest screen corner.
     let far = 0;
     for (const [cx, cy] of [[-aspect, -1], [aspect, -1], [-aspect, 1], [aspect, 1]]) far = Math.max(far, Math.hypot(cx - ox, cy - oy));
@@ -366,7 +369,7 @@ export class BeaconDevice extends Device {
 
   applyTime(night, activity) {
     const u = this.halo.material.uniforms;
-    u.uOpacity.value = (0.05 + 0.26 * night) * activity * this.fade;
+    u.uOpacity.value = (0.05 + 0.26 * night) * (1 + 0.4 * this.flash) * activity * this.fade;
     this.halo.visible = u.uOpacity.value > 0.002;
   }
 }
