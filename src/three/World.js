@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
 import { createGround, createTree, Lamp, Ribbon } from './props.js';
-import { LampDevice, BeaconDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
+import { LampDevice, BeaconDevice, SplitDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, MASK, MASK_GLSL } from './typography.js';
@@ -260,6 +260,7 @@ export class World {
   /** The page's reveal device (see devices.js): a street lamp unless configured otherwise. */
   makeDevice(sc) {
     if (sc.device?.type === 'beacon') return new BeaconDevice(sc.device);
+    if (sc.device?.type === 'split') return new SplitDevice(sc.device);
     return new LampDevice(this.mats, sc.lamp);
   }
 

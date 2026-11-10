@@ -202,55 +202,128 @@ function home(mats) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* 02 · DEBATE — a slab tower of stacked floors with a canopy                */
+/* 02 · DEBATE — "The Forum": two towers face each other; their sky bridges  */
+/* stop two metres apart (the clash point); a grandstand and a round stage   */
+/* with two lecterns sit in the gap between them.                            */
 /* ------------------------------------------------------------------------ */
+// The gap between the bridge arms: the split device in pages.js pivots here.
+export const FORUM = { gap: [1, 23.05, -3] };
+
 function debate(mats) {
   const b = new Builder(mats);
-  const L = -14;
-  const C = 6; // start of the solid core
-  const R = 14;
-  const D = -14;
-  const floors = 8;
-  const fh = 3.4;
-  const base = 4.4;
 
-  b.box('warm', [L, 0, D], [C, base, -3.2]);
-  b.box('strip', [L, base - 0.15, -3.2], [C, base, 0]);
-  b.mullionsZ('metal', L, C, 0, base - 0.15, -1.2, 2.5);
-  for (let i = 0; i < floors; i++) {
-    const y = base + i * fh;
-    b.box('white', [L, y, D], [C, y + 1.0, 0.7]);
-    b.box(i % 3 === 1 ? 'glassDark' : 'glass', [L + 0.2, y + 1.0, D + 1], [C, y + fh, -0.7]);
-    b.mullionsZ('metal', L + 1, C - 0.5, y + 1.0, y + fh, -0.62, 3.0, 0.06);
+  /* --- Affirmative tower (left): tall, glass behind dense vertical fins --- */
+  const A = { x0: -20, x1: -6, z0: -15, z1: -3, top: 38 };
+  // Lobby: warm glazing under a deep slab with a light strip.
+  b.box('warm', [A.x0 + 0.5, 0, A.z0 + 1], [A.x1 - 0.5, 4.6, A.z1 - 0.6]);
+  b.box('white', [A.x0, 4.6, A.z0], [A.x1, 5.2, A.z1 + 1.6]);
+  b.box('strip', [A.x0 + 0.4, 4.52, A.z1 - 0.4], [A.x1 - 0.4, 4.6, A.z1 + 1.4]);
+  for (const x of [A.x0 + 1, A.x1 - 1]) b.box('white', [x - 0.3, 0, A.z1 - 0.3], [x + 0.3, 4.6, A.z1 + 0.3]);
+  // Floors: glass with slim slab edges.
+  const fhA = 3.6;
+  for (let y = 5.2, i = 0; y < A.top - 3; y += fhA, i++) {
+    // The top floors stay dark: the title is read against them, day and night.
+    const dark = y > A.top - 14 || i % 4 === 2;
+    b.box(dark ? 'glassDark' : 'glass', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, y + fhA - 0.35, A.z1 - 0.3]);
+    b.box('white', [A.x0, y + fhA - 0.35, A.z0], [A.x1, y + fhA, A.z1]);
   }
-  const top = base + floors * fh;
-  b.box('white', [L, top, D], [C, top + 1.4, 0.7]);
+  // Vertical fins on the front and on the face looking at the other tower.
+  for (let x = A.x0 + 0.6; x <= A.x1 - 0.5; x += 1.3) b.box('white', [x - 0.11, 5.2, A.z1 - 0.3], [x + 0.11, A.top - 2, A.z1 + 0.55]);
+  for (let z = A.z0 + 0.8; z <= A.z1 - 0.5; z += 1.3) b.box('white', [A.x1 - 0.3, 5.2, z - 0.11], [A.x1 + 0.55, A.top - 2, z + 0.11]);
+  // Crown with an orange slot.
+  b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
+  b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
+  b.box('whiteShade', [-16, A.top, -12], [-10, A.top + 2.2, -7]);
 
-  // Solid core with punched windows.
-  b.box('white', [C, 0, D], [R, top + 4.5, 0.3]);
-  for (let y = 6; y < top; y += fh * 2) b.winZ(y % 3 > 1 ? 'glass' : 'glassDark', C + 2.2, C + 3.6, y, y + 1.4, 0.3);
-  b.box('warm', [C + 1.4, 0, 0.2], [C + 4.5, 3.6, 0.45]);
+  /* --- Negative tower (right): lower, horizontal bands, rounded corner --- */
+  const B = { x0: 8, x1: 22, z0: -15, z1: -3, top: 28, r: 4 };
+  const cx = B.x0 + B.r;
+  const cz = B.z1 - B.r;
+  // Footprint with its front corner (towards the gap) rounded, grown by e.
+  const footprint = (key, y0, y1, e) => {
+    b.box(key, [cx, y0, B.z0], [B.x1 + e, y1, B.z1 + e]);
+    b.box(key, [B.x0 - e, y0, B.z0], [cx, y1, cz]);
+    b.cyl(key, cx, cz, y0, y1, B.r + e, 40);
+  };
+  footprint('warm', 0, 4.4, -0.6);
+  footprint('white', 4.4, 5.3, 0.6); // canopy
+  b.box('strip', [cx, 4.32, B.z1 - 0.2], [B.x1, 4.4, B.z1 + 0.5]);
+  const fhB = 3.3;
+  for (let y = 5.3, i = 0; y < B.top - 1; y += fhB, i++) {
+    footprint(i % 3 === 1 ? 'glass' : 'glassDark', y, y + fhB - 0.95, -0.25);
+    footprint('white', y + fhB - 0.95, y + fhB, 0.35);
+  }
+  footprint('white', B.top - 1.2, B.top + 0.4, 0.35); // parapet
+  b.box('whiteShade', [14, B.top + 0.4, -12], [19, B.top + 2.6, -7]);
 
-  // Low lecture hall to the right of the tower (open sky above the lamp).
-  b.box('white', [R, 0, -16], [38, 10.6, -3]);
-  b.winZ('warm', R + 1, 37, 0.4, 3.8, -3);
-  b.winZ('glass', R + 1, 37, 6.2, 8.0, -3);
-  b.box('whiteShade', [R - 0.2, 10.6, -16.2], [38.2, 11.0, -2.8]);
+  /* --- Sky bridges: two arms that stop 2 m short of each other --- */
+  const [gx, gy, gz] = FORUM.gap;
+  const y0 = gy - 1.55;
+  const y1 = gy + 1.55;
+  const armZ0 = gz - 6;
+  const half = 1.2; // half the gap
+  for (const [x0, x1] of [[A.x1 - 0.3, gx - half], [gx + half, cx]]) {
+    b.box('white', [x0, y0, armZ0], [x1, y1, gz]);
+    b.box('glass', [x0, y0 + 0.75, gz - 0.02], [x1, y1 - 0.45, gz + 0.04]);
+    b.box('strip', [x0, y0 - 0.08, armZ0 + 0.4], [x1, y0, gz - 0.4]);
+  }
+  // Orange end plates on the two tips facing each other: the clash point.
+  b.box('orange', [gx - half - 0.12, y0, armZ0], [gx - half, y1, gz + 0.05]);
+  b.box('orange', [gx + half, y0, armZ0], [gx + half + 0.12, y1, gz + 0.05]);
 
-  // Cantilevered wing on the upper floors.
-  const wy0 = base + 4 * fh;
-  const wy1 = base + 7 * fh;
-  b.box('white', [-26, wy0, -12], [L, wy1, -2]);
-  b.winZ('glass', -25, L - 1, wy0 + 2.0, wy0 + 3.6, -2);
-  b.winZ('glassDark', -25, L - 1, wy0 + 6.0, wy0 + 7.6, -2);
-  b.box('strip', [-25.5, wy0 - 0.08, -11.5], [L, wy0, -2.5]);
+  /* --- Grandstand between the towers, rising away from the stage --- */
+  for (let i = 0; i < 7; i++) {
+    const z = -2.4 - i * 1.15;
+    b.box(i % 2 ? 'whiteShade' : 'white', [A.x1 + 0.4, 0, -14.5], [B.x0 - 0.4, 0.42 * (i + 1), z]);
+  }
+  b.railingX('metal', A.x1 + 0.4, B.x0 - 0.4, -14.4, 0.42 * 7, 1.0, 1.15);
 
-  // Entrance canopy.
-  b.box('white', [-12, 4.6, 0], [4, 5.1, 9]);
-  b.box('strip', [-11.5, 4.52, 0.5], [3.5, 4.6, 8.5]);
-  b.cyl('metal', -10, 8, 0, 4.6, 0.14, 12);
-  b.cyl('metal', 2, 8, 0, 4.6, 0.14, 12);
-  return b.build();
+  /* --- Round stage with two lecterns facing each other --- */
+  const sx = gx;
+  const sz = 5;
+  b.cyl('white', sx, sz, 0, 0.7, 4.6, 64);
+  b.cyl('whiteShade', sx, sz, 0, 0.1, 5.0, 64);
+  b.box('orange', [sx - 0.07, 0.7, sz - 4.5], [sx + 0.07, 0.73, sz + 4.5]); // the line down the middle
+  for (const [x, key, face] of [[sx - 2.6, 'white', 'orange'], [sx + 2.6, 'orange', 'white']]) {
+    const dir = Math.sign(sx - x); // faces the other lectern
+    b.box(key, [x - 0.35, 0.7, sz - 0.4], [x + 0.35, 2.0, sz + 0.4]);
+    b.boxRot(key, [x + dir * 0.05, 2.08, sz], [0.85, 0.12, 0.9], [0, 0, dir * 0.35]);
+    b.box(face, [x + dir * 0.35, 0.9, sz - 0.3], [x + dir * 0.38, 1.75, sz + 0.3]);
+  }
+
+  /* --- Plaza edge --- */
+  for (let x = -24; x <= 26; x += 4.6) if (Math.abs(x - sx) > 7) b.bollard(x, 13);
+  b.bench(-18, 12.5);
+  b.bench(16, 12.5);
+
+  const group = b.build();
+
+  // LED "speaking time" bars under the bridge glass: one side counts down,
+  // then the other, like a debate timer.
+  const bars = [];
+  for (const [x0, x1] of [[A.x1 + 0.2, gx - half - 0.3], [B.x0 + 0.2, gx + half + 0.3]]) {
+    const len = Math.abs(x1 - x0);
+    const g = new THREE.BoxGeometry(1, 0.26, 0.1);
+    g.translate(0.5, 0, 0);
+    const bar = new THREE.Mesh(g, mats.orange);
+    bar.position.set(x0, y0 + 0.42, gz + 0.06);
+    bar.scale.x = len * Math.sign(x1 - x0);
+    bar.userData.len = bar.scale.x;
+    group.add(bar);
+    bars.push(bar);
+  }
+  const turn = 9; // seconds per speech
+  group.userData.animate = (t) => {
+    const k = (t / turn) % 2;
+    bars.forEach((bar, i) => {
+      const mine = Math.floor(k) === i;
+      const f = k % 1;
+      // Counting down during its own turn; refilling quickly when it ends.
+      const left = mine ? 1 - f : Math.min(1, f * 4);
+      bar.scale.x = bar.userData.len * Math.max(0.001, left);
+    });
+  };
+  return group;
 }
 
 /* ------------------------------------------------------------------------ */

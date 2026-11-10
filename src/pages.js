@@ -61,12 +61,14 @@ export const PAGES = [
     en: 'DEBATE',
     building: 'debate',
     scene: {
-      view: { pos: [11, 1.5, 27], target: [27, 16, 0], fov: 58, roll: 0.03 },
-      lamp: { p: [24, 13], h: 20 },
-      cluster: { p: [21.5, 11.8, 11.2], r: [0.08, -0.06, 0], size: 6.0, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement' },
-      texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 1.25, p: [-4, 4.95, 0.76], c: 'orange' }],
-      ribbon: { p: [6, 22.5, 9], r: [0, -0.12, -0.15], length: 26, width: 1.2, seed: 2.1 },
-      trees: [[-18, 10, 1.1], [-28, 16, 1.0]],
+      view: { pos: [-9, 1.6, 30], target: [-3.5, 20.5, -6], fov: 60, roll: 0.02 },
+      // The split line pivots in the gap between the two bridge arms
+      // (FORUM.gap in buildings.js); the right-hand side shows the other time.
+      device: { type: 'split', p: [1, 23.05, -3], side: 1 },
+      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 5.2, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement' },
+      texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 0.45, p: [-13, 4.9, -1.33], c: 'orange' }],
+      ribbon: { p: [1, 15.5, 1], r: [0, 0, 0.08], length: 24, width: 1.1, seed: 2.1 },
+      trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
     eyebrow: 'DEBATE',
     poem: ['Every motion is a door', 'left half open on purpose.', 'Walk through it twice.'],

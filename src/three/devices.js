@@ -122,6 +122,147 @@ export class LampDevice extends Device {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 02 · Split line: the picture divided at the gap between the two towers      */
+/* -------------------------------------------------------------------------- */
+/*
+ * A line through the "clash point" (the gap between the bridge arms) divides
+ * the whole picture: one side is shown at the other time of day. The line
+ * rocks slowly about that point, like the beam of a balance. Drawn in screen
+ * space ("aspect NDC", as the beacon): x scaled by the aspect ratio.
+ */
+const splitVert = /* glsl */ `
+  uniform vec2 uOrigin;   // pivot (aspect NDC)
+  uniform vec2 uDir;      // unit direction of the line on screen
+  uniform float uAspect;
+  uniform float uSide;    // +1: reveal to the right of the line, -1: left
+  uniform float uOffset;  // move the near edge across the line (punch overlap)
+  uniform float uHalf;    // >0: draw a thin band of this half-width instead
+  uniform float uDepth;
+  void main() {
+    vec2 n = vec2(uDir.y, -uDir.x) * uSide;
+    float across = uHalf > 0.0 ? position.x * uHalf : position.x * 8.0 - uOffset;
+    vec2 p = uOrigin + n * across + uDir * position.y * 8.0;
+    gl_Position = vec4(p.x / uAspect, p.y, uDepth, 1.0);
+  }
+`;
+const splitMaskFrag = /* glsl */ `
+  uniform float uReveal;
+  void main() { gl_FragColor = vec4(vec3(uReveal), 1.0); }
+`;
+const splitLineFrag = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uOpacity;
+  void main() { gl_FragColor = vec4(uColor, uOpacity); }
+`;
+
+function quad(x0, x1) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([x0, -1, 0, x1, -1, 0, x1, 1, 0, x0, 1, 0], 3));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  return g;
+}
+
+export class SplitDevice extends Device {
+  /**
+   * @param {object} cfg
+   *   p      pivot (local): the gap between the bridge arms
+   *   side   1 = the right of the line shows the other time, -1 = the left
+   *   sway   how far the line rocks either way (radians)
+   *   period seconds per rock
+   */
+  constructor({ p, side = 1, sway = 0.06, period = 13, color = 0xff7d10 }) {
+    super();
+    this.p = new THREE.Vector3(...p);
+    this.sway = sway;
+    this.period = period;
+    this.shape = {
+      uOrigin: { value: new THREE.Vector2() },
+      uDir: { value: new THREE.Vector2(0, 1) },
+      uAspect: { value: 1 },
+      uSide: { value: side },
+    };
+    const half = quad(0, 1);
+    const common = { vertexShader: splitVert, depthTest: false, depthWrite: false, side: THREE.DoubleSide };
+    this.maskMat = new THREE.ShaderMaterial({
+      ...common,
+      fragmentShader: splitMaskFrag,
+      uniforms: { ...this.shape, uOffset: { value: 0 }, uHalf: { value: 0 }, uDepth: { value: 0 }, uReveal: { value: 0 } },
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+    });
+    this.addMask(half);
+    this.punchMat = punchMaterial(splitVert, { ...this.shape, uOffset: { value: 0.012 }, uHalf: { value: 0 }, uDepth: { value: 1 } });
+    this.addPunch(half, this.punchMat);
+
+    // The line itself: a thin orange stroke over the picture, in both renders.
+    this.line = new THREE.Mesh(
+      quad(-1, 1),
+      new THREE.ShaderMaterial({
+        ...common,
+        fragmentShader: splitLineFrag,
+        uniforms: { ...this.shape, uOffset: { value: 0 }, uHalf: { value: 0.0032 }, uDepth: { value: 0 }, uColor: { value: new THREE.Color(color) }, uOpacity: { value: 0 } },
+        transparent: true,
+      }),
+    );
+    this.line.frustumCulled = false;
+    this.line.renderOrder = 8;
+    this.group.add(this.line);
+
+    this.glow = { pos: this.p.clone(), radius: 1.4, day: 0.25, night: 0.95 };
+    this._L = new THREE.Vector3();
+    this._o = new THREE.Vector3();
+  }
+
+  setReveal(v) {
+    this.maskMat.uniforms.uReveal.value = v;
+    this.mask.visible = this.punch.visible = v > 0.002;
+  }
+
+  update(time, dt, night, activity, camera) {
+    this.group.updateWorldMatrix(true, false);
+    const L = this._L.copy(this.p).applyMatrix4(this.group.matrixWorld);
+    const viewZ = this._o.copy(L).applyMatrix4(camera.matrixWorldInverse).z;
+    if (viewZ > -camera.near) {
+      this.on = 0;
+      this.setReveal(0);
+      return;
+    }
+    const aspect = camera.aspect;
+    const o = this._o.copy(L).project(camera);
+    // Rocking like a balance: a slow swing with a little unevenness.
+    const w = (Math.PI * 2) / this.period;
+    const tilt = this.sway * (Math.sin(time * w) * 0.85 + Math.sin(time * w * 2.3 + 1.1) * 0.15);
+    const s = this.shape;
+    s.uOrigin.value.set(o.x * aspect, o.y);
+    s.uDir.value.set(-Math.sin(tilt), Math.cos(tilt));
+    s.uAspect.value = aspect;
+    this.on = activity;
+    this.setReveal(activity);
+  }
+
+  /** Pixel rectangle (x, y, w, h) covering the revealed side of the screen. */
+  screenBox(size, out) {
+    const s = this.shape;
+    const a = s.uAspect.value;
+    const o = s.uOrigin.value;
+    const d = s.uDir.value;
+    if (Math.abs(d.y) < 0.2) return out.set(0, 0, size.x, size.y);
+    // Where the line crosses the top and bottom of the screen.
+    const xs = [-1, 1].map((y) => ((o.x + (d.x * (y - o.y)) / d.y) / a) * 0.5 + 0.5);
+    const right = d.y * s.uSide.value > 0;
+    const x0 = right ? Math.max(0, Math.floor(Math.min(...xs) * size.x) - 3) : 0;
+    const x1 = right ? size.x : Math.min(size.x, Math.ceil(Math.max(...xs) * size.x) + 3);
+    return out.set(x0, 0, Math.max(1, x1 - x0), size.y);
+  }
+
+  applyTime(night, activity) {
+    const u = this.line.material.uniforms;
+    u.uOpacity.value = 0.95 * activity;
+    this.line.visible = u.uOpacity.value > 0.002;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* 05 · Lighthouse beacon: a flat wedge of light sweeping out of the lantern   */
 /* -------------------------------------------------------------------------- */
 /*
