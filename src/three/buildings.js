@@ -18,8 +18,11 @@ class Builder {
     return this;
   }
 
-  /** Axis-aligned box from min corner to max corner. */
-  box(key, min, max) {
+  /** Axis-aligned box between two opposite corners (in any order). */
+  box(key, a, b) {
+    // A box given max-before-min would be built inside out (and flicker).
+    const min = a.map((v, i) => Math.min(v, b[i]));
+    const max = a.map((v, i) => Math.max(v, b[i]));
     const g = new THREE.BoxGeometry(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
     g.translate((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
     return this.push(key, g);
@@ -268,13 +271,17 @@ function debate(mats) {
     b.box('strip', [x0, y0 - 0.08, armZ0 + 0.4], [x1, y0, gz - 0.4]);
   }
   // Orange end plates on the two tips facing each other: the clash point.
-  b.box('orange', [gx - half - 0.12, y0, armZ0], [gx - half, y1, gz + 0.05]);
-  b.box('orange', [gx + half, y0, armZ0], [gx + half + 0.12, y1, gz + 0.05]);
+  // (Proud of the arm ends and a hair over their edges: coplanar faces flicker.)
+  b.box('orange', [gx - half - 0.1, y0 - 0.03, armZ0 - 0.03], [gx - half + 0.05, y1 + 0.03, gz + 0.05]);
+  b.box('orange', [gx + half - 0.05, y0 - 0.03, armZ0 - 0.03], [gx + half + 0.1, y1 + 0.03, gz + 0.05]);
 
   /* --- Grandstand between the towers, rising away from the stage --- */
+  // One block per step (overlapping full-depth blocks would share their side
+  // faces, and the two alternating materials would flicker there).
   for (let i = 0; i < 7; i++) {
     const z = -2.4 - i * 1.15;
-    b.box(i % 2 ? 'whiteShade' : 'white', [A.x1 + 0.4, 0, -14.5], [B.x0 - 0.4, 0.42 * (i + 1), z]);
+    const back = i === 6 ? -14.5 : z - 1.15;
+    b.box(i % 2 ? 'whiteShade' : 'white', [A.x1 + 0.4, 0, back], [B.x0 - 0.4, 0.42 * (i + 1), z]);
   }
   b.railingX('metal', A.x1 + 0.4, B.x0 - 0.4, -14.4, 0.42 * 7, 1.0, 1.15);
 
@@ -288,7 +295,8 @@ function debate(mats) {
     const dir = Math.sign(sx - x); // faces the other lectern
     b.box(key, [x - 0.35, 0.7, sz - 0.4], [x + 0.35, 2.0, sz + 0.4]);
     b.boxRot(key, [x + dir * 0.05, 2.08, sz], [0.85, 0.12, 0.9], [0, 0, dir * 0.35]);
-    b.box(face, [x + dir * 0.35, 0.9, sz - 0.3], [x + dir * 0.38, 1.75, sz + 0.3]);
+    const fx = [x + dir * 0.35, x + dir * 0.4]; // min/max must be in order for box()
+    b.box(face, [Math.min(...fx), 0.9, sz - 0.3], [Math.max(...fx), 1.75, sz + 0.3]);
   }
 
   /* --- Plaza edge --- */

@@ -169,12 +169,16 @@ export class SplitDevice extends Device {
    *   side   1 = the right of the line shows the other time, -1 = the left
    *   sway   how far the line rocks either way (radians)
    *   period seconds per rock
+   *   push   how far the line is pushed to and fro between the towers (m)
+   *   pushPeriod seconds per push and pull
    */
-  constructor({ p, side = 1, sway = 0.06, period = 13, color = 0xff7d10 }) {
+  constructor({ p, side = 1, sway = 0.06, period = 13, push = 3.6, pushPeriod = 19, color = 0xff7d10 }) {
     super();
     this.p = new THREE.Vector3(...p);
     this.sway = sway;
     this.period = period;
+    this.push = push;
+    this.pushPeriod = pushPeriod;
     this.shape = {
       uOrigin: { value: new THREE.Vector2() },
       uDir: { value: new THREE.Vector2(0, 1) },
@@ -220,7 +224,13 @@ export class SplitDevice extends Device {
 
   update(time, dt, night, activity, camera) {
     this.group.updateWorldMatrix(true, false);
-    const L = this._L.copy(this.p).applyMatrix4(this.group.matrixWorld);
+    // Pushed to and fro between the two towers, like a tug of war (on a
+    // different rhythm from the rocking, so the two never look mechanical).
+    const pw = (Math.PI * 2) / this.pushPeriod;
+    const shift = this.push * (Math.sin(time * pw) * 0.8 + Math.sin(time * pw * 2.7 + 0.5) * 0.2);
+    const L = this._L.copy(this.p);
+    L.x += shift;
+    L.applyMatrix4(this.group.matrixWorld);
     const viewZ = this._o.copy(L).applyMatrix4(camera.matrixWorldInverse).z;
     if (viewZ > -camera.near) {
       this.on = 0;
@@ -455,6 +465,10 @@ export class BeaconDevice extends Device {
       const low = oy + dy * t - Math.abs(dx) * (w0 + t * spread);
       vis = THREE.MathUtils.smoothstep(low - horizon, 0.02, 0.3);
     }
+    // On the left it bows out once it has come round to about horizontal
+    // (pointing further down-left read oddly).
+    const deg = THREE.MathUtils.radToDeg(phi);
+    if (deg > 90 && deg < 270) vis = Math.min(vis, 1 - THREE.MathUtils.smoothstep(deg, 170, 194));
     this.angle = (phi + dt * this.speed * (1 + 1.5 * (1 - vis) ** 2)) % (Math.PI * 2);
 
     const s = this.shape;
