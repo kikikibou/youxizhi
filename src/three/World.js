@@ -65,8 +65,10 @@ const finalShader = {
     ${MASK_GLSL}
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
-      vec3 c = texture2D(tScene, vUv).rgb;
-      if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb;
+      vec4 scene = texture2D(tScene, vUv);
+      vec3 c = scene.rgb;
+      // (alpha below 1 marks a lit sign's letters: less glow lands on them)
+      if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb * mix(0.25, 1.0, clamp(scene.a, 0.0, 1.0));
       if (uMix > 0.5) {
         float k = beamCoverage(gl_FragCoord.xy);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);

@@ -140,7 +140,9 @@ function home(mats) {
 
   // Level 1 mass with a ribbon window.
   b.box('white', [-26, 5.0, -16], [6, 9.0, -1.0]);
-  b.winZ('glass', -21, -5, 6.2, 7.9, -1.0);
+  // (dark glass: the light-box sign runs across it, and a lit window
+  // behind the letters at night made them hard to read)
+  b.winZ('glassDark', -21, -5, 6.2, 7.9, -1.0);
   b.winZ('glassDark', -2, 4, 6.2, 7.9, -1.0);
 
   // Shadow gap under the cantilever.
@@ -355,6 +357,9 @@ function puzzle(mats) {
   b.box('warm', [x0 + 4, 0, back + 4], [x1 - 4, y0, Z - 5]);
   b.box('strip', [x0 + 0.5, y0 - 0.08, back + 0.5], [x1 - 0.5, y0, Z - 0.5]);
   b.mullionsZ('metal', x0 + 4, x1 - 4, 0, y0, Z - 4.9, 2.0);
+  // Entrance canopy under the left half, its front a fascia for the sign.
+  b.box('white', [x0 + 0.4, 2.75, Z - 4.5], [x0 + 9.4, 3.65, Z + 1.8]);
+  b.box('strip', [x0 + 0.7, 2.67, Z - 4.2], [x0 + 9.1, 2.75, Z + 1.6]);
 
   // Cube body (set back a little so the modules can stand proud or sink),
   // with the top right corner cut out where the missing module was.

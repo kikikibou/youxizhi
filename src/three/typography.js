@@ -92,19 +92,20 @@ const frag = /* glsl */ `
   void main() {
     float cov = beamCoverage(gl_FragCoord.xy);
     float a = texture2D(map, vUv).a;
-    vec3 c = mix(uOut, uIn, cov);
+    // (premultiplied: the letters cover what is behind them, the halo adds light)
+    vec3 c = mix(uOut, uIn, cov) * a;
     float glow = mix(uHalo.x, uHalo.y, cov);
     if (glow > 0.0) {
-      // Blurred copies of the letters (coarse mip levels) make a soft halo
-      // in the sign's own colour around the lighter, lit letters.
-      float h = textureLod(map, vUv, 4.0).a * 0.5 + textureLod(map, vUv, 5.5).a * 0.6;
-      float ha = clamp(h, 0.0, 1.0) * 0.55 * glow * (1.0 - a);
-      float total = a + ha;
-      c = (c * a + uHaloCol * ha) / max(total, 1e-4);
-      a = total;
+      // Blurred copies of the letters (coarse mip levels) make a soft glow
+      // in the sign's colour round the lit letters.
+      // (kept well below the letters' own brightness: a strong glow filled
+      // the gaps between them and the lettering read as smudged)
+      float h = textureLod(map, vUv, 4.5).a * 0.5 + textureLod(map, vUv, 6.0).a * 0.5;
+      c += uHaloCol * clamp(h, 0.0, 1.0) * 0.5 * glow * (1.0 - a);
     }
+    c *= uOpacity;
     a *= uOpacity;
-    if (a < 0.004) discard;
+    if (max(a, max(c.r, max(c.g, c.b))) < 0.004) discard;
     gl_FragColor = vec4(c, a);
   }
 `;
@@ -115,7 +116,7 @@ const ORANGE = new THREE.Color(0xff7d10);
 const NAVY = new THREE.Color(0x0d1f3c);
 const WHITE = new THREE.Color(0xffffff);
 const CREAM = new THREE.Color(0xfff0d8);
-const SIGN = new THREE.Color(0xffa45c); // a lit sign: the accent, lighter
+const SIGN = new THREE.Color(0xff7d10); // a lit sign: the accent, brightened when lit
 const PALETTE = {
   // By day the beam is night, so letters inside it are white; by night the
   // beam is daylight, so letters inside it turn navy.
@@ -140,7 +141,9 @@ export function setTextColors({ accent, ink, light, cream }) {
   NAVY.set(ink);
   WHITE.set(light);
   CREAM.set(cream);
-  SIGN.set(accent).lerp(WHITE, 0.3);
+  // (barely lighter: mixing in linear light, a little white already turns
+  // the accent pink and the lit letters read pale instead of vivid)
+  SIGN.set(accent).lerp(WHITE, 0.03);
 }
 
 export class TextBlock {
@@ -173,14 +176,37 @@ export class TextBlock {
         uMaskRes: MASK.uMaskRes,
       },
       transparent: true,
+      premultipliedAlpha: true,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    const geo = new THREE.PlaneGeometry(w * scale, h * scale);
+    if (spec.c === 'sign') {
+      // Signs also leave their letters' coverage in the frame's alpha
+      // (alpha = 1 - coverage): the final pass lays less of the night glow
+      // over the letters there, so nearby strip lights don't wash them pale.
+      const m = this.material;
+      m.blending = THREE.CustomBlending;
+      m.blendSrc = THREE.OneFactor;
+      m.blendDst = THREE.OneMinusSrcAlphaFactor;
+      m.blendSrcAlpha = THREE.ZeroFactor;
+      m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+    }
+    const geo = new THREE.PlaneGeometry(w * scale, h * scale, spec.bend ? 64 : 1, 1);
     // anchor: which point of the glyph run sits at spec.p
     const shift = (w * scale) / 2 - pad * scale;
     if (spec.anchor === 'left') geo.translate(shift, 0, 0);
     if (spec.anchor === 'right') geo.translate(-shift, 0, 0);
+    if (spec.bend) {
+      // Wrapped round a cylinder of this radius whose axis is spec.p:
+      // the middle of the line faces +z (turned by spec.r).
+      const R = spec.bend;
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const a = pos.getX(i) / R;
+        pos.setXYZ(i, Math.sin(a) * R, pos.getY(i), Math.cos(a) * R);
+      }
+      geo.computeVertexNormals();
+    }
     this.mesh = new THREE.Mesh(geo, this.material);
     this.mesh.position.set(...spec.p);
     if (spec.r) this.mesh.rotation.set(...spec.r);
@@ -193,13 +219,13 @@ export class TextBlock {
     u.uIn.value.copy(p.dayIn).lerp(p.nightIn, night);
     u.uOut.value.copy(p.dayOut).lerp(p.nightOut, night);
     if (this.spec.c === 'sign') {
-      // Lit where it is night: lighter, brighter letters (much more washes
-      // the colour out in the tone mapping) in a halo of the accent colour.
-      const lit = 1.15;
+      // Lit where it is night: brighter letters (much more washes the
+      // colour out in the tone mapping) in a glow of the accent colour.
+      const lit = 1.3;
       u.uOut.value.multiplyScalar(1 + (lit - 1) * night);
       u.uIn.value.multiplyScalar(1 + (lit - 1) * (1 - night));
       u.uHalo.value.set(night, 1 - night);
-      u.uHaloCol.value.copy(ORANGE).multiplyScalar(1.1);
+      u.uHaloCol.value.copy(ORANGE);
     } else if (night > 0) {
       const k = 1 + (this.glow - 1) * night;
       u.uOut.value.multiplyScalar(k);
