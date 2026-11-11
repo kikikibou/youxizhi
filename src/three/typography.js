@@ -137,7 +137,6 @@ const NAVY = new THREE.Color(0x0d1f3c);
 const WHITE = new THREE.Color(0xffffff);
 const CREAM = new THREE.Color(0xfff0d8);
 const SIGN = new THREE.Color(0xff7d10); // a lit sign: the accent, brightened when lit
-const TAG = new THREE.Color(0xcc3642); // a red tag (the deeper red of the UI's tags)
 const PALETTE = {
   // By day the beam is night, so letters inside it are white; by night the
   // beam is daylight, so letters inside it turn navy.
@@ -159,9 +158,8 @@ const PALETTE = {
 };
 
 /** Lettering colours for a colour scheme (see palettes.js). */
-export function setTextColors({ accent, accentInk, accentDeep, ink, light, cream }) {
+export function setTextColors({ accent, ink, light, cream }) {
   ORANGE.set(accent);
-  TAG.set(accentInk || accentDeep);
   NAVY.set(ink);
   WHITE.set(light);
   CREAM.set(cream);
@@ -199,7 +197,7 @@ export class TextBlock {
         uHalo: { value: new THREE.Vector2() },
         uHaloCol: { value: new THREE.Color() },
         uTag: { value: new THREE.Vector4(0, 0, 0, 0) },
-        uTagCol: { value: TAG },
+        uTagCol: { value: new THREE.Color() },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
       },
@@ -208,10 +206,10 @@ export class TextBlock {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    if (spec.c === 'sign' || tag) {
-      // Signs (and tags) also leave their coverage in the frame's alpha
+    if (spec.c === 'sign') {
+      // Signs also leave their letters' coverage in the frame's alpha
       // (alpha = 1 - coverage): the final pass lays less of the night glow
-      // over them there, so nearby strip lights don't wash them pale.
+      // over the letters there, so nearby strip lights don't wash them pale.
       const m = this.material;
       m.blending = THREE.CustomBlending;
       m.blendSrc = THREE.OneFactor;
@@ -265,6 +263,9 @@ export class TextBlock {
       const k = 1 + (this.glow - 1) * night;
       u.uOut.value.multiplyScalar(k);
     }
+    // A tag is the title's own colour, glowing with it at night like the
+    // title letters (see 'cone' and glow).
+    if (this.spec.tag) u.uTagCol.value.copy(ORANGE).multiplyScalar(1 + 0.35 * night);
     u.uOpacity.value = opacity;
     this.mesh.visible = opacity > 0.003;
   }
@@ -314,7 +315,7 @@ export function buildCluster(c, aniso) {
     // caption under the title (above it would meet the header)
     // (capsSize / capsTracking: a short line, such as an address, reads
     // better a little larger and more widely spaced)
-    // (capsTag: white letters on a red tag, its left edge in line with the title's)
+    // (capsTag: white letters on a tag in the title's colour, its left edge in line with the title's)
     const cs = S * (c.capsSize ?? 0.16);
     const tag = c.capsTag ? { padX: 0.42, padY: 0.26 } : null;
     const x = tag ? -half + S * 0.09 + tag.padX * cs : -half + S * 0.08;

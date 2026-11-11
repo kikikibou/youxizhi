@@ -974,17 +974,17 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   font-size: 11px;
   letter-spacing: 0.26em;
 }
-/* The stars in coral: filled ones solid, the rest faint. */
+/* The stars in the badge's red (see .strip-badge): filled ones solid, the rest faint. */
 .strip-stars {
   margin-right: -2px;
-  color: var(--orange);
+  color: var(--orange-ink);
   font-family: 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
   font-size: 11px;
   letter-spacing: 2px;
 }
 .strip-stars i {
   font-style: normal;
-  opacity: 0.35;
+  opacity: 0.4;
 }
 .strip-badge {
   padding: 1px 7px 2px;
