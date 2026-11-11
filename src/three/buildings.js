@@ -259,8 +259,9 @@ function debate(mats) {
   // bridge's height a "bridge storey" flush with the bands that carries the
   // bridge's window ribbon round the tower, so the bridge arm runs into one
   // smooth surface. (Over set-back glass and proud bands at once, its end
-  // looked notched.)
-  const by0 = FORUM.gap[1] - 1.55 - 0.08; // (the underside of the bridge's light strip)
+  // looked notched.) Its underside sits a little below the arm's light strip,
+  // so the strip runs into its side: level with it, the two faces flickered.
+  const by0 = FORUM.gap[1] - 1.55 - 0.08 - 0.06;
   const by1 = FORUM.gap[1] + 1.55;
   const gH = (by0 - 5.3 - 4 * 0.95) / 5; // five glazed floors and four bands below it
   let fy = 5.3;
@@ -272,7 +273,7 @@ function debate(mats) {
     fy += 0.95;
   }
   footprint('white', by0, by1, 0.35);
-  footprint('glass', by0 + 0.08 + 0.75, by1 - 0.45, 0.39); // (level with the bridge's window, and as proud of it)
+  footprint('glass', FORUM.gap[1] - 1.55 + 0.75, by1 - 0.45, 0.39); // (level with the bridge's window, and as proud of it)
   footprint('glassDark', by1, B.top - 1.2, -0.25); // top floor
   footprint('white', B.top - 1.2, B.top + 0.4, 0.35); // parapet
   b.box('whiteShade', [14, B.top + 0.4, -12], [19, B.top + 2.6, -7]);
@@ -281,22 +282,29 @@ function debate(mats) {
   const [gx, gy, gz] = FORUM.gap;
   const y0 = gy - 1.55;
   const y1 = gy + 1.55;
-  const armZ0 = gz - 6;
   const half = 1.2; // half the gap
-  // The left arm starts inside the last fin on A's front and takes in the
-  // corner bay (a bare end face showed as a thin line in the gap in front of
-  // the set-back glass); the right one runs into B's bridge storey.
-  let finX = A.x0 + 0.6;
-  while (finX + 1.3 <= A.x1 - 0.5) finX += 1.3;
-  for (const [x0, x1] of [[finX + 0.05, gx - half], [gx + half, cx]]) {
-    b.box('white', [x0, y0, armZ0], [x1, y1, gz]);
-    b.box('glass', [x0, y0 + 0.75, gz - 0.02], [x1, y1 - 0.45, gz + 0.04]);
-    b.box('strip', [x0, y0 - 0.08, armZ0 + 0.4], [x1, y0, gz - 0.4]);
+  // The right arm runs into B's bridge storey, its front at the gap's z. The
+  // left one leaves A's flank one fin bay behind the front corner (its front
+  // half-way between the first two side fins) and starts inside the glass, so
+  // the side fins run down past it and the corner stays whole; the two arms
+  // needn't line up.
+  let finZ = A.z0 + 0.8;
+  while (finZ + 1.3 <= A.z1 - 0.5) finZ += 1.3;
+  const zL = finZ - 0.65;
+  const finOut = A.x1 + 0.55; // (the side fins' outer face)
+  const arms = [
+    { x0: A.x1 - 0.6, x1: gx - half, z: zL, strip0: finOut + 0.05 },
+    { x0: gx + half, x1: cx, z: gz, strip0: gx + half },
+  ];
+  for (const { x0, x1, z, strip0 } of arms) {
+    b.box('white', [x0, y0, z - 6], [x1, y1, z]);
+    b.box('glass', [x0, y0 + 0.75, z - 0.02], [x1, y1 - 0.45, z + 0.04]);
+    b.box('strip', [strip0, y0 - 0.08, z - 5.6], [x1, y0, z - 0.4]);
   }
   // Orange end plates on the two tips facing each other: the clash point.
   // (Proud of the arm ends and a hair over their edges: coplanar faces flicker.)
-  b.box('orange', [gx - half - 0.1, y0 - 0.03, armZ0 - 0.03], [gx - half + 0.05, y1 + 0.03, gz + 0.05]);
-  b.box('orange', [gx + half - 0.05, y0 - 0.03, armZ0 - 0.03], [gx + half + 0.1, y1 + 0.03, gz + 0.05]);
+  b.box('orange', [gx - half - 0.1, y0 - 0.03, zL - 6.03], [gx - half + 0.05, y1 + 0.03, zL + 0.05]);
+  b.box('orange', [gx + half - 0.05, y0 - 0.03, gz - 6.03], [gx + half + 0.1, y1 + 0.03, gz + 0.05]);
 
   /* --- Grandstand between the towers, rising away from the stage --- */
   // One block per step (overlapping full-depth blocks would share their side
@@ -333,15 +341,15 @@ function debate(mats) {
   // down, then the other, like a debate timer.
   const xJ = cx - Math.sqrt((B.r + 0.35) ** 2 - (gz - cz) ** 2); // where the right arm meets the bridge storey
   const bars = [];
-  for (const [x0, x1] of [[A.x1 + 0.2, gx - half - 0.3], [xJ - 0.35, gx + half + 0.3]]) {
+  for (const [x0, x1, z] of [[finOut + 0.55, gx - half - 0.3, zL], [xJ - 0.35, gx + half + 0.3, gz]]) {
     const len = Math.abs(x1 - x0);
     const track = new THREE.Mesh(new THREE.BoxGeometry(len + 0.16, 0.44, 0.05), mats.glassDark);
-    track.position.set((x0 + x1) / 2, y0 + 0.38, gz + 0.035);
+    track.position.set((x0 + x1) / 2, y0 + 0.38, z + 0.035);
     group.add(track);
     const g = new THREE.BoxGeometry(1, 0.32, 0.08);
     g.translate(0.5, 0, 0);
     const bar = new THREE.Mesh(g, mats.orange);
-    bar.position.set(x0, y0 + 0.38, gz + 0.07);
+    bar.position.set(x0, y0 + 0.38, z + 0.07);
     bar.scale.x = len * Math.sign(x1 - x0);
     bar.userData.len = bar.scale.x;
     group.add(bar);
