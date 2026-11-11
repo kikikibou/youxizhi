@@ -589,9 +589,10 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
 }
 .poem-small {
   font-family: 'Oswald', 'Noto Sans SC Variable', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500; /* (Chinese at 400 read thin against the scene) */
   line-height: 1.3;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 /* Content panel */
@@ -638,6 +639,12 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   font-weight: 400;
   font-size: 24px;
   line-height: 1;
+}
+/* home's 00 as an infinity sign: the size of the two digits it replaces */
+.ticket-stub .stub-inf {
+  display: block;
+  width: 0.9883em; /* (two zeros: 2 × 1012 / 2048) */
+  height: 1em;
 }
 .ticket-stub small {
   margin-right: -0.2em;
@@ -718,8 +725,8 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   margin-top: 4px;
   font-family: var(--cn);
   font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  letter-spacing: 0.06em;
 }
 .ticket-lines span {
   display: inline-block; /* (so its width can be watched) */
@@ -745,7 +752,7 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
 }
 .intro {
   margin: 0 0 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--paper-ink);
   opacity: 0.88;
@@ -1162,8 +1169,8 @@ html[data-theme='night'] .drawer-panel {
     font-size: 13px;
   }
   .ticket-lines[lang='zh'] {
-    font-size: 10px;
-    letter-spacing: 0.04em;
+    font-size: 11px;
+    letter-spacing: 0.02em;
   }
   .topbar {
     grid-template-columns: 1fr auto;

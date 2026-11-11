@@ -1,4 +1,5 @@
 /** DOM overlay: nav, per-page poster layouts, footer, drawer. */
+import { infinity00 } from './infinity.js';
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -71,13 +72,13 @@ const lang = (s) => (/[\u3400-\u9fff]/.test(s) ? 'zh' : 'en');
 /**
  * The page's ticket: a stub with the page number, a perforation, and the
  * face with the title, an optional subtitle, a script watermark (decoration)
- * and one line of small print.
+ * and one line of small print. Home's 00 is drawn as an infinity sign (infinity.js).
  */
 function ticketHtml(p) {
   const t = p.label;
   return `
         <div class="ticket reveal" style="--d:3">
-          <div class="ticket-stub"><b>${esc(p.no)}</b><small>${esc(p.en)}</small></div>
+          <div class="ticket-stub"><b>${p.no === '00' ? infinity00() : esc(p.no)}</b><small>${esc(p.en)}</small></div>
           <div class="ticket-main">
             ${t.mark ? `<span class="ticket-mark" aria-hidden="true">${esc(t.mark)}</span>` : ''}
             <div class="ticket-title"><b>${esc(t.title)}</b>${t.sub ? `<span lang="${lang(t.sub)}">${esc(t.sub)}</span>` : ''}</div>
