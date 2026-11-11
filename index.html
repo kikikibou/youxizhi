@@ -55,9 +55,14 @@
 
       <main class="stage" id="stage"></main>
 
-      <footer class="bottom" id="bottom"></footer>
-
-      <div class="hint" id="hint">滚轮 / ← → 切换建筑</div>
+      <!-- One hairline strip of three cells; ui.js fills in the cells and the script title. -->
+      <footer class="bottom" id="bottom">
+        <div class="strip">
+          <div class="strip-rule strip-rule--top"><span class="strip-script"></span></div>
+          <div class="strip-cells"></div>
+          <div class="strip-rule strip-rule--bottom"><span class="hint" id="hint">滚轮 / ← → 切换建筑</span></div>
+        </div>
+      </footer>
     </div>
 
     <aside class="drawer" id="drawer" aria-hidden="true">

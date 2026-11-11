@@ -30,7 +30,7 @@ export const PALETTES = [
     name: '西柚',
     en: 'Grapefruit',
     note: '果肉的珊瑚粉 · 天蓝色天空 · 白瓤般的楼 · 窗光是果肉的粉橘、灯带是果皮的柚黄 · 夜里是深李子色',
-    accent: '#f2545b', accentGlow: '#ff4e5a', accentDeep: '#d93d47',
+    accent: '#f2545b', accentGlow: '#ff4e5a', accentDeep: '#d93d47', accentInk: '#cc3642',
     ink: '#3b1b2e', light: '#fff7f0', cream: '#ffe9de',
     building: '#fbf2ea', buildingShade: '#f1e0d4', concrete: '#d2bdb0', metal: '#7b6f75', groundTint: '#fbece4',
     glass: '#2c2433', glassGlow: '#ffb39c', glassDark: '#251d2b', glassDarkGlow: '#c98fb5',
@@ -123,6 +123,7 @@ export function paletteCss(p) {
 :root {
   --orange: ${p.accent};
   --orange-deep: ${p.accentDeep};
+  --orange-ink: ${p.accentInk || p.accentDeep};
   --accent-rgb: ${rgb(p.accent)};
   --navy: ${p.ink};
   --ink: ${p.ink};

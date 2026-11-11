@@ -42,24 +42,50 @@ function fitPoems() {
     page.classList.toggle('is-crowded', meet);
   }
 }
+/** A ticket's small lines run together on one line, or stack when that doesn't fit. */
+function fitTickets() {
+  for (const el of document.querySelectorAll('.ticket-lines')) {
+    el.classList.remove('is-stacked');
+    if (el.scrollWidth > el.clientWidth + 1) el.classList.add('is-stacked');
+  }
+}
 const panelSizes = new ResizeObserver(() => fitPoems());
-window.addEventListener('resize', fitPoems);
+const ticketSizes = new ResizeObserver(() => fitTickets()); // (e.g. when the fonts arrive)
+window.addEventListener('resize', () => {
+  fitTickets();
+  fitPoems();
+});
+
+/**
+ * The page's ticket: a stub with the page number, a perforation, and the
+ * face with the title, an optional subtitle, a script watermark (decoration)
+ * and one line of small caps.
+ */
+function ticketHtml(p) {
+  const t = p.label;
+  return `
+        <div class="ticket reveal" style="--d:3">
+          <div class="ticket-stub"><b>${esc(p.no)}</b><small>${esc(p.en)}</small></div>
+          <div class="ticket-main">
+            ${t.mark ? `<span class="ticket-mark" aria-hidden="true">${esc(t.mark)}</span>` : ''}
+            <div class="ticket-title"><b>${esc(t.title)}</b>${t.sub ? `<span>${esc(t.sub)}</span>` : ''}</div>
+            <div class="ticket-lines">${t.lines.map((l) => `<span>${esc(l)}</span>`).join('<i> · </i>')}</div>
+          </div>
+        </div>`;
+}
 
 export function renderPages(pages, el) {
   el.innerHTML = pages
     .map(
       (p) => `
-    <section class="page" data-page="${p.id}" data-side="${p.side || 'right'}" aria-label="${esc(p.nav)}">
+    <section class="page" data-page="${p.id}" data-side="${p.side || 'right'}"${p.poemTone ? ` data-poem="${p.poemTone}"` : ''} aria-label="${esc(p.nav)}">
       <div class="poem">
         <div class="poem-eyebrow reveal" style="--d:1">${esc(p.eyebrow)}</div>
         <div class="poem-lines reveal" style="--d:2">${p.poem.map(esc).join('<br>')}</div>
         <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
       </div>
       <div class="panel">
-        <div class="brush reveal${p.label.compact ? ' is-compact' : ''}" style="--d:3">
-          <div class="brush-title">${esc(p.label.title)}<em>${esc(p.label.script)}</em>${esc(p.label.title2)}</div>
-          <div class="brush-lines">${p.label.lines.map(esc).join(p.label.compact ? ' · ' : '<br>')}</div>
-        </div>
+        ${ticketHtml(p)}
         <div class="sheet reveal" style="--d:4">
           ${[].concat(p.intro).map((t) => `<p class="intro">${esc(t)}</p>`).join('')}
           <ul class="cards">${p.cards.map(cardHtml).join('')}</ul>
@@ -69,56 +95,53 @@ export function renderPages(pages, el) {
     )
     .join('');
   el.querySelectorAll('.poem, .panel').forEach((n) => panelSizes.observe(n));
+  el.querySelectorAll('.ticket-lines span').forEach((n) => ticketSizes.observe(n));
 }
+
+/** [label, value] pairs, each set as a label over its value. */
+const items = (pairs) =>
+  `<div class="strip-items">${pairs.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+
+// Great Vibes leaves a word-sized gap after an apostrophe: wrap it so CSS can close it up.
+const script = (s) => esc(s).replace(/(’|&#39;)/g, '<i>$1</i>');
+
+// The content panel sits a fixed gap above the footer strip, however tall the
+// strip's copy makes it (see .panel in style.css).
+let footEl = null;
+function measureFoot() {
+  const strip = footEl?.querySelector('.strip');
+  if (!strip) return;
+  const foot = footEl.getBoundingClientRect().bottom - strip.getBoundingClientRect().top;
+  document.documentElement.style.setProperty('--foot', `${Math.max(0, Math.ceil(foot))}px`);
+  fitPoems(); // (the panels moved)
+}
+const footSize = new ResizeObserver(measureFoot);
 
 /**
- * Footer lines: plain strings, or [name, value] rows, set as a table with
- * dotted leaders ('table') or as "name: value" ('pairs').
+ * Fill the footer strip (its frame and the key hint are static in index.html):
+ * left a heading with stars over [label, value] items, centre two lines under
+ * the script title on the top edge, right a heading with a badge over items.
  */
-function footLines(lines, rowStyle, lead = '') {
-  if (!lines.some(Array.isArray)) {
-    return `<div class="ft-lines">${[lead, ...lines].filter(Boolean).map(esc).join('<br>')}</div>`;
-  }
-  const row = (l) => {
-    if (!Array.isArray(l)) return `<div class="ft-row">${esc(l)}</div>`;
-    const [k, v] = l;
-    return rowStyle === 'table'
-      ? `<div class="ft-row"><span>${esc(k)}</span><i></i><b>${esc(v)}</b></div>`
-      : `<div class="ft-row"><span>${esc(k)}:</span> ${esc(v)}</div>`;
-  };
-  const head = lead ? `<div class="ft-row">${esc(lead)}</div>` : '';
-  return `<div class="ft-lines ft-${rowStyle}">${head}${lines.map(row).join('')}</div>`;
-}
-
-// The content panel sits just above the footer column on its side, however
-// tall that column's copy makes it (see .panel in style.css).
-const footSizes = new ResizeObserver((entries) => {
-  for (const e of entries) {
-    const side = e.target.classList.contains('ft-left') ? 'left' : 'right';
-    document.documentElement.style.setProperty(`--foot-${side}`, `${Math.ceil(e.target.offsetHeight)}px`);
-  }
-  fitPoems(); // (the panels moved)
-});
-
 export function renderFooter(page, el) {
   const f = page.footer;
-  el.innerHTML = `
-    <div class="ft-left">
-      <div class="ft-title">${esc(f.left.title)}</div>
-      <div class="ft-stars">${'★'.repeat(f.left.stars)}${'☆'.repeat(5 - f.left.stars)}</div>
-      ${footLines(f.left.lines, 'table', f.left.sub)}
+  el.querySelector('.strip-script').innerHTML = script(f.center.script);
+  el.querySelector('.strip-cells').innerHTML = `
+    <div class="strip-cell ft-left">
+      <div class="strip-head"><b>${esc(f.left.title)}</b><span class="ft-stars">${'★'.repeat(f.left.stars)}${'☆'.repeat(5 - f.left.stars)}</span></div>
+      ${items(f.left.items)}
     </div>
-    <div class="ft-center">
-      <div class="ft-script">${esc(f.center.script)}</div>
-      ${footLines(f.center.lines, 'pairs')}
+    <div class="strip-cell ft-center">
+      <p>${f.center.lines.map(esc).join('<br>')}</p>
     </div>
-    <div class="ft-right">
-      <div class="ft-title">${esc(f.right.title)}</div>
-      <div class="ft-sub">${esc(f.right.sub)}</div>
-      ${footLines(f.right.lines, 'pairs')}
+    <div class="strip-cell ft-right">
+      <div class="strip-head"><b>${esc(f.right.title)}</b><span class="strip-badge">${esc(f.right.badge)}</span></div>
+      ${items(f.right.items)}
     </div>`;
-  footSizes.disconnect();
-  el.querySelectorAll('.ft-left, .ft-right').forEach((c) => footSizes.observe(c));
+  if (footEl !== el) {
+    footEl = el;
+    footSize.observe(el.querySelector('.strip'));
+    window.addEventListener('resize', measureFoot);
+  }
 }
 
 export class Drawer {

@@ -14,6 +14,13 @@
  *               c colour role (cone = white inside the beam / orange outside)
  * scene.ribbon  the flowing orange ribbon
  * scene.trees   [x, z, scale]
+ *
+ * label         the ticket above the content panel: title, optional sub(title),
+ *               mark (a script watermark, decoration only), lines (small caps,
+ *               run together on one line); the stub shows the page's no / en
+ * footer        the strip along the bottom: left { title, stars, items },
+ *               center { script (on the top edge), lines (two) },
+ *               right { title, badge, items }; items are [label, value] pairs
  */
 export const PAGES = [
   {
@@ -37,11 +44,10 @@ export const PAGES = [
     poem: ['This corner exists to prove', 'that an argument can be a gift,', 'not an inevitable war.'],
     poemSmall: '思考是一种选择 · FEEL THE WEIGHT OF THAT BEAM',
     label: {
-      title: '《思辨街区',
-      script: 'Observation',
-      title2: '一座为思考而建的街区》',
+      title: '思辨街区',
+      sub: '一座为思考而建的街区',
+      mark: 'Observation',
       lines: ['DEBATE · PUZZLES · GAMES', 'A STREET CORNER OF REASON'],
-      compact: true, // one line each, so the long intro below still leaves room for the poem
     },
     // (an array: one paragraph each)
     intro: [
@@ -49,21 +55,20 @@ export const PAGES = [
       '我相信在不远的未来，人们会拥有更强大的工具来寻找与自己共鸣的灵魂。于是，我决定抢先一步把自己所有的名片塞进这个漂流瓶。希望「它」也能让你喜欢。Cheers~',
     ],
     cards: [
-      { no: 'A', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
-      { no: 'B', title: '谜题', en: 'Puzzles', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
-      { no: 'C', title: '玩乐', en: 'Games', desc: '网页即玩的智力游戏', go: 'games' },
+      { no: '02', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
+      { no: '03', title: '谜题', en: 'Puzzles', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
+      { no: '04', title: '玩乐', en: 'Games', desc: '网页即玩的智力游戏', go: 'games' },
     ],
     footer: {
-      // (a line given as [name, value] is set as a row: an ingredients table
-      // on the left, a "name: value" line on the right)
-      left: { title: 'Ingredients', stars: 3, lines: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Taste', '≤0.6%']] },
-      center: { script: 'Material', lines: ['Variations in humorousness', 'are inherent to the material', 'and not considered defects.'] },
-      right: { title: 'Inspection Panel', sub: 'PASSED, LOOSELY', lines: [['Inspected by', '35,000,000 bananas'], ['Classification', 'berry'], ['Shipped', 'anyway']] },
+      left: { title: 'INGREDIENTS', stars: 3, items: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Naringin', '100 IBU'], ['Taste', '≤0.6%']] },
+      center: { script: 'Mode d’emploi', lines: ['Begin with any building and read in either direction.', 'Results may vary; the street will not.'] },
+      right: { title: 'INSPECTION PANEL', badge: 'PASSED, LOOSELY', items: [['INSPECTED BY', '35,000,000 bananas'], ['CLASSIFICATION', 'berry'], ['SHIPPED', 'anyway']] },
     },
   },
   {
     id: 'debate',
     side: 'left', // which side the content panel sits on (away from the beam)
+    poemTone: 'inverse', // the poem stands on the split's other-time side
     no: '02',
     nav: '辩论',
     en: 'DEBATE',
@@ -82,9 +87,8 @@ export const PAGES = [
     poem: ['Every motion is a door', 'left half open on purpose.', 'Walk through it twice.'],
     poemSmall: '立场是门 · 论证是钥匙',
     label: {
-      title: '《辩论',
-      script: 'Toolbox',
-      title2: '工具箱》',
+      title: '辩论工具箱',
+      mark: 'Toolbox',
       lines: ['ARGUMENT · STRUCTURE · TIME', 'TOOLS FOR THE PODIUM'],
     },
     intro: '为备赛和比赛准备的小工具。先放上计时器，赛制速查、论点结构器和辩题库会陆续搬进这栋楼。',
@@ -95,9 +99,9 @@ export const PAGES = [
       { no: '04', title: '辩题库', en: 'Motion Bank', desc: '按议题分类的辩题', ready: false },
     ],
     footer: {
-      left: { title: 'Panel', stars: 4, sub: 'Structure', lines: ['30% Definition', '30% Burden of Proof', '40% Clash'] },
-      center: { script: 'Rebuttal', lines: ['The strongest case', 'is the one that survives', 'its most generous opponent'] },
-      right: { title: 'Inspection Panel', sub: 'THE PODIUM', lines: ['3:30 Constructive', '1:30 Cross-Examination', '4:00 Free Debate'] },
+      left: { title: 'STRUCTURE', stars: 4, items: [['Definition', '30%'], ['Burden of Proof', '30%'], ['Clash', '40%']] },
+      center: { script: 'Rebuttal', lines: ['The strongest case is the one that survives', 'its most generous opponent'] },
+      right: { title: 'INSPECTION PANEL', badge: 'THE PODIUM', items: [['CONSTRUCTIVE', '3:30'], ['CROSS-EXAMINATION', '1:30'], ['FREE DEBATE', '4:00']] },
     },
   },
   {
@@ -123,9 +127,8 @@ export const PAGES = [
     poem: ['A good puzzle is a locked room', 'whose key was in your pocket', 'the whole time.'],
     poemSmall: '答案只有一个 · 门有很多扇',
     label: {
-      title: '《谜题',
-      script: 'Enigma',
-      title2: '研究所》',
+      title: '谜题研究所',
+      mark: 'Enigma',
       lines: ['LOGIC · NUMBERS · LATERAL', 'ONE A DAY KEEPS THE BOREDOM AWAY'],
     },
     intro: '逻辑推理、数学趣题与横向思维。答案默认折叠，想好了再点开。',
@@ -136,9 +139,9 @@ export const PAGES = [
       { no: '04', title: '横向思维', en: 'Lateral', desc: '换个角度就有答案', ready: false },
     ],
     footer: {
-      left: { title: 'Panel', stars: 5, sub: 'Difficulty', lines: ['15% Obvious', '60% Satisfying', '25% Sleepless'] },
-      center: { script: 'Insight', lines: ['Every locked room', 'is only a question', 'asked in the wrong order'] },
-      right: { title: 'Inspection Panel', sub: 'THE LABORATORY', lines: ['30% Deduction', '25% Arithmetic', '20% Leap of Faith'] },
+      left: { title: 'DIFFICULTY', stars: 5, items: [['Obvious', '15%'], ['Satisfying', '60%'], ['Sleepless', '25%']] },
+      center: { script: 'Insight', lines: ['Every locked room is only a question', 'asked in the wrong order'] },
+      right: { title: 'INSPECTION PANEL', badge: 'THE LABORATORY', items: [['DEDUCTION', '30%'], ['ARITHMETIC', '25%'], ['LEAP OF FAITH', '20%']] },
     },
   },
   {
@@ -171,9 +174,8 @@ export const PAGES = [
     poem: ['Play is the oldest laboratory.', 'Nobody told the children', 'they were doing research.'],
     poemSmall: '游戏是最古老的实验室',
     label: {
-      title: '《网页',
-      script: 'Arcade',
-      title2: '游乐场》',
+      title: '网页游乐场',
+      mark: 'Arcade',
       lines: ['BROWSER · NO INSTALL', 'SMALL GAMES FOR SHARP MINDS'],
     },
     intro: '打开即玩、不用安装的智力小游戏。这一栋还在施工，先把门牌挂上。',
@@ -184,9 +186,9 @@ export const PAGES = [
       { no: '04', title: '更多', en: 'More', desc: '欢迎来提建议', ready: false },
     ],
     footer: {
-      left: { title: 'Panel', stars: 4, sub: 'Gameplay', lines: ['50% Thinking', '30% Trying Again', '20% One More Round'] },
-      center: { script: 'Playtime', lines: ['A game is a problem', 'that decided', 'to be kind to you'] },
-      right: { title: 'Inspection Panel', sub: 'THE ARCADE', lines: ['30% Social Warmth', '25% Essential Coolness', '20% Diagnostic Rectangle'] },
+      left: { title: 'GAMEPLAY', stars: 4, items: [['Thinking', '50%'], ['Trying Again', '30%'], ['One More Round', '20%']] },
+      center: { script: 'Playtime', lines: ['A game is a problem that decided', 'to be kind to you'] },
+      right: { title: 'INSPECTION PANEL', badge: 'THE ARCADE', items: [['SOCIAL WARMTH', '30%'], ['ESSENTIAL COOLNESS', '25%'], ['DIAGNOSTIC RECTANGLE', '20%']] },
     },
   },
   {
@@ -204,7 +206,7 @@ export const PAGES = [
       // hides the lower half, and a beam from there seemed to come out of the deck.
       device: { type: 'beacon', p: [-21, 30.4, -66], source: 0.7 },
       sea: true,
-      cluster: { p: [-4, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
+      cluster: { p: [-9, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
       texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'sign' }],
       ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8 },
       trees: [],
@@ -213,9 +215,8 @@ export const PAGES = [
     poem: ['I build small rooms for thinking', 'and leave the lights on', 'for whoever walks by.'],
     poemSmall: '欢迎路过 · 欢迎留下',
     label: {
-      title: '《关于',
-      script: 'Signal',
-      title2: '这条街》',
+      title: '关于这条街',
+      mark: 'Signal',
       lines: ['WHO · WHY · HOW TO REACH', 'NOTES FROM THE STREET CORNER'],
     },
     intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和谜题、怎样联系你。（占位文字，等你来替换）',
@@ -225,9 +226,9 @@ export const PAGES = [
       { no: '03', title: '更新日志', en: 'Changelog', desc: '这条街每一次扩建', ready: false },
     ],
     footer: {
-      left: { title: 'Panel', stars: 5, sub: 'Ingredients', lines: ['15% Harmonious Conflict', '10% Suspended Existence', '75% Late Nights'] },
-      center: { script: 'Signature', lines: ['Built slowly,', 'one building at a time,', 'under a single street lamp'] },
-      right: { title: 'Inspection Panel', sub: 'THE SELF PORTRAIT', lines: ['30% Social Warmth', '25% Essential Coolness', '20% Diagnostic Rectangle'] },
+      left: { title: 'INGREDIENTS', stars: 5, items: [['Harmonious Conflict', '15%'], ['Suspended Existence', '10%'], ['Late Nights', '75%']] },
+      center: { script: 'Signature', lines: ['Built slowly, one building at a time,', 'under a single street lamp'] },
+      right: { title: 'INSPECTION PANEL', badge: 'THE SELF PORTRAIT', items: [['SOCIAL WARMTH', '30%'], ['ESSENTIAL COOLNESS', '25%'], ['DIAGNOSTIC RECTANGLE', '20%']] },
     },
   },
 ];
