@@ -24,7 +24,7 @@
   --caps: 'Oswald', 'Anton', sans-serif;
   --serif: 'EB Garamond', 'Noto Serif SC', Georgia, serif;
   --script: 'Great Vibes', cursive;
-  --cn: 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --cn: 'Latin Dot', 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* (Latin Dot: main.js) */
 }
 
 html[data-theme='night'] {
@@ -756,6 +756,14 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   line-height: 1.7;
   color: var(--paper-ink);
   opacity: 0.88;
+}
+/* *words* in pages.js: in italic serif, like the cards' English names */
+.intro em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.12em;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 .cards {
   list-style: none;

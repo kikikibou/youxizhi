@@ -49,17 +49,17 @@ export const PAGES = [
     },
     eyebrow: 'EPIGRAPH',
     poem: ['Born bare or born in a robe:', 'not born to bear,', 'nor born to bore.'],
-    poemSmall: '裸着的，裹着的。生下来了，不只是活下去吧 · YANJIE HUANG',
+    poemSmall: '裸着的，裹着的。不是都生下来了，不都是活下去吧 · YANJIE',
     label: {
       title: '自我介绍',
       sub: 'Dedicated to the me I love so deeply.',
       mark: 'Enchanté',
       lines: ['欢迎来到我的个人网站', '我叫游戏之', '很开心遇到你'],
     },
-    // (an array: one paragraph each)
+    // (an array: one paragraph each; *words* are set in italic)
     intro: [
       '这里放着那些我喜欢的、我制作的、同时也构成了我的东西。',
-      '我相信在不远的将来，人们会拥有更强大的工具来寻找趣味相投的灵魂。于是，我决定抢先一步，把自己塞进这个漂流瓶、丢向互联网的大海。希望这支珊瑚色的果汁也能让你喜欢。雀儿思~',
+      '我相信在不远的将来，人们会拥有更强大的工具来寻找趣味相投的灵魂。于是，我决定抢先一步，把自己塞进这个漂流瓶、丢向互联网的大海。希望这支珊瑚色的冷饮也能让你喜欢。*Cheers.*',
     ],
     cards: [
       { no: '01', title: '辩论', en: 'Debate', desc: 'AI评委/备赛辅助系统、创意赛制等等', go: 'debate' },

@@ -10,6 +10,9 @@ export function renderNav(pages, el) {
     .join('');
 }
 
+/** Escaped copy in which *words* are set in italic (see .intro em). */
+const emph = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
 function cardHtml(c, i) {
   const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : '';
   const ready = c.go || c.ready;
@@ -100,7 +103,7 @@ export function renderPages(pages, el) {
       <div class="panel">
         ${ticketHtml(p)}
         <div class="sheet reveal" style="--d:4">
-          ${[].concat(p.intro).map((t) => `<p class="intro">${esc(t)}</p>`).join('')}
+          ${[].concat(p.intro).map((t) => `<p class="intro">${emph(t)}</p>`).join('')}
           <ul class="cards">${p.cards.map(cardHtml).join('')}</ul>
         </div>
       </div>
