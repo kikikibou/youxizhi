@@ -241,7 +241,9 @@ function debate(mats) {
   b.box('whiteShade', [-16, A.top, -12], [-10, A.top + 2.2, -7]);
 
   /* --- Negative tower (right): lower, horizontal bands, rounded corner --- */
-  const B = { x0: 8, x1: 22, z0: -15, z1: -3, top: 28, r: 4 };
+  // (Its front stands 2 m proud of the bridge arms, so the right arm runs
+  // into the round corner from the side instead of jutting out in front of it.)
+  const B = { x0: 8, x1: 22, z0: -15, z1: -1, top: 28, r: 4 };
   const cx = B.x0 + B.r;
   const cz = B.z1 - B.r;
   // Footprint with its front corner (towards the gap) rounded, grown by e.
@@ -308,15 +310,21 @@ function debate(mats) {
 
   const group = b.build();
 
-  // LED "speaking time" bars under the bridge glass: one side counts down,
-  // then the other, like a debate timer.
+  // LED "speaking time" displays under the bridge glass, like a debate
+  // timer: the side that has the floor fills its bar, counts it down and
+  // blinks through the last two seconds; the other side's display is dark.
+  // Then they swap.
+  const xJ = cx - Math.sqrt(B.r ** 2 - (gz - cz) ** 2); // where the right arm meets the round corner
   const bars = [];
-  for (const [x0, x1] of [[A.x1 + 0.2, gx - half - 0.3], [B.x0 + 0.2, gx + half + 0.3]]) {
+  for (const [x0, x1] of [[A.x1 + 0.2, gx - half - 0.3], [xJ - 0.35, gx + half + 0.3]]) {
     const len = Math.abs(x1 - x0);
-    const g = new THREE.BoxGeometry(1, 0.26, 0.1);
+    const track = new THREE.Mesh(new THREE.BoxGeometry(len + 0.16, 0.44, 0.05), mats.glassDark);
+    track.position.set((x0 + x1) / 2, y0 + 0.38, gz + 0.035);
+    group.add(track);
+    const g = new THREE.BoxGeometry(1, 0.32, 0.08);
     g.translate(0.5, 0, 0);
     const bar = new THREE.Mesh(g, mats.orange);
-    bar.position.set(x0, y0 + 0.42, gz + 0.06);
+    bar.position.set(x0, y0 + 0.38, gz + 0.07);
     bar.scale.x = len * Math.sign(x1 - x0);
     bar.userData.len = bar.scale.x;
     group.add(bar);
@@ -325,12 +333,14 @@ function debate(mats) {
   const turn = 9; // seconds per speech
   group.userData.animate = (t) => {
     const k = (t / turn) % 2;
+    const f = k % 1; // how far through the current speech
+    const left = (1 - f) * turn; // seconds left in it
     bars.forEach((bar, i) => {
       const mine = Math.floor(k) === i;
-      const f = k % 1;
-      // Counting down during its own turn; refilling quickly when it ends.
-      const left = mine ? 1 - f : Math.min(1, f * 4);
-      bar.scale.x = bar.userData.len * Math.max(0.001, left);
+      const level = Math.min((f * turn) / 0.6, 1 - f); // fills in 0.6 s, then counts down
+      const blink = left < 2 && Math.floor(left * 4) % 2 === 1;
+      bar.visible = mine && !blink;
+      bar.scale.x = bar.userData.len * Math.max(0.001, level);
     });
   };
   return group;
@@ -539,9 +549,31 @@ function puzzle(mats) {
   const home = new THREE.Vector3(x0 + 3.5 * cell, top + 6.5, Z - 3);
   piece.position.copy(home);
   group.add(piece);
+  // Every 18 s it tries its old place: it squares up, sinks most of the way
+  // into the gap it left, hesitates there, and floats back up. The puzzle is
+  // never quite solved. (Seated, its centre would be at hole.y + cell / 2.)
+  const CYCLE = 18;
+  const dipY = hole.y + cell / 2 + 1.1;
+  const free = new THREE.Quaternion();
+  const square = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const ease = (x) => {
+    const k = Math.min(1, Math.max(0, x));
+    return k * k * (3 - 2 * k);
+  };
   group.userData.animate = (t) => {
-    piece.rotation.set(0.35 + Math.sin(t * 0.3) * 0.08, t * 0.22, 0.25);
-    piece.position.y = home.y + Math.sin(t * 0.7) * 0.4;
+    const c = t % CYCLE;
+    // Down over 10-13 s, a pause, back up over 14-17.5 s; squared up before it
+    // reaches the roof, and let go only once it is clear of it again.
+    const down = ease((c - 10) / 3) * (1 - ease((c - 14) / 3.5));
+    const sq = ease((c - 10) / 1.4) * (1 - ease((c - 15.8) / 1.7));
+    free.setFromEuler(e.set(0.35 + Math.sin(t * 0.3) * 0.08, t * 0.22, 0.25));
+    // (the quarter turn nearest the way it is facing halfway down)
+    const yaw = Math.round(((t - c + 11.5) * 0.22) / (Math.PI / 2)) * (Math.PI / 2);
+    square.setFromEuler(e.set(0, yaw, 0));
+    piece.quaternion.slerpQuaternions(free, square, sq);
+    const hover = Math.sin(t * 0.7) * 0.4 * (1 - down) + Math.sin(t * 2.4) * 0.05 * down;
+    piece.position.y = THREE.MathUtils.lerp(home.y, dipY, down) + hover;
   };
   return group;
 }

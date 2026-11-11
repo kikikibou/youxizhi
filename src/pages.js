@@ -12,7 +12,9 @@
  * scene.texts   extra 3D lettering: t text, f font (display|caps|cn|script),
  *               s font size in metres, p position, r rotation,
  *               c colour role (cone = white inside the beam / orange outside)
- * scene.ribbon  the flowing orange ribbon
+ * scene.ribbon  a small flowing ribbon (only by the sea, on About; the other
+ *               buildings have motions of their own: see buildings.js)
+ * scene.plane   a paper plane gliding round a level loop (see PaperPlane in props.js)
  * scene.trees   [x, z, scale]
  *
  * label         the ticket above the content panel: title, optional sub(title),
@@ -37,7 +39,9 @@ export const PAGES = [
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
       cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
       texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
-      ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
+      // Round the lamp post and back, through its beam, in the sky between the
+      // poem and the content panel (the far end of the loop is off the picture).
+      plane: { c: [14.4, 15, 16.3], a: 6.7, b: 2.1, heading: 0.457, period: 16, size: 2.2 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
     },
     eyebrow: 'MANIFESTO',
@@ -80,7 +84,6 @@ export const PAGES = [
       device: { type: 'split', p: [1, 23.05, -3], side: 1 },
       cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 5.2, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement', scriptTilt: -0.15, scriptShift: [0.4, 0.1] },
       texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 0.45, p: [-13, 4.9, -1.33], c: 'sign' }],
-      ribbon: { p: [1, 15.5, 1], r: [0, 0, 0.08], length: 24, width: 1.1, seed: 2.1 },
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
     eyebrow: 'DEBATE',
@@ -120,7 +123,6 @@ export const PAGES = [
       device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
       cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light', scriptTilt: -0.36, scriptShift: [-0.3, -0.16] },
       texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 0.78, p: [-4.4, 3.2, 1.86], c: 'sign' }],
-      ribbon: { p: [-14, 20, 2], r: [0, -0.2, 0.15], length: 24, width: 1.1, seed: 4.3 },
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
     eyebrow: 'QUIZ',
@@ -208,7 +210,7 @@ export const PAGES = [
       sea: true,
       cluster: { p: [-9, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
       texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'sign' }],
-      ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8 },
+      ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8, tip: 0.07 },
       trees: [],
     },
     eyebrow: 'ABOUT',

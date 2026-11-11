@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 import { createMaterials, updateMaterials } from './materials.js';
 import { BUILDERS } from './buildings.js';
-import { createGround, createTree, Lamp, Ribbon } from './props.js';
+import { createGround, createTree, Lamp, Ribbon, PaperPlane } from './props.js';
 import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, RibbonDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
@@ -307,6 +307,9 @@ export class World {
         ribbon.mesh.rotation.set(...sc.ribbon.r);
         group.add(ribbon.mesh);
       }
+      // Home's paper plane.
+      const plane = sc.plane ? new PaperPlane(sc.plane) : null;
+      if (plane) group.add(plane.mesh);
 
       for (const [x, z, s] of sc.trees) {
         const t = createTree(this.mats, s);
@@ -316,7 +319,7 @@ export class World {
       group.updateMatrixWorld(true);
 
 
-      this.sites.push({ page, group, device, ribbon, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
+      this.sites.push({ page, group, device, ribbon, plane, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
     });
   }
 
@@ -1126,6 +1129,7 @@ export class World {
       const on = i === this.active && p > 0.62 ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
       if (this.quality.ribbons) site.ribbon?.update(this.time + i * 3.1);
+      site.plane?.update(this.time);
       site.device.update(this.time, dt, this.night, site.activity, this.camera);
       site.group.userData.animate?.(this.time, dt, this.night);
       site.texts.forEach((t, k) => {

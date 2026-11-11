@@ -190,11 +190,13 @@ export function createTree(mats, scale = 1) {
 /* ------------------------------ Orange ribbon ---------------------------- */
 
 export class Ribbon {
-  constructor(mat, { length = 30, width = 1.2, segments = 180, seed = 0 } = {}) {
+  /** tip: the share of the length over which the free end (u = 1) narrows to a point (0: cut square) */
+  constructor(mat, { length = 30, width = 1.2, segments = 180, seed = 0, tip = 0 } = {}) {
     this.length = length;
     this.width = width;
     this.segments = segments;
     this.seed = seed;
+    this.tip = tip;
     const geo = new THREE.BufferGeometry();
     const n = (segments + 1) * 2;
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
@@ -219,7 +221,8 @@ export class Ribbon {
       const y = (Math.sin(u * 7.0 + t * 0.9 + s) * 1.5 + Math.sin(u * 15.0 - t * 0.55 + s * 2) * 0.45) * amp;
       const z = Math.sin(u * 4.2 + t * 0.7 + s) * 2.4 * amp;
       const tw = Math.sin(u * 5.5 + t * 0.8 + s) * 1.25 + u * 0.8;
-      const w = this.width * (1 - u * 0.7) * 0.5;
+      let w = this.width * (1 - u * 0.7) * 0.5;
+      if (this.tip > 0) w *= Math.min(1, (1 - u) / this.tip);
       const oy = Math.cos(tw) * w;
       const oz = Math.sin(tw) * w;
       const k = i * 6;
@@ -232,5 +235,71 @@ export class Ribbon {
     }
     this.mesh.geometry.attributes.position.needsUpdate = true;
     this.mesh.geometry.computeVertexNormals();
+  }
+}
+
+/* ------------------------------ Paper plane ------------------------------ */
+
+const UP = new THREE.Vector3(0, 1, 0);
+const FORWARD = new THREE.Vector3(0, 0, 1);
+
+/**
+ * A folded paper dart gliding round a flat, level loop (Home: through the
+ * lamp's beam, in the sky between the poem and the content panel). It banks
+ * into the turns at the ends of the loop and rises and sinks a little.
+ *   c       centre of the loop (the building's local frame)
+ *   a, b    half its length and half its width (m)
+ *   heading direction of its long axis (radians round y; 0 = +x, π/2 = +z)
+ *   period  seconds per lap;  size  nose to tail (m)
+ */
+export class PaperPlane {
+  constructor({ c, a, b, heading = 0, period = 16, size = 2.2, seed = 0 }) {
+    // Nose at +z, wings folded up a little either side of the crease, and a
+    // keel hanging under the crease.
+    const N = [0, 0, 0.5];
+    const T = [0, 0, -0.5];
+    const L = [-0.42, 0.08, -0.5];
+    const R = [0.42, 0.08, -0.5];
+    const K = [0, -0.17, -0.46];
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([...N, ...T, ...L, ...N, ...R, ...T, ...N, ...K, ...T], 3));
+    geo.computeVertexNormals();
+    geo.scale(size, size, size);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xfbf8f2, roughness: 0.9, side: THREE.DoubleSide, flatShading: true, emissive: 0xffffff, emissiveIntensity: 0.06 });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.castShadow = false; // (moving: the shadow map isn't redrawn every frame)
+    Object.assign(this, { c: new THREE.Vector3(...c), a, b, period, seed });
+    this.u = new THREE.Vector3(Math.cos(heading), 0, Math.sin(heading));
+    this.v = new THREE.Vector3(-Math.sin(heading), 0, Math.cos(heading));
+    this._m = new THREE.Matrix4();
+    this._f = new THREE.Vector3();
+    this._s = new THREE.Vector3();
+    this._up = new THREE.Vector3();
+    this._q = new THREE.Quaternion();
+    this.update(0);
+  }
+
+  update(t) {
+    const { a, b, u, v } = this;
+    const th = (t / this.period) * Math.PI * 2 + this.seed;
+    const sin = Math.sin(th);
+    const cos = Math.cos(th);
+    const dy = 0.45 * Math.sin(2 * th + 0.6); // rising and sinking
+    this.mesh.position.copy(this.c).addScaledVector(u, a * cos).addScaledVector(v, b * sin);
+    this.mesh.position.y += dy;
+    // Heading along the loop, nose a touch up or down as it climbs or sinks.
+    const f = this._f.copy(u).multiplyScalar(-a * sin).addScaledVector(v, b * cos); // (per radian of the lap)
+    const speed = f.length();
+    f.y = 0.9 * Math.cos(2 * th + 0.6); // (d dy / d th)
+    f.normalize();
+    // Bank into the turn (the loop's centre is always on its right): the
+    // tighter the curve, the steeper.
+    const curve = (a * b) / speed ** 3; // curvature of the ellipse
+    const roll = Math.min(0.75, curve * 1.6);
+    const s = this._s.crossVectors(UP, f).normalize();
+    const up = this._up.crossVectors(f, s);
+    this._m.makeBasis(s, up, f);
+    this.mesh.quaternion.setFromRotationMatrix(this._m);
+    this.mesh.quaternion.multiply(this._q.setFromAxisAngle(FORWARD, roll));
   }
 }
