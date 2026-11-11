@@ -3,6 +3,7 @@
   --orange-deep: #f06a00;
   --orange-ink: var(--orange-deep); /* v2: fills that carry small white text */
   --strip-line: rgba(255, 255, 255, 0.8); /* v2: hairlines of the footer strip */
+  --panel-gap: 41px; /* content panel to footer strip */
   --accent-rgb: 255, 122, 13;
   --cream: #f4ecdf;
   --bg: #0b1a38;
@@ -597,16 +598,16 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
 .panel {
   position: absolute;
   right: clamp(18px, 4vw, 70px);
-  /* clear of the footer column below it (its height is measured in ui.js),
-     plus the footer's bottom padding and a gap */
-  bottom: calc(var(--foot, 115px) + 23px);
+  /* clear of the footer strip below it (its height and the footer's bottom
+     padding are measured in ui.js as --foot), plus a gap that the footer's
+     shade stops short of */
+  bottom: calc(var(--foot, 115px) + var(--panel-gap));
   width: min(400px, 92vw);
   color: var(--paper-ink);
 }
 .page[data-side='left'] .panel {
   right: auto;
   left: clamp(18px, 4vw, 70px);
-  bottom: calc(var(--foot, 115px) + 23px);
 }
 
 /* v2: the flag (.brush) is now a ticket: a stub, a perforation, and the face. */
@@ -812,7 +813,8 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .bottom {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 70px clamp(18px, 4.5vw, 80px) 30px;
+  /* (the shade starts just below the content panel: see --panel-gap) */
+  padding: 40px clamp(18px, 4.5vw, 80px) 30px;
   background: linear-gradient(to top, rgba(var(--shade-rgb), 0.8), rgba(var(--shade-rgb), 0));
   color: #fff;
   pointer-events: none;

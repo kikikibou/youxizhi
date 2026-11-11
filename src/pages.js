@@ -26,7 +26,7 @@ export const PAGES = [
   {
     id: 'home',
     side: 'right', // which side the content panel sits on (away from the beam)
-    no: '01',
+    no: '00',
     nav: '首页',
     en: 'HOME',
     building: 'home',
@@ -47,7 +47,7 @@ export const PAGES = [
       title: '思辨街区',
       sub: '一座为思考而建的街区',
       mark: 'Observation',
-      lines: ['DEBATE · PUZZLES · GAMES', 'A STREET CORNER OF REASON'],
+      lines: ['DEBATE · QUIZ · GAMES', 'A STREET CORNER OF REASON'],
     },
     // (an array: one paragraph each)
     intro: [
@@ -55,9 +55,9 @@ export const PAGES = [
       '我相信在不远的未来，人们会拥有更强大的工具来寻找与自己共鸣的灵魂。于是，我决定抢先一步把自己所有的名片塞进这个漂流瓶。希望「它」也能让你喜欢。Cheers~',
     ],
     cards: [
-      { no: '02', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
-      { no: '03', title: '谜题', en: 'Puzzles', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
-      { no: '04', title: '玩乐', en: 'Games', desc: '网页即玩的智力游戏', go: 'games' },
+      { no: '01', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
+      { no: '02', title: '答题', en: 'Quiz', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
+      { no: '03', title: '玩乐', en: 'Games', desc: '网页即玩的智力游戏', go: 'games' },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 3, items: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Naringin', '100 IBU'], ['Taste', '≤0.6%']] },
@@ -69,7 +69,7 @@ export const PAGES = [
     id: 'debate',
     side: 'left', // which side the content panel sits on (away from the beam)
     poemTone: 'inverse', // the poem stands on the split's other-time side
-    no: '02',
+    no: '01',
     nav: '辩论',
     en: 'DEBATE',
     building: 'debate',
@@ -107,9 +107,9 @@ export const PAGES = [
   {
     id: 'puzzle',
     side: 'left', // which side the content panel sits on (away from the beam)
-    no: '03',
-    nav: '谜题',
-    en: 'PUZZLES',
+    no: '02',
+    nav: '答题',
+    en: 'QUIZ',
     building: 'puzzle',
     scene: {
       view: { pos: [18, 1.6, 30], target: [-6, 20.5, -6], fov: 60, roll: -0.02 },
@@ -123,7 +123,7 @@ export const PAGES = [
       ribbon: { p: [-14, 20, 2], r: [0, -0.2, 0.15], length: 24, width: 1.1, seed: 4.3 },
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
-    eyebrow: 'PUZZLES',
+    eyebrow: 'QUIZ',
     poem: ['A good puzzle is a locked room', 'whose key was in your pocket', 'the whole time.'],
     poemSmall: '答案只有一个 · 门有很多扇',
     label: {
@@ -147,7 +147,7 @@ export const PAGES = [
   {
     id: 'games',
     side: 'right', // which side the content panel sits on (away from the beam)
-    no: '04',
+    no: '03',
     nav: '玩乐',
     en: 'GAMES',
     building: 'games',
@@ -194,7 +194,7 @@ export const PAGES = [
   {
     id: 'about',
     side: 'right', // which side the content panel sits on (away from the beam)
-    no: '05',
+    no: '04',
     nav: '其他',
     en: 'ABOUT',
     building: 'about',
@@ -219,7 +219,7 @@ export const PAGES = [
       mark: 'Signal',
       lines: ['WHO · WHY · HOW TO REACH', 'NOTES FROM THE STREET CORNER'],
     },
-    intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和谜题、怎样联系你。（占位文字，等你来替换）',
+    intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和答题、怎样联系你。（占位文字，等你来替换）',
     cards: [
       { no: '01', title: '关于我', en: 'Profile', desc: '辩手 / 出题人 / 写代码的人', ready: false },
       { no: '02', title: '联系方式', en: 'Contact', desc: '邮箱与社交账号', ready: false },

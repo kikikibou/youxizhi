@@ -28,18 +28,27 @@ function cardHtml(c, i) {
 
 /**
  * On a short screen a page's poem (top right) and its content panel can
- * meet when both sit on the right: then the poem steps aside, so it never
- * covers the panel's copy.
+ * meet when both sit on the right. Then the panel first gives back some of
+ * its gap above the footer (--panel-gap, down to PANEL_GAP_MIN), and only if
+ * that isn't enough does the poem step aside, so it never covers the panel's copy.
  */
+const PANEL_GAP_MIN = 23;
 function fitPoems() {
   for (const page of document.querySelectorAll('.page')) {
     const poem = page.querySelector('.poem');
     const panel = page.querySelector('.panel');
     if (!poem || !panel) continue;
+    page.style.removeProperty('--panel-gap');
     const a = poem.getBoundingClientRect();
-    const b = panel.getBoundingClientRect();
-    const meet = a.width > 0 && a.left < b.right && b.left < a.right && a.bottom + 6 > b.top;
-    page.classList.toggle('is-crowded', meet);
+    let b = panel.getBoundingClientRect();
+    const side = a.width > 0 && a.left < b.right && b.left < a.right;
+    const short = a.bottom + 6 - b.top; // (px the panel would have to come down)
+    if (side && short > 0) {
+      const gap = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-gap')) || PANEL_GAP_MIN;
+      page.style.setProperty('--panel-gap', `${Math.max(PANEL_GAP_MIN, gap - Math.ceil(short))}px`);
+      b = panel.getBoundingClientRect();
+    }
+    page.classList.toggle('is-crowded', side && a.bottom + 6 > b.top);
   }
 }
 /** A ticket's small lines run together on one line, or stack when that doesn't fit. */
