@@ -255,11 +255,25 @@ function debate(mats) {
   footprint('warm', 0, 4.4, -0.6);
   footprint('white', 4.4, 5.3, 0.6); // canopy
   b.box('strip', [cx, 4.32, B.z1 - 0.2], [B.x1, 4.4, B.z1 + 0.5]);
-  const fhB = 3.3;
-  for (let y = 5.3, i = 0; y < B.top - 1; y += fhB, i++) {
-    footprint(i % 3 === 1 ? 'glass' : 'glassDark', y, y + fhB - 0.95, -0.25);
-    footprint('white', y + fhB - 0.95, y + fhB, 0.35);
+  // Floors: glazing set back behind proud white bands, and at the sky
+  // bridge's height a "bridge storey" flush with the bands that carries the
+  // bridge's window ribbon round the tower, so the bridge arm runs into one
+  // smooth surface. (Over set-back glass and proud bands at once, its end
+  // looked notched.)
+  const by0 = FORUM.gap[1] - 1.55 - 0.08; // (the underside of the bridge's light strip)
+  const by1 = FORUM.gap[1] + 1.55;
+  const gH = (by0 - 5.3 - 4 * 0.95) / 5; // five glazed floors and four bands below it
+  let fy = 5.3;
+  for (let i = 0; i < 5; i++) {
+    footprint(i % 3 === 1 ? 'glass' : 'glassDark', fy, fy + gH, -0.25);
+    fy += gH;
+    if (i === 4) break;
+    footprint('white', fy, fy + 0.95, 0.35);
+    fy += 0.95;
   }
+  footprint('white', by0, by1, 0.35);
+  footprint('glass', by0 + 0.08 + 0.75, by1 - 0.45, 0.39); // (level with the bridge's window, and as proud of it)
+  footprint('glassDark', by1, B.top - 1.2, -0.25); // top floor
   footprint('white', B.top - 1.2, B.top + 0.4, 0.35); // parapet
   b.box('whiteShade', [14, B.top + 0.4, -12], [19, B.top + 2.6, -7]);
 
@@ -269,7 +283,12 @@ function debate(mats) {
   const y1 = gy + 1.55;
   const armZ0 = gz - 6;
   const half = 1.2; // half the gap
-  for (const [x0, x1] of [[A.x1 - 0.3, gx - half], [gx + half, cx]]) {
+  // The left arm starts inside the last fin on A's front and takes in the
+  // corner bay (a bare end face showed as a thin line in the gap in front of
+  // the set-back glass); the right one runs into B's bridge storey.
+  let finX = A.x0 + 0.6;
+  while (finX + 1.3 <= A.x1 - 0.5) finX += 1.3;
+  for (const [x0, x1] of [[finX + 0.05, gx - half], [gx + half, cx]]) {
     b.box('white', [x0, y0, armZ0], [x1, y1, gz]);
     b.box('glass', [x0, y0 + 0.75, gz - 0.02], [x1, y1 - 0.45, gz + 0.04]);
     b.box('strip', [x0, y0 - 0.08, armZ0 + 0.4], [x1, y0, gz - 0.4]);
@@ -310,11 +329,9 @@ function debate(mats) {
 
   const group = b.build();
 
-  // LED "speaking time" displays under the bridge glass, like a debate
-  // timer: the side that has the floor fills its bar, counts it down and
-  // blinks through the last two seconds; the other side's display is dark.
-  // Then they swap.
-  const xJ = cx - Math.sqrt(B.r ** 2 - (gz - cz) ** 2); // where the right arm meets the round corner
+  // LED "speaking time" displays under the bridge glass: one side counts
+  // down, then the other, like a debate timer.
+  const xJ = cx - Math.sqrt((B.r + 0.35) ** 2 - (gz - cz) ** 2); // where the right arm meets the bridge storey
   const bars = [];
   for (const [x0, x1] of [[A.x1 + 0.2, gx - half - 0.3], [xJ - 0.35, gx + half + 0.3]]) {
     const len = Math.abs(x1 - x0);
@@ -333,14 +350,12 @@ function debate(mats) {
   const turn = 9; // seconds per speech
   group.userData.animate = (t) => {
     const k = (t / turn) % 2;
-    const f = k % 1; // how far through the current speech
-    const left = (1 - f) * turn; // seconds left in it
     bars.forEach((bar, i) => {
       const mine = Math.floor(k) === i;
-      const level = Math.min((f * turn) / 0.6, 1 - f); // fills in 0.6 s, then counts down
-      const blink = left < 2 && Math.floor(left * 4) % 2 === 1;
-      bar.visible = mine && !blink;
-      bar.scale.x = bar.userData.len * Math.max(0.001, level);
+      const f = k % 1;
+      // Counting down during its own turn; refilling quickly when it ends.
+      const left = mine ? 1 - f : Math.min(1, f * 4);
+      bar.scale.x = bar.userData.len * Math.max(0.001, left);
     });
   };
   return group;
