@@ -43,9 +43,11 @@ export async function loadFonts(texts) {
   await Promise.all(jobs);
 }
 
-function drawText(text, fontKey, align = 'left', tracking) {
-  // (tracking: letter spacing in em, instead of the font's own)
+function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
+  // (tracking: letter spacing in em, instead of the font's own;
+  //  minPad: room round the letters in em, e.g. for a tag behind them)
   const f = { ...FONTS[fontKey], spacing: tracking ?? FONTS[fontKey].spacing };
+  f.pad = Math.max(f.pad, minPad);
   const px = 200;
   const lines = String(text).split('\n');
   const canvas = document.createElement('canvas');
@@ -64,13 +66,21 @@ function drawText(text, fontKey, align = 'left', tracking) {
   if (f.spacing && 'letterSpacing' in ctx) ctx.letterSpacing = `${f.spacing * px}px`;
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'middle';
+  // ink: the letters' own bounds in canvas pixels (for a tag fitted round them)
+  const ink = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   lines.forEach((l, i) => {
     let x = pad;
     if (align === 'center') x = (w - widths[i]) / 2;
     if (align === 'right') x = w - pad - widths[i];
-    ctx.fillText(l, x, pad + lineH * (i + 0.5));
+    const y = pad + lineH * (i + 0.5);
+    ctx.fillText(l, x, y);
+    const m = ctx.measureText(l);
+    ink.x0 = Math.min(ink.x0, x - m.actualBoundingBoxLeft);
+    ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight);
+    ink.y0 = Math.min(ink.y0, y - m.actualBoundingBoxAscent);
+    ink.y1 = Math.max(ink.y1, y + m.actualBoundingBoxDescent);
   });
-  return { canvas, px, w, h };
+  return { canvas, px, w, h, pad, ink };
 }
 
 const vert = /* glsl */ `
@@ -88,6 +98,8 @@ const frag = /* glsl */ `
   uniform float uOpacity;
   uniform vec2 uHalo; // light-box halo: x outside the beam, y inside it
   uniform vec3 uHaloCol;
+  uniform vec4 uTag; // a tag behind the letters: its rectangle in uv (none when empty)
+  uniform vec3 uTagCol;
   varying vec2 vUv;
   ${MASK_GLSL}
   void main() {
@@ -104,6 +116,13 @@ const frag = /* glsl */ `
       float h = textureLod(map, vUv, 4.5).a * 0.5 + textureLod(map, vUv, 6.0).a * 0.5;
       c += uHaloCol * clamp(h, 0.0, 1.0) * 0.5 * glow * (1.0 - a);
     }
+    if (uTag.z > uTag.x) {
+      // (edges anti-aliased over one pixel)
+      vec2 d = min(vUv - uTag.xy, uTag.zw - vUv) / fwidth(vUv);
+      float t = clamp(min(d.x, d.y) + 0.5, 0.0, 1.0);
+      c += uTagCol * t * (1.0 - a);
+      a += t * (1.0 - a);
+    }
     c *= uOpacity;
     a *= uOpacity;
     if (max(a, max(c.r, max(c.g, c.b))) < 0.004) discard;
@@ -118,6 +137,7 @@ const NAVY = new THREE.Color(0x0d1f3c);
 const WHITE = new THREE.Color(0xffffff);
 const CREAM = new THREE.Color(0xfff0d8);
 const SIGN = new THREE.Color(0xff7d10); // a lit sign: the accent, brightened when lit
+const TAG = new THREE.Color(0xcc3642); // a red tag (the deeper red of the UI's tags)
 const PALETTE = {
   // By day the beam is night, so letters inside it are white; by night the
   // beam is daylight, so letters inside it turn navy.
@@ -134,11 +154,14 @@ const PALETTE = {
   // Motto: ink outside the beam, accent inside it, so that where it crosses
   // the title's letters it never takes their colour (they are white/navy there).
   motto: { dayIn: ORANGE, dayOut: NAVY, nightIn: ORANGE, nightOut: CREAM },
+  // White letters on a red tag (see spec.tag).
+  tag: { dayIn: WHITE, dayOut: WHITE, nightIn: CREAM, nightOut: CREAM },
 };
 
 /** Lettering colours for a colour scheme (see palettes.js). */
-export function setTextColors({ accent, ink, light, cream }) {
+export function setTextColors({ accent, accentInk, accentDeep, ink, light, cream }) {
   ORANGE.set(accent);
+  TAG.set(accentInk || accentDeep);
   NAVY.set(ink);
   WHITE.set(light);
   CREAM.set(cream);
@@ -152,7 +175,9 @@ export class TextBlock {
    * @param {object} spec  { t, f, s, p:[x,y,z], r:[x,y,z], c, align }
    */
   constructor(spec, maxAniso = 8) {
-    const { canvas, px, w, h } = drawText(spec.t, spec.f, spec.align, spec.tracking);
+    // spec.tag { padX, padY } (em): a red tag round the letters, drawn with them
+    const tag = spec.tag && { padX: 0.45, padY: 0.25, ...spec.tag };
+    const { canvas, px, w, h, pad: padPx, ink } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
     tex.generateMipmaps = true;
@@ -161,7 +186,7 @@ export class TextBlock {
     this.palette = PALETTE[spec.c || 'cone'];
     this.glow = spec.c === 'orange' || spec.c === 'cone' ? 1.35 : 1.0;
     const scale = spec.s / px; // spec.s = font size in metres
-    const pad = FONTS[spec.f].pad * px;
+    const pad = padPx;
     this.glyphWidth = (w - 2 * pad) * scale;
     this.material = new THREE.ShaderMaterial({
       vertexShader: vert,
@@ -173,6 +198,8 @@ export class TextBlock {
         uOpacity: { value: 0 },
         uHalo: { value: new THREE.Vector2() },
         uHaloCol: { value: new THREE.Color() },
+        uTag: { value: new THREE.Vector4(0, 0, 0, 0) },
+        uTagCol: { value: TAG },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
       },
@@ -181,16 +208,23 @@ export class TextBlock {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    if (spec.c === 'sign') {
-      // Signs also leave their letters' coverage in the frame's alpha
+    if (spec.c === 'sign' || tag) {
+      // Signs (and tags) also leave their coverage in the frame's alpha
       // (alpha = 1 - coverage): the final pass lays less of the night glow
-      // over the letters there, so nearby strip lights don't wash them pale.
+      // over them there, so nearby strip lights don't wash them pale.
       const m = this.material;
       m.blending = THREE.CustomBlending;
       m.blendSrc = THREE.OneFactor;
       m.blendDst = THREE.OneMinusSrcAlphaFactor;
       m.blendSrcAlpha = THREE.ZeroFactor;
       m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+    }
+    if (tag) {
+      const x0 = ink.x0 - tag.padX * px;
+      const x1 = ink.x1 + tag.padX * px;
+      const y0 = ink.y0 - tag.padY * px;
+      const y1 = ink.y1 + tag.padY * px;
+      this.material.uniforms.uTag.value.set(x0 / w, 1 - y1 / h, x1 / w, 1 - y0 / h);
     }
     const geo = new THREE.PlaneGeometry(w * scale, h * scale, spec.bend ? 64 : 1, 1);
     // anchor: which point of the glyph run sits at spec.p
@@ -280,8 +314,11 @@ export function buildCluster(c, aniso) {
     // caption under the title (above it would meet the header)
     // (capsSize / capsTracking: a short line, such as an address, reads
     // better a little larger and more widely spaced)
+    // (capsTag: white letters on a red tag, its left edge in line with the title's)
     const cs = S * (c.capsSize ?? 0.16);
-    if (c.caps) add({ t: c.caps, f: 'caps', s: cs, tracking: c.capsTracking, p: [-half + S * 0.08, -cap / 2 - S * 0.2 - cs * 0.5, 0.05], anchor: 'left', c: 'cone' });
+    const tag = c.capsTag ? { padX: 0.42, padY: 0.26 } : null;
+    const x = tag ? -half + S * 0.09 + tag.padX * cs : -half + S * 0.08;
+    if (c.caps) add({ t: c.caps, f: 'caps', s: cs, tracking: c.capsTracking, tag, p: [x, -cap / 2 - S * 0.2 - cs * 0.5, 0.05], anchor: 'left', c: tag ? 'tag' : 'cone' });
     return { group, blocks };
   }
   if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });

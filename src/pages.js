@@ -35,7 +35,7 @@ export const PAGES = [
       lamp: { p: [6.5, 13], h: 20 },
       // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZXY.COM', capsSize: 0.22, capsTracking: 0.1 },
+      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
       texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
       ribbon: { p: [-13, 12.5, 8.5], r: [0, 0.05, 0.12], length: 30, width: 1.3, seed: 0.4 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],

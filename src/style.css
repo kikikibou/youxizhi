@@ -891,7 +891,7 @@ html[data-theme='night'] .card:hover:not([disabled]) {
    return, then the three cells fill in from left to right.
    (The "in" timings sit on the normal state, the "out" ones on .is-swapping.) */
 .strip {
-  transition: border-color 0.5s var(--ease) 0.45s, background-color 0.8s var(--ease) 0.1s;
+  transition: border-color 0.5s var(--ease) 0.45s, background-color 0.7s var(--ease) 0.4s;
 }
 .strip-rule::before {
   transform-origin: right center;
@@ -921,11 +921,13 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .strip-script {
   transition: opacity 0.6s var(--ease), transform 0.8s var(--ease);
 }
+/* (the box's ground clears completely, and stays clear until the lines
+   have started back out) */
 .bottom.is-swapping .strip {
   border-color: transparent;
-  background-color: rgba(var(--shade-rgb), 0.18);
-  transition-duration: 0.35s, 0.5s;
-  transition-delay: 0s, 0.1s;
+  background-color: rgba(var(--shade-rgb), 0);
+  transition-duration: 0.35s, 0.4s;
+  transition-delay: 0s, 0s;
 }
 .bottom.is-swapping .strip-rule::before,
 .bottom.is-swapping .strip-rule::after {
@@ -972,17 +974,17 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   font-size: 11px;
   letter-spacing: 0.26em;
 }
-/* The stars as a red tag, like the badge in the right cell: filled stars
-   white, the rest faint. */
+/* The stars in coral: filled ones solid, the rest faint. */
 .strip-stars {
-  padding: 1px 4px 2px 6px;
+  margin-right: -2px;
+  color: var(--orange);
   font-family: 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
 }
 .strip-stars i {
   font-style: normal;
-  opacity: 0.38;
+  opacity: 0.35;
 }
 .strip-badge {
   padding: 1px 7px 2px;
