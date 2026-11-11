@@ -127,7 +127,7 @@ export function renderFooter(page, el) {
   el.querySelector('.strip-script').innerHTML = script(f.center.script);
   el.querySelector('.strip-cells').innerHTML = `
     <div class="strip-cell ft-left">
-      <div class="strip-head"><b>${esc(f.left.title)}</b><span class="ft-stars">${'★'.repeat(f.left.stars)}${'☆'.repeat(5 - f.left.stars)}</span></div>
+      <div class="strip-head"><b>${esc(f.left.title)}</b><span class="strip-badge strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
       ${items(f.left.items)}
     </div>
     <div class="strip-cell ft-center">
