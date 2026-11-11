@@ -18,8 +18,11 @@
  * scene.trees   [x, z, scale]
  *
  * label         the ticket above the content panel: title, optional sub(title),
- *               mark (a script watermark, decoration only), lines (small caps,
- *               run together on one line); the stub shows the page's no / en
+ *               mark (a script watermark, decoration only), lines (run together
+ *               on one line); the stub shows the page's no / en. sub and lines
+ *               may be Chinese or English: ui.js tags them and the CSS sets each
+ *               in its own type (English sub in italic serif, English lines in
+ *               small caps, Chinese in the Chinese sans).
  * footer        the strip along the bottom: left { title, stars, items },
  *               center { script (on the top edge), lines (two) },
  *               right { title, badge, items }; items are [label, value] pairs
@@ -44,24 +47,24 @@ export const PAGES = [
       plane: { c: [14.4, 15, 16.3], a: 6.7, b: 2.1, heading: 0.457, period: 16, size: 2.2 },
       trees: [[-21, 8, 1.05], [36, -2, 1.1], [-27, 14, 1.2]],
     },
-    eyebrow: 'MANIFESTO',
-    poem: ['This corner exists to prove', 'that an argument can be a gift,', 'not an inevitable war.'],
-    poemSmall: '思考是一种选择 · FEEL THE WEIGHT OF THAT BEAM',
+    eyebrow: 'EPIGRAPH',
+    poem: ['Born bare or born in a robe:', 'not born to bear,', 'nor born to bore.'],
+    poemSmall: '裸着的，裹着的。生下来了，不只是活下去吧 · YANJIE HUANG',
     label: {
-      title: '思辨街区',
-      sub: '一座为思考而建的街区',
-      mark: 'Observation',
-      lines: ['DEBATE · QUIZ · GAMES', 'A STREET CORNER OF REASON'],
+      title: '自我介绍',
+      sub: 'Dedicated to the me I love so deeply.',
+      mark: 'Enchanté',
+      lines: ['欢迎来到我的个人网站', '我叫游戏之', '很开心遇到你'],
     },
     // (an array: one paragraph each)
     intro: [
-      '这里放着那些我喜欢的、我拼装的、同时也定义了我的东西。',
-      '我相信在不远的未来，人们会拥有更强大的工具来寻找与自己共鸣的灵魂。于是，我决定抢先一步把自己所有的名片塞进这个漂流瓶。希望「它」也能让你喜欢。Cheers~',
+      '这里放着那些我喜欢的、我制作的、同时也构成了我的东西。',
+      '我相信在不远的将来，人们会拥有更强大的工具来寻找趣味相投的灵魂。于是，我决定抢先一步，把自己塞进这个漂流瓶、丢向互联网的大海。希望这支珊瑚色的果汁也能让你喜欢。雀儿思~',
     ],
     cards: [
-      { no: '01', title: '辩论', en: 'Debate', desc: '工具、赛制与辩题', go: 'debate' },
-      { no: '02', title: '答题', en: 'Quiz', desc: '逻辑与数学的小陷阱', go: 'puzzle' },
-      { no: '03', title: '玩乐', en: 'Games', desc: '网页即玩的智力游戏', go: 'games' },
+      { no: '01', title: '辩论', en: 'Debate', desc: 'AI评委/备赛辅助系统、创意赛制等等', go: 'debate' },
+      { no: '02', title: '答题', en: 'Quiz', desc: '睡前智力题系列、单机竞答小挑战什么的', go: 'puzzle' },
+      { no: '03', title: '玩乐', en: 'Games', desc: '多人参与的聚会游戏、或者其他小工具', go: 'games' },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 3, items: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Naringin', '100 IBU'], ['Taste', '≤0.6%']] },

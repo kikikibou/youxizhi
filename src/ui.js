@@ -65,10 +65,13 @@ window.addEventListener('resize', () => {
   fitPoems();
 });
 
+/** 'zh' for copy with Chinese characters in it, else 'en' (the CSS sets each in its own type). */
+const lang = (s) => (/[\u3400-\u9fff]/.test(s) ? 'zh' : 'en');
+
 /**
  * The page's ticket: a stub with the page number, a perforation, and the
  * face with the title, an optional subtitle, a script watermark (decoration)
- * and one line of small caps.
+ * and one line of small print.
  */
 function ticketHtml(p) {
   const t = p.label;
@@ -77,8 +80,8 @@ function ticketHtml(p) {
           <div class="ticket-stub"><b>${esc(p.no)}</b><small>${esc(p.en)}</small></div>
           <div class="ticket-main">
             ${t.mark ? `<span class="ticket-mark" aria-hidden="true">${esc(t.mark)}</span>` : ''}
-            <div class="ticket-title"><b>${esc(t.title)}</b>${t.sub ? `<span>${esc(t.sub)}</span>` : ''}</div>
-            <div class="ticket-lines">${t.lines.map((l) => `<span>${esc(l)}</span>`).join('<i> · </i>')}</div>
+            <div class="ticket-title"><b>${esc(t.title)}</b>${t.sub ? `<span lang="${lang(t.sub)}">${esc(t.sub)}</span>` : ''}</div>
+            <div class="ticket-lines" lang="${lang(t.lines.join(''))}">${t.lines.map((l) => `<span>${esc(l)}</span>`).join('<i> · </i>')}</div>
           </div>
         </div>`;
 }

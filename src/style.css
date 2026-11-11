@@ -664,7 +664,7 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   bottom: 9px;
   border-left: 2px dashed rgba(255, 233, 222, 0.8);
 }
-/* "Observation" as a watermark: decoration, not meant to be read. */
+/* The script word (label.mark) as a watermark: decoration, not meant to be read. */
 .ticket-mark {
   position: absolute;
   right: -4px;
@@ -696,6 +696,14 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   line-height: 1.15;
   color: var(--cream);
 }
+/* an English subtitle: a line of italic serif beside the Chinese title */
+.ticket-title span[lang='en'] {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
 .ticket-lines {
   position: relative;
   margin-top: 5px;
@@ -705,6 +713,13 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   line-height: 1.2;
   letter-spacing: 0.115em;
   white-space: nowrap;
+}
+.ticket-lines[lang='zh'] {
+  margin-top: 4px;
+  font-family: var(--cn);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.1em;
 }
 .ticket-lines span {
   display: inline-block; /* (so its width can be watched) */
@@ -1138,6 +1153,17 @@ html[data-theme='night'] .drawer-panel {
   }
   .ticket-mark {
     font-size: 52px;
+  }
+  /* (an English subtitle drops under the title when even this doesn't fit) */
+  .ticket-title {
+    flex-wrap: wrap;
+  }
+  .ticket-title span[lang='en'] {
+    font-size: 13px;
+  }
+  .ticket-lines[lang='zh'] {
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
   .topbar {
     grid-template-columns: 1fr auto;
