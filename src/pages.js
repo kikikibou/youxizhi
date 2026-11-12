@@ -170,7 +170,8 @@ export const PAGES = [
         ],
       },
       // (caps: Für Elise in numbered notation, an ideographic space after the key)
-      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 5.0, title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C　3 #2 3 #2 3 7 2 1 6', script: 'Draw, O coward!!', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
+      // (U+0323 puts the low-octave dot under 7 and 6, see DOT_BELOW in typography.js)
+      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 5.0, title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C\u30003 #2 3 #2 3 7\u0323 2 1 6\u0323', script: 'Draw, O coward!!', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
       // On the drum's first-floor band, bent round it (p = drum axis, r = facing angle).
       texts: [{ t: 'FAY CE QUE VOULDRAS', f: 'display', s: 0.75, p: [0, 4.6, -14], r: [0, -0.2, 0], bend: 13.06, c: 'sign' }],
       ribbon: null,

@@ -37,11 +37,17 @@ export const FONTS = {
 };
 
 /** Chinese or Japanese (kana) copy, set in the Chinese font rather than a Latin one. */
-export const isCJK = (s) => /[぀-ヿ㐀-鿿]/.test(s || '');
+export const isCJK = (s) => /[\u3040-\u30ff\u3400-\u9fff]/.test(s || '');
 
 // Great Vibes leaves a word-sized gap after an apostrophe (as in the footer,
 // see ui.js): script lines are set in pieces with it closed up (em).
 const APOSTROPHE = { before: 0.02, after: -0.09 };
+
+// A combining dot below (U+0323) after a character puts a dot under it, e.g.
+// a low octave in numbered musical notation. The fonts don't place the mark
+// under digits themselves, so it is drawn here from the font's own full stop.
+const DOT_BELOW = String.fromCharCode(0x0323);
+const DOT_GAP = 0.1; // between the letter's foot and the dot (em)
 
 export async function loadFonts(texts) {
   if (!document.fonts) return;
@@ -65,9 +71,16 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
   const font = `${f.weight} ${px}px ${f.family}`;
   ctx.font = font;
   if (f.spacing && 'letterSpacing' in ctx) ctx.letterSpacing = `${f.spacing * px}px`;
-  // Each line as [piece, x] runs (one run unless an apostrophe needs closing up).
-  const runs = lines.map((l) => {
-    if (fontKey !== 'script' || !/[’']/.test(l)) return { parts: [[l, 0]], width: ctx.measureText(l).width };
+  // Each line as [piece, x] runs (one run unless an apostrophe needs closing
+  // up), the text without its dots below, and where those go (character indexes).
+  const runs = lines.map((raw) => {
+    let l = '';
+    const dots = [];
+    for (const ch of raw) {
+      if (ch !== DOT_BELOW) l += ch;
+      else if (l) dots.push(l.length - 1);
+    }
+    if (fontKey !== 'script' || !/[’']/.test(l)) return { parts: [[l, 0]], width: ctx.measureText(l).width, l, dots };
     const parts = [];
     let x = 0;
     for (const s of l.split(/([’'])/)) {
@@ -77,7 +90,7 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
       parts.push([s, x]);
       x += ctx.measureText(s).width + (apos ? APOSTROPHE.after * px : 0);
     }
-    return { parts, width: x };
+    return { parts, width: x, l, dots: [] }; // (no dots in a line set in pieces)
   });
   const widths = runs.map((r) => r.width);
   const pad = px * f.pad;
@@ -92,7 +105,7 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
   ctx.textBaseline = 'middle';
   // ink: the letters' own bounds in canvas pixels (for a tag fitted round them)
   const ink = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  runs.forEach(({ parts }, i) => {
+  runs.forEach(({ parts, l, dots }, i) => {
     let x0 = pad;
     if (align === 'center') x0 = (w - widths[i]) / 2;
     if (align === 'right') x0 = w - pad - widths[i];
@@ -105,6 +118,20 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
       ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight);
       ink.y0 = Math.min(ink.y0, y - m.actualBoundingBoxAscent);
       ink.y1 = Math.max(ink.y1, y + m.actualBoundingBoxDescent);
+    }
+    if (dots.length) {
+      // Centred under the letter's ink (the line up to it ends with it),
+      // a gap below the baseline (the foot of an H).
+      const dot = ctx.measureText('.');
+      const top = y + ctx.measureText('H').actualBoundingBoxDescent + DOT_GAP * px;
+      const dy = top + dot.actualBoundingBoxAscent;
+      for (const j of dots) {
+        const upto = ctx.measureText(l.slice(0, j + 1));
+        const ch = ctx.measureText(l[j]);
+        const cx = x0 + upto.actualBoundingBoxRight - (ch.actualBoundingBoxLeft + ch.actualBoundingBoxRight) / 2;
+        ctx.fillText('.', cx - (dot.actualBoundingBoxRight - dot.actualBoundingBoxLeft) / 2, dy);
+      }
+      ink.y1 = Math.max(ink.y1, dy + dot.actualBoundingBoxDescent);
     }
   });
   return { canvas, px, w, h, pad, ink, lastY: pad + lineH * (lines.length - 0.5) };
