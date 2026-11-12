@@ -63,8 +63,8 @@ export const PAGES = [
     ],
     cards: [
       { no: '01', title: '辩论', en: 'Debate', desc: 'AI评委/备赛辅助系统、创意赛制等等', go: 'debate' },
-      { no: '02', title: '答题', en: 'Quiz', desc: '睡前智力题系列、单机竞答小挑战什么的', go: 'puzzle' },
-      { no: '03', title: '玩乐', en: 'Games', desc: '多人参与的聚会游戏、或者其他小工具', go: 'games' },
+      { no: '02', title: '问答', en: 'Quiz', desc: '睡前智力题系列、单机竞答小挑战什么的', go: 'puzzle' },
+      { no: '03', title: '消遣', en: 'Games', desc: '多人参与的聚会游戏、或者其他小工具', go: 'games' },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 3, items: [['Radiation', '3.6 R'], ['Furanocoumarins', '85 mg'], ['Naringin', '100 IBU'], ['Taste', '≤0.6%']] },
@@ -85,8 +85,8 @@ export const PAGES = [
       // The split line pivots in the gap between the two bridge arms
       // (FORUM.gap in buildings.js); the right-hand side shows the other time.
       device: { type: 'split', p: [1, 23.05, -3], side: 1 },
-      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 5.2, title: 'ARGUMENT', cn: '论场', of: 'OF CLASH', caps: 'MOTION · BURDEN · CLASH', script: 'The Art of Disagreement', scriptTilt: -0.15, scriptShift: [0.4, 0.1] },
-      texts: [{ t: 'THE WEIGHT OF PROOF', f: 'display', s: 0.45, p: [-13, 4.9, -1.33], c: 'sign' }],
+      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 6.0, title: 'MOTION', cn: '题眼', of: '↑ ↑ ↓ ↓\n← → ← → B A', caps: 'PRO ET CONTRA', script: 'Do geese see God?', scriptTilt: -0.15, scriptShift: [0.15, -0.15] },
+      texts: [{ t: 'CAVE CANEM', f: 'display', s: 0.6, p: [-13, 4.9, -1.33], c: 'sign' }],
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
     eyebrow: 'DEBATE',
@@ -114,7 +114,7 @@ export const PAGES = [
     id: 'puzzle',
     side: 'left', // which side the content panel sits on (away from the beam)
     no: '02',
-    nav: '答题',
+    nav: '问答',
     en: 'QUIZ',
     building: 'puzzle',
     scene: {
@@ -124,8 +124,8 @@ export const PAGES = [
       // Four sliding tiles on a 7 m grid 5 m in front of the cube, straddling
       // its left edge (half building, half sky) below the title.
       device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
-      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 5.2, title: 'ENIGMA', cn: '谜宫', of: 'OF LOGIC', caps: 'ONE ANSWER · MANY DOORS', script: 'Logic is a Quiet Light', scriptTilt: -0.36, scriptShift: [-0.3, -0.16] },
-      texts: [{ t: 'THE SHAPE OF AN ANSWER', f: 'display', s: 0.78, p: [-4.4, 3.2, 1.86], c: 'sign' }],
+      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2, title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?', scriptTilt: -0.22, scriptShift: [-0.1, -0.4] },
+      texts: [{ t: 'PEDO MELLON A MINNO', f: 'display', s: 0.78, p: [-4.4, 3.2, 1.86], c: 'sign' }],
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
     eyebrow: 'QUIZ',
@@ -153,7 +153,7 @@ export const PAGES = [
     id: 'games',
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '03',
-    nav: '玩乐',
+    nav: '消遣',
     en: 'GAMES',
     building: 'games',
     scene: {
@@ -169,9 +169,10 @@ export const PAGES = [
           { p: [-8, 12, 4], r: [0, -0.12, 0.16], length: 130, width: 5.5, seed: 3.7, amp: 0.8 },
         ],
       },
-      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 4.6, title: 'PLAYGROUND', cn: '游园', of: 'OF MINDS', caps: 'PRESS START TO THINK', script: 'Play is Serious Research', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
+      // (caps: Für Elise in numbered notation, an ideographic space after the key)
+      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 5.0, title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C　3 #2 3 #2 3 7 2 1 6', script: 'Draw, O coward!!', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
       // On the drum's first-floor band, bent round it (p = drum axis, r = facing angle).
-      texts: [{ t: 'THE RULES OF PLAY', f: 'display', s: 0.75, p: [0, 4.6, -14], r: [0, -0.2, 0], bend: 13.06, c: 'sign' }],
+      texts: [{ t: 'FAY CE QUE VOULDRAS', f: 'display', s: 0.75, p: [0, 4.6, -14], r: [0, -0.2, 0], bend: 13.06, c: 'sign' }],
       ribbon: null,
       trees: [[-44, 6, 1.1], [32, 8, 1.0]],
     },
@@ -211,8 +212,8 @@ export const PAGES = [
       // hides the lower half, and a beam from there seemed to come out of the deck.
       device: { type: 'beacon', p: [-21, 30.4, -66], source: 0.7 },
       sea: true,
-      cluster: { p: [-9, 17, -52], r: [0.12, -0.25, 0], size: 5.2, title: 'SIGNAL', cn: '关于', of: 'ON AIR', caps: 'WHO BUILT THIS STREET', script: 'Notes from the Street Corner', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
-      texts: [{ t: 'NOTES FROM THE CORNER', f: 'display', s: 0.62, p: [-28.65, 7.15, -59.52], c: 'sign' }],
+      cluster: { p: [-8.8, 17, -52], portrait: { p: [-8.8, 17, -52], scale: 0.92 }, r: [0.12, -0.25, 0], size: 4.0, title: 'COLOPHON', cn: '注脚', of: 'SEE ALSO', caps: 'CF. JUDGES 16:17', script: 'Madam, I’m not Adam.', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
+      texts: [{ t: 'ΓΝΩΘΙ ΣΕΑΥΤΟΝ', f: 'display', s: 0.8, p: [-28.65, 7.15, -59.52], c: 'sign' }],
       ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8, tip: 0.07 },
       trees: [],
     },
@@ -224,7 +225,7 @@ export const PAGES = [
       mark: 'Signal',
       lines: ['WHO · WHY · HOW TO REACH', 'NOTES FROM THE STREET CORNER'],
     },
-    intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和答题、怎样联系你。（占位文字，等你来替换）',
+    intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和问答、怎样联系你。（占位文字，等你来替换）',
     cards: [
       { no: '01', title: '关于我', en: 'Profile', desc: '辩手 / 出题人 / 写代码的人', ready: false },
       { no: '02', title: '联系方式', en: 'Contact', desc: '邮箱与社交账号', ready: false },

@@ -26,12 +26,22 @@ export const MASK_GLSL = /* glsl */ `
   }
 `;
 
+// ('Anton Extra' has what Anton lacks: Greek capitals and ← →, drawn from
+// Anton's own letters, see main.js; the Chinese font after Oswald is for the
+// odd wide character in a caps line, such as an ideographic space.)
 export const FONTS = {
-  display: { family: '"Anton", "Oswald", Impact, sans-serif', weight: 400, lh: 1.08, pad: 0.18 },
-  caps: { family: '"Oswald", "Anton", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
+  display: { family: '"Anton", "Anton Extra", "Oswald", Impact, sans-serif', weight: 400, lh: 1.08, pad: 0.18 },
+  caps: { family: '"Oswald", "Anton", "Noto Sans SC Variable", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
   cn: { family: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", sans-serif', weight: 900, lh: 1.2, pad: 0.2 },
-  script: { family: '"Great Vibes", cursive', weight: 400, lh: 1.25, pad: 0.45 },
+  script: { family: '"Great Vibes", cursive', weight: 400, lh: 0.95, pad: 0.45 }, // (lh: its letters are small for their size)
 };
+
+/** Chinese or Japanese (kana) copy, set in the Chinese font rather than a Latin one. */
+export const isCJK = (s) => /[぀-ヿ㐀-鿿]/.test(s || '');
+
+// Great Vibes leaves a word-sized gap after an apostrophe (as in the footer,
+// see ui.js): script lines are set in pieces with it closed up (em).
+const APOSTROPHE = { before: 0.02, after: -0.09 };
 
 export async function loadFonts(texts) {
   if (!document.fonts) return;
@@ -55,7 +65,21 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
   const font = `${f.weight} ${px}px ${f.family}`;
   ctx.font = font;
   if (f.spacing && 'letterSpacing' in ctx) ctx.letterSpacing = `${f.spacing * px}px`;
-  const widths = lines.map((l) => ctx.measureText(l).width);
+  // Each line as [piece, x] runs (one run unless an apostrophe needs closing up).
+  const runs = lines.map((l) => {
+    if (fontKey !== 'script' || !/[’']/.test(l)) return { parts: [[l, 0]], width: ctx.measureText(l).width };
+    const parts = [];
+    let x = 0;
+    for (const s of l.split(/([’'])/)) {
+      if (!s) continue;
+      const apos = s === '’' || s === "'";
+      if (apos) x += APOSTROPHE.before * px;
+      parts.push([s, x]);
+      x += ctx.measureText(s).width + (apos ? APOSTROPHE.after * px : 0);
+    }
+    return { parts, width: x };
+  });
+  const widths = runs.map((r) => r.width);
   const pad = px * f.pad;
   const lineH = px * f.lh;
   const w = Math.ceil(Math.max(...widths) + pad * 2);
@@ -68,19 +92,22 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
   ctx.textBaseline = 'middle';
   // ink: the letters' own bounds in canvas pixels (for a tag fitted round them)
   const ink = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  lines.forEach((l, i) => {
-    let x = pad;
-    if (align === 'center') x = (w - widths[i]) / 2;
-    if (align === 'right') x = w - pad - widths[i];
+  runs.forEach(({ parts }, i) => {
+    let x0 = pad;
+    if (align === 'center') x0 = (w - widths[i]) / 2;
+    if (align === 'right') x0 = w - pad - widths[i];
     const y = pad + lineH * (i + 0.5);
-    ctx.fillText(l, x, y);
-    const m = ctx.measureText(l);
-    ink.x0 = Math.min(ink.x0, x - m.actualBoundingBoxLeft);
-    ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight);
-    ink.y0 = Math.min(ink.y0, y - m.actualBoundingBoxAscent);
-    ink.y1 = Math.max(ink.y1, y + m.actualBoundingBoxDescent);
+    for (const [s, dx] of parts) {
+      const x = x0 + dx;
+      ctx.fillText(s, x, y);
+      const m = ctx.measureText(s);
+      ink.x0 = Math.min(ink.x0, x - m.actualBoundingBoxLeft);
+      ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight);
+      ink.y0 = Math.min(ink.y0, y - m.actualBoundingBoxAscent);
+      ink.y1 = Math.max(ink.y1, y + m.actualBoundingBoxDescent);
+    }
   });
-  return { canvas, px, w, h, pad, ink };
+  return { canvas, px, w, h, pad, ink, lastY: pad + lineH * (lines.length - 0.5) };
 }
 
 const vert = /* glsl */ `
@@ -175,7 +202,7 @@ export class TextBlock {
   constructor(spec, maxAniso = 8) {
     // spec.tag { padX, padY } (em): a red tag round the letters, drawn with them
     const tag = spec.tag && { padX: 0.45, padY: 0.25, ...spec.tag };
-    const { canvas, px, w, h, pad: padPx, ink } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0);
+    const { canvas, px, w, h, pad: padPx, ink, lastY } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
     tex.generateMipmaps = true;
@@ -186,6 +213,8 @@ export class TextBlock {
     const scale = spec.s / px; // spec.s = font size in metres
     const pad = padPx;
     this.glyphWidth = (w - 2 * pad) * scale;
+    this.foot = (h / 2 - ink.y1) * scale; // the letters' lowest point (local y, metres)
+    this.lastLine = (h / 2 - lastY) * scale; // the middle of the last line (0 for one line)
     this.material = new THREE.ShaderMaterial({
       vertexShader: vert,
       fragmentShader: frag,
@@ -322,14 +351,29 @@ export function buildCluster(c, aniso) {
     if (c.caps) add({ t: c.caps, f: 'caps', s: cs, tracking: c.capsTracking, tag, p: [x, -cap / 2 - S * 0.2 - cs * 0.5, 0.05], anchor: 'left', c: tag ? 'tag' : 'cone' });
     return { group, blocks };
   }
-  if (c.cn) add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });
-  if (c.of) add({ t: c.of, f: 'display', s: S * 0.46, p: [half, rowY - S * 0.04, 0.05], anchor: 'right', c: 'cone' });
+  const cn = c.cn && add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });
+  if (c.of) {
+    // (kana or Chinese: in the Chinese font, a little smaller than the Chinese title)
+    const cjk = isCJK(c.of);
+    const of = add({ t: c.of, f: cjk ? 'cn' : 'display', s: S * (cjk ? 0.4 : 0.46), p: [half, rowY - S * 0.04, 0.05], anchor: 'right', c: 'cone' });
+    // (broken in two with \n: the last line takes the place of a single one, the first stands above it)
+    of.mesh.position.y -= of.lastLine;
+    // One too long for the room right of the Chinese title is set smaller,
+    // standing on the same line.
+    const room = 2 * half - (cn ? S * 0.02 + cn.glyphWidth + S * 0.3 : 0);
+    if (of.glyphWidth > room) {
+      const k = room / of.glyphWidth;
+      of.mesh.scale.setScalar(k);
+      of.mesh.position.y += of.foot * (1 - k);
+    }
+  }
   if (c.caps)
     add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.25, rowY + S * 0.62, 0.05], r: [0, 0, -0.08], anchor: 'left', c: 'cone' });
   if (c.script) {
     // Each page may tilt and shift it a little (scriptTilt, scriptShift in title sizes).
     const [dx, dy] = c.scriptShift || [0, 0];
-    const sc = add({ t: c.script, f: 'script', s: S * 0.34, p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'inverse' });
+    // (a long one may be broken in two with \n: the lines are centred on each other)
+    const sc = add({ t: c.script, f: 'script', s: S * 0.34, align: 'center', p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'inverse' });
     sc.mesh.renderOrder = 6.5; // over the big letters (sorting by distance used to put it under)
   }
   return { group, blocks };

@@ -10,7 +10,7 @@ import { createGround, createTree, Lamp, Ribbon, PaperPlane } from './props.js';
 import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, RibbonDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
-import { TextBlock, buildCluster, loadFonts, setTextColors, MASK, MASK_GLSL } from './typography.js';
+import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
 
 const PLAZA_RADIUS = 56;
@@ -504,7 +504,8 @@ export class World {
   async buildTypography() {
     const all = this.sites.flatMap(({ page: { scene: sc } }) => [
       ...sc.texts,
-      { t: sc.cluster.title + (sc.cluster.of || ''), f: 'display' },
+      { t: sc.cluster.title, f: 'display' },
+      { t: sc.cluster.of || '', f: isCJK(sc.cluster.of) ? 'cn' : 'display' },
       { t: sc.cluster.cn, f: 'cn' },
       { t: sc.cluster.caps, f: 'caps' },
       { t: sc.cluster.script, f: 'script' },
