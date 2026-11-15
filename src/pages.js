@@ -142,17 +142,15 @@ export const PAGES = [
       // its left edge (half building, half sky) below the title.
       device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
       // (place, after Claude Design: the script hangs from the title's lower
-      // right, leaving AREPO clear; the caps line ends where the title does.
-      // Off the title it crosses pale sky and the sliding tiles, so it is set
-      // in ink like the home page's motto, not in white)
+      // right, leaving AREPO clear; the caps line ends where the title does)
       cluster: {
         p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2,
         title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?',
         place: {
           caps: { left: 60, base: -148, scale: 0.16, rotate: 4.58, tracking: 0.03 },
           script: [
-            { left: 158, base: 210, scale: 0.32, rotate: 10, color: 'motto' },
-            { left: 216, base: 283, scale: 0.32, rotate: 10, color: 'motto' },
+            { left: 158, base: 210, scale: 0.32, rotate: 10 },
+            { left: 216, base: 283, scale: 0.32, rotate: 10 },
           ],
         },
       },

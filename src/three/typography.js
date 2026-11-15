@@ -142,8 +142,10 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
 
 const vert = /* glsl */ `
   varying vec2 vUv;
+  varying vec3 vWorld;
   void main() {
     vUv = uv;
+    vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -157,13 +159,35 @@ const frag = /* glsl */ `
   uniform vec3 uHaloCol;
   uniform vec4 uTag; // a tag behind the letters: its rectangle in uv (none when empty)
   uniform vec3 uTagCol;
+  // Lettering in front of other letters (a script across the title) takes
+  // other colours where those letters are behind it on screen (uInT, uOutT).
+  uniform sampler2D uUnder; // their texture
+  uniform float uUnderOn; // 0: none (else their opacity)
+  uniform mat4 uUnderInv; // world to their mesh's space (their plane is z = 0)
+  uniform vec4 uUnderBox; // their plane's rectangle there: x0, y0, width, height
+  uniform vec3 uInT;
+  uniform vec3 uOutT;
   varying vec2 vUv;
+  varying vec3 vWorld;
   ${MASK_GLSL}
   void main() {
     float cov = beamCoverage(gl_FragCoord.xy);
     float a = texture2D(map, vUv).a;
+    vec3 cIn = uIn;
+    vec3 cOut = uOut;
+    if (uUnderOn > 0.0) {
+      // (the ray from the camera through this point, met with their plane)
+      vec3 eye = (uUnderInv * vec4(cameraPosition, 1.0)).xyz;
+      vec3 p = (uUnderInv * vec4(vWorld, 1.0)).xyz;
+      vec2 q = eye.xy + (p.xy - eye.xy) * (eye.z / (eye.z - p.z));
+      vec2 uv = (q - uUnderBox.xy) / uUnderBox.zw;
+      float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+      float under = texture2D(uUnder, clamp(uv, 0.0, 1.0)).a * inside * uUnderOn;
+      cIn = mix(uIn, uInT, under);
+      cOut = mix(uOut, uOutT, under);
+    }
     // (premultiplied: the letters cover what is behind them, the halo adds light)
-    vec3 c = mix(uOut, uIn, cov) * a;
+    vec3 c = mix(cOut, cIn, cov) * a;
     float glow = mix(uHalo.x, uHalo.y, cov);
     if (glow > 0.0) {
       // Blurred copies of the letters (coarse mip levels) make a soft glow
@@ -202,6 +226,14 @@ const PALETTE = {
   white: { dayIn: WHITE, dayOut: WHITE, nightIn: ORANGE, nightOut: ORANGE },
   // Script lettering: orange where the big letters are white (inside the beam), white elsewhere.
   inverse: { dayIn: ORANGE, dayOut: WHITE, nightIn: ORANGE, nightOut: CREAM },
+  // Script across a title (spec.under): over open sky, ink against daylight
+  // and the accent against night (cream was lost on the pale night clouds);
+  // over the title's letters (on), the colour that stands off theirs (white
+  // or cream on the accent, the accent on white, cream on ink).
+  script: {
+    dayIn: ORANGE, dayOut: NAVY, nightIn: NAVY, nightOut: ORANGE,
+    on: { dayIn: ORANGE, dayOut: WHITE, nightIn: CREAM, nightOut: CREAM },
+  },
   // Ink: the scheme's dark ink by day, cream by night (and swapped inside the beam).
   ink: { dayIn: WHITE, dayOut: NAVY, nightIn: NAVY, nightOut: CREAM },
   // Facade signs are light boxes: accent by day, lit (brighter, with a halo)
@@ -268,6 +300,12 @@ export class TextBlock {
         uHaloCol: { value: new THREE.Color() },
         uTag: { value: new THREE.Vector4(0, 0, 0, 0) },
         uTagCol: { value: new THREE.Color() },
+        uUnder: { value: spec.under ? spec.under.material.uniforms.map.value : null },
+        uUnderOn: { value: 0 },
+        uUnderInv: { value: new THREE.Matrix4() },
+        uUnderBox: { value: new THREE.Vector4(0, 0, 1, 1) },
+        uInT: { value: new THREE.Color() },
+        uOutT: { value: new THREE.Color() },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
       },
@@ -314,6 +352,13 @@ export class TextBlock {
     this.mesh.position.set(...spec.p);
     if (spec.r) this.mesh.rotation.set(...spec.r);
     this.mesh.renderOrder = 6;
+    if (spec.under) {
+      // (the letters behind: their plane's rectangle in their mesh's space)
+      const g = spec.under.mesh.geometry;
+      g.computeBoundingBox();
+      const { min, max } = g.boundingBox;
+      this.material.uniforms.uUnderBox.value.set(min.x, min.y, max.x - min.x, max.y - min.y);
+    }
   }
 
   update(night, opacity) {
@@ -336,6 +381,14 @@ export class TextBlock {
     // A tag is the title's own colour, glowing with it at night like the
     // title letters (see 'cone' and glow).
     if (this.spec.tag) u.uTagCol.value.copy(ORANGE).multiplyScalar(1 + 0.35 * night);
+    const under = this.spec.under;
+    if (under && p.on) {
+      u.uInT.value.copy(p.on.dayIn).lerp(p.on.nightIn, night);
+      u.uOutT.value.copy(p.on.dayOut).lerp(p.on.nightOut, night);
+      under.mesh.updateWorldMatrix(true, false);
+      u.uUnderInv.value.copy(under.mesh.matrixWorld).invert();
+      u.uUnderOn.value = under.material.uniforms.uOpacity.value;
+    }
     u.uOpacity.value = opacity;
     this.mesh.visible = opacity > 0.003;
   }
@@ -357,6 +410,10 @@ export function buildCluster(c, aniso) {
   const blocks = [];
   const add = (spec) => {
     const b = new TextBlock(spec, aniso);
+    // The stack stands in front of the scene like a poster's title: no
+    // building cuts into it. (The lamp is drawn after it, so it still passes
+    // in front, see props.js.)
+    b.material.depthTest = false;
     group.add(b.mesh);
     blocks.push(b);
     return b;
@@ -418,7 +475,8 @@ export function buildCluster(c, aniso) {
       if (texts[i] == null) return;
       const rot = -((q.rotate || 0) * Math.PI) / 180;
       const z = role === 'script' ? 0.3 : 0.05;
-      const b = add({ t: texts[i], f: q.font || FONT[role], weight: q.weight, s: S * q.scale, tracking: q.tracking, r: [0, 0, rot], p: [0, 0, z], c: q.color || (role === 'script' ? 'inverse' : 'cone') });
+      const script = role === 'script';
+      const b = add({ t: texts[i], f: q.font || FONT[role], weight: q.weight, s: S * q.scale, tracking: q.tracking, r: [0, 0, rot], p: [0, 0, z], c: q.color || (script ? 'script' : 'cone'), under: script ? title : undefined });
       // (the block turns about its letters' end on the baseline, which lands on the given point)
       const [x, y] = plane(q.left ?? q.right, q.base);
       const lx = q.left != null ? b.inkLeft : b.inkRight;
@@ -457,7 +515,7 @@ export function buildCluster(c, aniso) {
     // Each page may tilt and shift it a little (scriptTilt, scriptShift in title sizes).
     const [dx, dy] = c.scriptShift || [0, 0];
     // (a long one may be broken in two with \n: the lines are centred on each other)
-    const sc = add({ t: c.script, f: 'script', s: S * 0.34, align: 'center', p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'inverse' });
+    const sc = add({ t: c.script, f: 'script', s: S * 0.34, align: 'center', p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'script', under: title });
     sc.mesh.renderOrder = 6.5; // over the big letters (sorting by distance used to put it under)
     shift('script', sc);
   }

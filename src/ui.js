@@ -37,6 +37,14 @@ function cardHtml(c, i) {
  * that isn't enough does the poem step aside, so it never covers the panel's copy.
  */
 const PANEL_GAP_MIN = 23;
+// (where the panel stands with the strip open: while it is folded the panel
+// is moved down by `translate`, perhaps part way, see --fold-drop)
+function openRect(panel) {
+  const r = panel.getBoundingClientRect();
+  const t = getComputedStyle(panel).translate;
+  const dy = t === 'none' ? 0 : parseFloat(t.split(' ')[1] || 0);
+  return { left: r.left, right: r.right, top: r.top - dy, bottom: r.bottom - dy };
+}
 function fitPoems() {
   for (const page of document.querySelectorAll('.page')) {
     const poem = page.querySelector('.poem');
@@ -44,13 +52,13 @@ function fitPoems() {
     if (!poem || !panel) continue;
     page.style.removeProperty('--panel-gap');
     const a = poem.getBoundingClientRect();
-    let b = panel.getBoundingClientRect();
+    let b = openRect(panel);
     const side = a.width > 0 && a.left < b.right && b.left < a.right;
     const short = a.bottom + 6 - b.top; // (px the panel would have to come down)
     if (side && short > 0) {
       const gap = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-gap')) || PANEL_GAP_MIN;
       page.style.setProperty('--panel-gap', `${Math.max(PANEL_GAP_MIN, gap - Math.ceil(short))}px`);
-      b = panel.getBoundingClientRect();
+      b = openRect(panel);
     }
     page.classList.toggle('is-crowded', side && a.bottom + 6 > b.top);
   }
@@ -122,23 +130,27 @@ const items = (pairs) =>
 const script = (s) => esc(s).replace(/(’|&#39;)/g, '<i>$1</i>');
 
 // The content panel sits a fixed gap above the footer strip, however tall the
-// strip's copy makes it (see .panel in style.css). It is measured open, so the
-// panel stays put while the strip folds (see the fold below); the cells' full
-// height also sets how far they open (--cells-h).
+// strip's copy makes it (see .panel in style.css). It is measured open; while
+// the strip is folded (see the fold below) the panel comes down by the cells'
+// height (--fold-drop), so it keeps that gap above the one line left. The
+// cells' full height also sets how far they open (--cells-h).
 let footEl = null;
 function measureFoot() {
   const strip = footEl?.querySelector('.strip');
   if (!strip) return;
   const cells = strip.querySelector('.strip-cells');
   // (the cells' height when open, from their contents, which keep their
-  // places however far the cells are folded; offsets are from .strip)
+  // places however far the cells are folded; offsets are from .strip, whose
+  // top is the cells' top)
   let full = 0;
   for (const cell of cells.children) {
-    let end = 0;
-    for (const c of cell.children) end = Math.max(end, c.offsetTop - cell.offsetTop + c.offsetHeight);
-    full = Math.max(full, end + parseFloat(getComputedStyle(cell).paddingBottom));
+    const pad = parseFloat(getComputedStyle(cell).paddingBottom);
+    for (const c of cell.children) full = Math.max(full, c.offsetTop + c.offsetHeight + pad);
   }
+  full += parseFloat(getComputedStyle(cells).paddingBottom);
   cells.style.setProperty('--cells-h', `${Math.ceil(full)}px`);
+  fold.full = Math.ceil(full);
+  dropPanel();
   const foot = footEl.getBoundingClientRect().bottom - strip.getBoundingClientRect().top + (full - cells.clientHeight);
   const value = `${Math.max(0, Math.ceil(foot))}px`;
   if (document.documentElement.style.getPropertyValue('--foot') === value) return;
@@ -154,13 +166,24 @@ let observedCells = [];
  * (.bottom.is-folded in style.css). Pointing at it opens it again (moving off
  * folds it after a moment); a click, or Enter / Space when it has the focus,
  * pins it open, another folds it. On a touch screen a tap does the same.
+ *
+ * Or, with ?strip=fine in the address, it is set as one line of fine print
+ * for good, its script title on the bottom edge instead of the key hint
+ * (.bottom.m-fine), and doesn't fold. (Two forms to compare.)
  */
 const FOLD_AFTER = 5000; // ms after a page's strip has come in
 const FOLD_OFF = 700; // ms after the pointer moves off it
-const fold = { el: null, timer: 0, pinned: false, inside: false };
+const FINE = new URLSearchParams(location.search).get('strip') === 'fine';
+const fold = { el: null, timer: 0, pinned: false, inside: false, full: 0 };
+function dropPanel() {
+  const drop = fold.el?.classList.contains('is-folded') ? fold.full : 0;
+  document.documentElement.style.setProperty('--fold-drop', `${drop}px`);
+}
 function setFolded(folded) {
+  if (FINE) return;
   fold.el.classList.toggle('is-folded', folded);
   fold.el.querySelector('.strip').setAttribute('aria-expanded', String(!folded));
+  dropPanel();
 }
 function foldLater(ms) {
   clearTimeout(fold.timer);
@@ -170,6 +193,10 @@ function foldLater(ms) {
 }
 function initFold(el) {
   fold.el = el;
+  if (FINE) {
+    el.classList.add('m-fine');
+    return;
+  }
   const strip = el.querySelector('.strip');
   strip.tabIndex = 0;
   strip.setAttribute('role', 'button');
@@ -212,14 +239,15 @@ function foldArrive() {
  */
 export function renderFooter(page, el) {
   const f = page.footer;
-  el.querySelector('.strip-script').innerHTML = script(f.center.script);
+  el.querySelectorAll('.strip-script').forEach((s) => (s.innerHTML = script(f.center.script)));
+  // (a space after each break: the fine print hides the breaks and runs the lines on)
   el.querySelector('.strip-cells').innerHTML = `
     <div class="strip-cell ft-left">
       <div class="strip-head"><b>${esc(f.left.title)}</b><span class="strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
       ${items(f.left.items)}
     </div>
     <div class="strip-cell ft-center">
-      <p>${f.center.lines.map(esc).join('<br>')}</p>
+      <p>${f.center.lines.map(esc).join('<br> ')}</p>
     </div>
     <div class="strip-cell ft-right">
       <div class="strip-head"><b>${esc(f.right.title)}</b><span class="strip-badge">${esc(f.right.badge)}</span></div>
