@@ -151,9 +151,9 @@ export const PAGES = [
         p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2,
         title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?',
         // (the script hangs below the title over open sky, the building and
-        // the sliding tiles: ink against daylight, the accent against night;
-        // at night the accent, as cream is lost on the pale lit clouds)
-        scriptColor: { dayOut: 'ink', dayIn: 'accent', nightOut: 'accent', nightIn: 'ink' },
+        // the sliding tiles: ink against daylight, the accent on the tiles'
+        // night by day; at night cream, ink on the tiles' daylight)
+        scriptColor: { dayOut: 'ink', dayIn: 'accent', nightOut: 'cream', nightIn: 'ink' },
         place: {
           caps: { left: 60, base: -148, scale: 0.16, rotate: 4.58, tracking: 0.03 },
           script: [
@@ -209,8 +209,8 @@ export const PAGES = [
       // (caps: Für Elise in numbered notation, an ideographic space after the key)
       // (U+0323 puts the low-octave dot under 7 and 6, see DOT_BELOW in typography.js)
       // (place, after Claude Design: the group 40 lower, the notation clear of
-      // the header and in line with the title's left end; the katakana a
-      // lighter second to 玩心; the script along the title's top edge)
+      // the header and in line with the title's left end; the script along
+      // the title's top edge)
       cluster: {
         p: [-13, 25.81, 5.88], r: [0.12, -0.05, 0], size: 5.0,
         title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C\u30003 #2 3 #2 3 7\u0323 2 1 6\u0323', script: 'Draw, O coward!!',
@@ -220,7 +220,9 @@ export const PAGES = [
         scriptColor: { dayOut: 'light', dayIn: 'accent', nightOut: 'cream', nightIn: 'accent' },
         place: {
           caps: { shift: [-47, 6] },
-          of: { right: 820, base: -3, scale: 0.33, tracking: 0.05, weight: 700 },
+          // (in Dela Gothic, a little narrower: as heavy and as tall as the
+          // Anton subtitles in this place on the other pages)
+          of: { right: 820, base: -3, scale: 0.46, font: 'kana', squeeze: 0.85, tracking: 0.02 },
           script: { left: 300, base: 48, scale: 0.344, rotate: 4.58 },
         },
       },

@@ -168,10 +168,8 @@ let observedCells = [];
  * folds it after a moment); a click, or Enter / Space when it has the focus,
  * pins it open, another folds it. On a touch screen a tap does the same.
  *
- * That is the strip with ?strip=fold in the address. Otherwise it is one row
- * of fine print that stays (.bottom.m-fine, see fineHtml): the centre's two
- * lines run on at the left, the script title about a third of the way along,
- * the two cells' figures at the right, joined by hairlines.
+ * That is the strip with ?strip=fold in the address. Otherwise it is one line
+ * of fine print over a hairline that stays (.bottom.m-fine, see fineHtml).
  */
 const FOLD_AFTER = 5000; // ms after a page's strip has come in
 const FOLD_OFF = 700; // ms after the pointer moves off it
@@ -235,11 +233,13 @@ function foldArrive() {
 }
 
 /**
- * The fine print's row (.fine in style.css): [the centre's lines run on,
- * a hairline] [the script title] [a hairline, the left cell's figures, the
- * right cell's]. It never wraps: what doesn't fit is left out, in the order
- * data-fit gives (the right cell's items from its last, its heading, the
- * left cell's items, its heading, last the lines), see fitFine.
+ * The fine print (.fine in style.css): a hairline across the foot with the
+ * script title on it about a third of the way along, and the copy standing
+ * just above the line on either side of the title (which rises between):
+ * the centre's lines run on at the left, the two cells' figures at the
+ * right. It never wraps: what doesn't fit is left out, in the order data-fit
+ * gives (the right cell's items from its last, its heading, the left cell's
+ * items, its heading, last the lines), see fitFine.
  */
 function fineHtml(f) {
   const rk = f.right.items.length;
@@ -247,21 +247,20 @@ function fineHtml(f) {
   const item = ([k, v], n) => `<div data-fit="${n}"><span>${esc(k)}</span><b>${esc(v)}</b></div>`;
   return `
     <div class="fine">
-      <div class="fine-l"><p data-fit="${rk + lk + 3}">${f.center.lines.map(esc).join(' ')}</p><i class="fine-rule"></i></div>
-      <span class="strip-script fine-script">${script(f.center.script)}</span>
+      <p class="fine-l" data-fit="${rk + lk + 3}">${f.center.lines.map(esc).join(' ')}</p>
       <div class="fine-r">
-        <i class="fine-rule"></i>
-        <div class="fine-stats">
-          <div class="fine-cell">
-            <div class="strip-head" data-fit="${rk + lk + 2}"><b>${esc(f.left.title)}</b><span class="strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
-            <div class="strip-items">${f.left.items.map((it, i) => item(it, rk + 1 + lk - i)).join('')}</div>
-          </div>
-          <div class="fine-cell">
-            <div class="strip-head" data-fit="${rk + 1}"><b>${esc(f.right.title)}</b></div>
-            <div class="strip-items">${f.right.items.map((it, i) => item(it, rk - i)).join('')}</div>
-          </div>
+        <div class="fine-cell">
+          <div class="strip-head" data-fit="${rk + lk + 2}"><b>${esc(f.left.title)}</b><span class="strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
+          <div class="strip-items">${f.left.items.map((it, i) => item(it, rk + 1 + lk - i)).join('')}</div>
+        </div>
+        <div class="fine-cell">
+          <div class="strip-head" data-fit="${rk + 1}"><b>${esc(f.right.title)}</b></div>
+          <div class="strip-items">${f.right.items.map((it, i) => item(it, rk - i)).join('')}</div>
         </div>
       </div>
+      <i class="fine-rule fine-rule--l"></i>
+      <span class="fine-mid"><span class="strip-script fine-script">${script(f.center.script)}</span></span>
+      <i class="fine-rule fine-rule--r"></i>
     </div>`;
 }
 function fitFine() {

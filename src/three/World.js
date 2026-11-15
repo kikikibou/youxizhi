@@ -506,6 +506,7 @@ export class World {
       ...sc.texts,
       { t: sc.cluster.title, f: 'display' },
       { t: sc.cluster.of || '', f: isCJK(sc.cluster.of) ? 'cn' : 'display' },
+      { t: sc.cluster.of || '', f: 'kana' }, // (kana may be set in their own face, see c.place)
       { t: sc.cluster.cn, f: 'cn' },
       { t: sc.cluster.caps, f: 'caps' },
       { t: sc.cluster.script, f: 'script' },

@@ -1051,14 +1051,15 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .bottom.is-folded .hint {
   transform: translateY(19px);
 }
-/* The fine print (the default; ?strip=fold gives the folding strip): one
-   unboxed row that stays and never wraps (see fineHtml / fitFine in ui.js):
-   the centre's lines run on at the left, the script title about a third of
-   the way along, the two cells' figures at the right (labels in small
-   italics, values in small caps), joined by hairlines. */
+/* The fine print (the default; ?strip=fold gives the folding strip): a
+   hairline across the foot with the script title on it about a third of the
+   way along; the copy stands just above the line on either side of the title
+   (which rises between the two): the centre's lines run on at the left, the
+   two cells' figures at the right (labels in small italics, values in small
+   caps). It never wraps (see fineHtml / fitFine in ui.js). */
 .bottom.m-fine {
   padding-top: 24px;
-  padding-bottom: 24px;
+  padding-bottom: 26px;
 }
 .bottom.m-fine::before {
   opacity: 0.6;
@@ -1077,9 +1078,11 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 }
 .fine {
   display: grid;
-  /* (the left column no narrower than its lines, the script near a third) */
+  /* (the left column no narrower than its lines, the title near a third) */
   grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 2fr);
-  align-items: center;
+  grid-template-rows: auto 1px;
+  row-gap: 6px;
+  align-items: end;
   white-space: nowrap;
   transition: opacity 0.6s var(--ease) 0.4s;
 }
@@ -1091,33 +1094,43 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .fine [hidden] {
   display: none !important;
 }
-.fine-l,
-.fine-r {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-.fine-rule {
-  flex: 1;
-  min-width: 24px;
-  height: 1px;
-  margin: 0 14px;
-  background: var(--strip-line);
-}
-.fine-l p {
+.fine-l {
+  grid-area: 1 / 1;
+  justify-self: end;
   margin: 0;
   font-family: var(--serif);
   font-style: italic;
   font-size: 13.5px;
   line-height: 1.2;
 }
-.fine .fine-script {
-  font-size: 34px;
-}
-.fine-stats {
+.fine-r {
+  grid-area: 1 / 3;
   display: flex;
   align-items: baseline;
   gap: 18px;
+  min-width: 0;
+}
+.fine-rule {
+  grid-row: 2;
+  align-self: stretch;
+  background: var(--strip-line);
+}
+.fine-rule--l {
+  grid-column: 1;
+}
+.fine-rule--r {
+  grid-column: 3;
+}
+/* (a line's height: the title stands on it, overflowing it both ways) */
+.fine-mid {
+  grid-area: 2 / 2;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+.fine .fine-script {
+  font-size: 34px;
 }
 .fine-cell {
   display: flex;

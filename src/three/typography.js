@@ -34,6 +34,9 @@ export const FONTS = {
   caps: { family: '"Oswald", "Anton", "Noto Sans SC Variable", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
   cn: { family: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", sans-serif', weight: 900, lh: 1.2, pad: 0.2 },
   script: { family: '"Great Vibes", cursive', weight: 400, lh: 0.95, pad: 0.45 }, // (lh: its letters are small for their size)
+  // Kana set beside Anton: Dela Gothic One's are about as heavy (main.js);
+  // squeezed a little (see drawText) they have its proportions too.
+  kana: { family: '"Dela Gothic Kana", "Noto Sans SC Variable", sans-serif', weight: 400, lh: 1.2, pad: 0.2 },
 };
 
 /** Chinese or Japanese (kana) copy, set in the Chinese font rather than a Latin one. */
@@ -59,10 +62,12 @@ export async function loadFonts(texts) {
   await Promise.all(jobs);
 }
 
-function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
+function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight, squeeze = 1) {
   // (tracking: letter spacing in em, instead of the font's own;
   //  minPad: room round the letters in em, e.g. for a tag behind them;
-  //  weight: instead of the font's own, e.g. a lighter Chinese)
+  //  weight: instead of the font's own, e.g. a lighter Chinese;
+  //  squeeze: the letters set narrower, by this much)
+  const sq = squeeze;
   const f = { ...FONTS[fontKey], spacing: tracking ?? FONTS[fontKey].spacing, weight: weight ?? FONTS[fontKey].weight };
   f.pad = Math.max(f.pad, minPad);
   const px = 200;
@@ -81,7 +86,7 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
       if (ch !== DOT_BELOW) l += ch;
       else if (l) dots.push(l.length - 1);
     }
-    if (fontKey !== 'script' || !/[’']/.test(l)) return { parts: [[l, 0]], width: ctx.measureText(l).width, l, dots };
+    if (fontKey !== 'script' || !/[’']/.test(l)) return { parts: [[l, 0]], width: ctx.measureText(l).width * sq, l, dots };
     const parts = [];
     let x = 0;
     for (const s of l.split(/([’'])/)) {
@@ -89,7 +94,7 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
       const apos = s === '’' || s === "'";
       if (apos) x += APOSTROPHE.before * px;
       parts.push([s, x]);
-      x += ctx.measureText(s).width + (apos ? APOSTROPHE.after * px : 0);
+      x += ctx.measureText(s).width * sq + (apos ? APOSTROPHE.after * px : 0);
     }
     return { parts, width: x, l, dots: [] }; // (no dots in a line set in pieces)
   });
@@ -113,10 +118,14 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
     const y = pad + lineH * (i + 0.5);
     for (const [s, dx] of parts) {
       const x = x0 + dx;
-      ctx.fillText(s, x, y);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(sq, 1);
+      ctx.fillText(s, 0, 0);
+      ctx.restore();
       const m = ctx.measureText(s);
-      ink.x0 = Math.min(ink.x0, x - m.actualBoundingBoxLeft);
-      ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight);
+      ink.x0 = Math.min(ink.x0, x - m.actualBoundingBoxLeft * sq);
+      ink.x1 = Math.max(ink.x1, x + m.actualBoundingBoxRight * sq);
       ink.y0 = Math.min(ink.y0, y - m.actualBoundingBoxAscent);
       ink.y1 = Math.max(ink.y1, y + m.actualBoundingBoxDescent);
     }
@@ -129,7 +138,7 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
       for (const j of dots) {
         const upto = ctx.measureText(l.slice(0, j + 1));
         const ch = ctx.measureText(l[j]);
-        const cx = x0 + upto.actualBoundingBoxRight - (ch.actualBoundingBoxLeft + ch.actualBoundingBoxRight) / 2;
+        const cx = x0 + (upto.actualBoundingBoxRight - (ch.actualBoundingBoxLeft + ch.actualBoundingBoxRight) / 2) * sq;
         ctx.fillText('.', cx - (dot.actualBoundingBoxRight - dot.actualBoundingBoxLeft) / 2, dy);
       }
       ink.y1 = Math.max(ink.y1, dy + dot.actualBoundingBoxDescent);
@@ -236,7 +245,7 @@ export class TextBlock {
   constructor(spec, maxAniso = 8) {
     // spec.tag { padX, padY } (em): a red tag round the letters, drawn with them
     const tag = spec.tag && { padX: 0.45, padY: 0.25, ...spec.tag };
-    const { canvas, px, w, h, pad: padPx, ink, baseY, lastY } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0, spec.weight);
+    const { canvas, px, w, h, pad: padPx, ink, baseY, lastY } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0, spec.weight, spec.squeeze);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
     tex.generateMipmaps = true;
@@ -408,7 +417,8 @@ export function buildCluster(c, aniso) {
   // per line of it, each
   //   { left | right: x of the letters' left / right end, base: y of their baseline,
   //     scale (of the title's size), rotate (degrees clockwise), tracking (em),
-  //     font, weight, color (a PALETTE role; instead of the role's own) }
+  //     font, weight, color (a PALETTE role; instead of the role's own),
+  //     squeeze (set narrower by this much) }
   // or { shift: [x, y] } to move the usual layout.
   // (the script's colours: each page's own, see scriptColor in pages.js)
   const scriptColor = c.scriptColor || 'inverse';
@@ -429,7 +439,7 @@ export function buildCluster(c, aniso) {
       const rot = -((q.rotate || 0) * Math.PI) / 180;
       const z = role === 'script' ? 0.3 : 0.05;
       const script = role === 'script';
-      const b = add({ t: texts[i], f: q.font || FONT[role], weight: q.weight, s: S * q.scale, tracking: q.tracking, r: [0, 0, rot], p: [0, 0, z], c: q.color || (script ? scriptColor : 'cone') });
+      const b = add({ t: texts[i], f: q.font || FONT[role], weight: q.weight, squeeze: q.squeeze, s: S * q.scale, tracking: q.tracking, r: [0, 0, rot], p: [0, 0, z], c: q.color || (script ? scriptColor : 'cone') });
       // (the block turns about its letters' end on the baseline, which lands on the given point)
       const [x, y] = plane(q.left ?? q.right, q.base);
       const lx = q.left != null ? b.inkLeft : b.inkRight;
