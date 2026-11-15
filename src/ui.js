@@ -138,6 +138,7 @@ let footEl = null;
 function measureFoot() {
   const strip = footEl?.querySelector('.strip');
   if (!strip) return;
+  fitFine();
   const cells = strip.querySelector('.strip-cells');
   // (the cells' height when open, from their contents, which keep their
   // places however far the cells are folded; offsets are from .strip, whose
@@ -167,13 +168,14 @@ let observedCells = [];
  * folds it after a moment); a click, or Enter / Space when it has the focus,
  * pins it open, another folds it. On a touch screen a tap does the same.
  *
- * Or, with ?strip=fine in the address, it is set as one line of fine print
- * for good, its script title on the bottom edge instead of the key hint
- * (.bottom.m-fine), and doesn't fold. (Two forms to compare.)
+ * That is the strip with ?strip=fold in the address. Otherwise it is one row
+ * of fine print that stays (.bottom.m-fine, see fineHtml): the centre's two
+ * lines run on at the left, the script title about a third of the way along,
+ * the two cells' figures at the right, joined by hairlines.
  */
 const FOLD_AFTER = 5000; // ms after a page's strip has come in
 const FOLD_OFF = 700; // ms after the pointer moves off it
-const FINE = new URLSearchParams(location.search).get('strip') === 'fine';
+const FINE = new URLSearchParams(location.search).get('strip') !== 'fold';
 const fold = { el: null, timer: 0, pinned: false, inside: false, full: 0 };
 function dropPanel() {
   const drop = fold.el?.classList.contains('is-folded') ? fold.full : 0;
@@ -233,21 +235,70 @@ function foldArrive() {
 }
 
 /**
+ * The fine print's row (.fine in style.css): [the centre's lines run on,
+ * a hairline] [the script title] [a hairline, the left cell's figures, the
+ * right cell's]. It never wraps: what doesn't fit is left out, in the order
+ * data-fit gives (the right cell's items from its last, its heading, the
+ * left cell's items, its heading, last the lines), see fitFine.
+ */
+function fineHtml(f) {
+  const rk = f.right.items.length;
+  const lk = f.left.items.length;
+  const item = ([k, v], n) => `<div data-fit="${n}"><span>${esc(k)}</span><b>${esc(v)}</b></div>`;
+  return `
+    <div class="fine">
+      <div class="fine-l"><p data-fit="${rk + lk + 3}">${f.center.lines.map(esc).join(' ')}</p><i class="fine-rule"></i></div>
+      <span class="strip-script fine-script">${script(f.center.script)}</span>
+      <div class="fine-r">
+        <i class="fine-rule"></i>
+        <div class="fine-stats">
+          <div class="fine-cell">
+            <div class="strip-head" data-fit="${rk + lk + 2}"><b>${esc(f.left.title)}</b><span class="strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
+            <div class="strip-items">${f.left.items.map((it, i) => item(it, rk + 1 + lk - i)).join('')}</div>
+          </div>
+          <div class="fine-cell">
+            <div class="strip-head" data-fit="${rk + 1}"><b>${esc(f.right.title)}</b></div>
+            <div class="strip-items">${f.right.items.map((it, i) => item(it, rk - i)).join('')}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+function fitFine() {
+  const fine = footEl?.querySelector('.fine');
+  if (!fine) return;
+  const parts = [...fine.querySelectorAll('[data-fit]')].sort((a, b) => a.dataset.fit - b.dataset.fit);
+  const cells = [...fine.querySelectorAll('.fine-cell')];
+  // (a cell with nothing left in it goes too, with its rule)
+  const tidy = () => cells.forEach((c) => (c.hidden = [...c.querySelectorAll('[data-fit]')].every((p) => p.hidden)));
+  const right = fine.querySelector('.fine-r');
+  const over = () => fine.scrollWidth > fine.clientWidth + 1 || right.scrollWidth > right.clientWidth + 1;
+  parts.forEach((p) => (p.hidden = false));
+  tidy();
+  for (const p of parts) {
+    if (!over()) break;
+    p.hidden = true;
+    tidy();
+  }
+}
+
+/**
  * Fill the footer strip (its frame and the key hint are static in index.html):
  * left a heading with stars over [label, value] items, centre two lines under
  * the script title on the top edge, right a heading with a badge over items.
+ * (Or the fine print's one row, see fineHtml.)
  */
 export function renderFooter(page, el) {
   const f = page.footer;
-  el.querySelectorAll('.strip-script').forEach((s) => (s.innerHTML = script(f.center.script)));
-  // (a space after each break: the fine print hides the breaks and runs the lines on)
-  el.querySelector('.strip-cells').innerHTML = `
+  el.querySelector('.strip-script').innerHTML = script(f.center.script);
+  if (FINE) el.querySelector('.strip-cells').innerHTML = fineHtml(f);
+  else el.querySelector('.strip-cells').innerHTML = `
     <div class="strip-cell ft-left">
       <div class="strip-head"><b>${esc(f.left.title)}</b><span class="strip-stars" role="img" aria-label="${f.left.stars} / 5">${'★'.repeat(f.left.stars)}<i>${'★'.repeat(5 - f.left.stars)}</i></span></div>
       ${items(f.left.items)}
     </div>
     <div class="strip-cell ft-center">
-      <p>${f.center.lines.map(esc).join('<br> ')}</p>
+      <p>${f.center.lines.map(esc).join('<br>')}</p>
     </div>
     <div class="strip-cell ft-right">
       <div class="strip-head"><b>${esc(f.right.title)}</b><span class="strip-badge">${esc(f.right.badge)}</span></div>
@@ -261,8 +312,9 @@ export function renderFooter(page, el) {
   }
   // (the cells too: clipped while folded, their copy can grow without the strip doing so, e.g. as fonts arrive)
   observedCells.forEach((c) => footSize.unobserve(c));
-  observedCells = [...el.querySelectorAll('.strip-cell')];
+  observedCells = [...el.querySelectorAll('.strip-cell, .fine')];
   observedCells.forEach((c) => footSize.observe(c));
+  fitFine();
   foldArrive();
 }
 

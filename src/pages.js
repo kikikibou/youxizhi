@@ -93,6 +93,10 @@ export const PAGES = [
       cluster: {
         p: [-1.01, 22.99, 6.02], r: [0.14, 0.05, 0], size: 5.28,
         title: 'MOTION', cn: '题眼', of: '↑↑↓↓\n←→←→\nBA', caps: 'PRO ET CONTRA', script: 'Do geese see God?',
+        // (the script runs along the tops of the letters and across the
+        // split: ink on the daylight half, the accent on the night half, so
+        // it reads on both the coral and the white letters; cream at night)
+        scriptColor: { dayOut: 'ink', dayIn: 'accent', nightOut: 'cream', nightIn: 'accent' },
         place: {
           caps: { left: 87, base: -146, scale: 0.16, rotate: 4.58, tracking: 0.2 },
           of: [
@@ -146,6 +150,10 @@ export const PAGES = [
       cluster: {
         p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2,
         title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?',
+        // (the script hangs below the title over open sky, the building and
+        // the sliding tiles: ink against daylight, the accent against night;
+        // at night the accent, as cream is lost on the pale lit clouds)
+        scriptColor: { dayOut: 'ink', dayIn: 'accent', nightOut: 'accent', nightIn: 'ink' },
         place: {
           caps: { left: 60, base: -148, scale: 0.16, rotate: 4.58, tracking: 0.03 },
           script: [
@@ -206,6 +214,10 @@ export const PAGES = [
       cluster: {
         p: [-13, 25.81, 5.88], r: [0.12, -0.05, 0], size: 5.0,
         title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C\u30003 #2 3 #2 3 7\u0323 2 1 6\u0323', script: 'Draw, O coward!!',
+        // (the script lies on the tops of the letters, over a mid-blue sky:
+        // white by day, cream at night, the accent where the ribbons show the
+        // other time and the letters go white / dark)
+        scriptColor: { dayOut: 'light', dayIn: 'accent', nightOut: 'cream', nightIn: 'accent' },
         place: {
           caps: { shift: [-47, 6] },
           of: { right: 820, base: -3, scale: 0.33, tracking: 0.05, weight: 700 },
@@ -259,6 +271,9 @@ export const PAGES = [
       cluster: {
         p: [-8.8, 17, -52], portrait: { p: [-8.8, 17, -52], scale: 0.92 }, r: [0.12, -0.25, 0], size: 4.0,
         title: 'COLOPHON', cn: '注脚', of: 'SEE ALSO', caps: 'CF. JUDGES 16:17', script: 'Madam, I’m not Adam.',
+        // (a colophon's signature: in ink by day, cream at night, the accent
+        // where the lighthouse's beam crosses it)
+        scriptColor: { dayOut: 'ink', dayIn: 'accent', nightOut: 'cream', nightIn: 'accent' },
         place: {
           caps: { left: 87, base: -146, scale: 0.16, rotate: 4.58, tracking: 0.28 },
           script: { left: 288, base: 30, scale: 0.33, rotate: 8 },

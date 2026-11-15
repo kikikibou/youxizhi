@@ -1051,15 +1051,14 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .bottom.is-folded .hint {
   transform: translateY(19px);
 }
-/* The fine-print form (?strip=fine, see ui.js), to compare with the fold:
-   one unboxed line that stays, the cells' copy run on in a row (labels in
-   small italics, values in small caps), parted by faint rules; the script
-   title sits on the bottom edge where the key hint was. */
-.strip-script--foot {
-  display: none;
-}
+/* The fine print (the default; ?strip=fold gives the folding strip): one
+   unboxed row that stays and never wraps (see fineHtml / fitFine in ui.js):
+   the centre's lines run on at the left, the script title about a third of
+   the way along, the two cells' figures at the right (labels in small
+   italics, values in small caps), joined by hairlines. */
 .bottom.m-fine {
   padding-top: 24px;
+  padding-bottom: 24px;
 }
 .bottom.m-fine::before {
   opacity: 0.6;
@@ -1070,76 +1069,95 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   pointer-events: none;
   cursor: auto;
 }
-.bottom.m-fine .strip-rule--top,
-.bottom.m-fine .hint {
+.bottom.m-fine .strip-rule {
   display: none;
-}
-.bottom.m-fine .strip-script--foot {
-  display: block;
-  font-size: 34px;
 }
 .bottom.m-fine .strip-cells {
   max-height: none;
-  justify-content: center;
-  align-items: baseline;
-  gap: 22px;
-  padding-bottom: 26px; /* (room for the script title below) */
 }
-.bottom.m-fine .strip-cell {
-  flex: 0 1 auto;
+.fine {
+  display: grid;
+  /* (the left column no narrower than its lines, the script near a third) */
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 2fr);
+  align-items: center;
+  white-space: nowrap;
+  transition: opacity 0.6s var(--ease) 0.4s;
+}
+.bottom.is-swapping .fine {
+  opacity: 0;
+  transition-duration: 0.35s;
+  transition-delay: 0s;
+}
+.fine [hidden] {
+  display: none !important;
+}
+.fine-l,
+.fine-r {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.fine-rule {
+  flex: 1;
+  min-width: 24px;
+  height: 1px;
+  margin: 0 14px;
+  background: var(--strip-line);
+}
+.fine-l p {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+.fine .fine-script {
+  font-size: 34px;
+}
+.fine-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+.fine-cell {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  padding: 0;
 }
-.bottom.m-fine .strip-cell + .strip-cell {
-  padding-left: 22px;
-  border-left-color: rgba(255, 255, 255, 0.45);
+.fine-cell + .fine-cell {
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
 }
-.bottom.m-fine .strip-head {
+.fine .strip-head {
   gap: 8px;
 }
-.bottom.m-fine .strip-head b {
+.fine .strip-head b {
   font-size: 10px;
 }
-.bottom.m-fine .strip-badge {
-  display: none;
-}
-.bottom.m-fine .strip-items {
+.fine .strip-items {
   margin: 0;
-  gap: 14px;
+  gap: 12px;
   justify-content: flex-start;
 }
-.bottom.m-fine .strip-items > div {
+.fine .strip-items > div {
   display: flex;
   align-items: baseline;
   gap: 5px;
 }
-.bottom.m-fine .strip-items span {
+.fine .strip-items span {
   font-family: var(--serif);
   font-style: italic;
   font-size: 13px;
   line-height: 1.2;
-  letter-spacing: 0;
   opacity: 0.9;
   text-transform: lowercase;
 }
-.bottom.m-fine .strip-items b {
+.fine .strip-items b {
   font-family: var(--caps);
   font-weight: 500;
   font-size: 12px;
   line-height: 1.2;
   letter-spacing: 0.04em;
-}
-.bottom.m-fine .ft-center {
-  padding-top: 0;
-}
-.bottom.m-fine .ft-center p {
-  font-size: 13.5px;
-  white-space: nowrap;
-}
-.bottom.m-fine .ft-center br {
-  display: none;
 }
 .ft-center {
   flex: 1 1 0;
