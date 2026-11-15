@@ -8,7 +8,9 @@
  *               a LOW volume with open sky above it: the upper half of the beam
  *               then crosses the sky, the lower half the building (as in the
  *               poster). World.probeBeam() measures this in dev.
- * scene.cluster the poster-style title stack (laid out automatically around p)
+ * scene.cluster the poster-style title stack (laid out automatically around p;
+ *               place lays out single blocks by hand, in the units of Claude
+ *               Design's specs: see buildCluster in three/typography.js)
  * scene.texts   extra 3D lettering: t text, f font (display|caps|cn|script),
  *               s font size in metres, p position, r rotation,
  *               c colour role (cone = white inside the beam / orange outside)
@@ -85,7 +87,22 @@ export const PAGES = [
       // The split line pivots in the gap between the two bridge arms
       // (FORUM.gap in buildings.js); the right-hand side shows the other time.
       device: { type: 'split', p: [1, 23.05, -3], side: 1 },
-      cluster: { p: [0, 23.2, 6], r: [0.14, 0.05, 0], size: 6.0, title: 'MOTION', cn: '题眼', of: '↑ ↑ ↓ ↓\n← → ← → B A', caps: 'PRO ET CONTRA', script: 'Do geese see God?', scriptTilt: -0.15, scriptShift: [0.15, -0.15] },
+      // (place, after Claude Design: two arrow rows of one width beside a big BA
+      // about as tall as 题眼; the caps line spaced out to half the title's
+      // width; the script along the title's top edge)
+      cluster: {
+        p: [-1.01, 22.99, 6.02], r: [0.14, 0.05, 0], size: 5.28,
+        title: 'MOTION', cn: '题眼', of: '↑↑↓↓\n←→←→\nBA', caps: 'PRO ET CONTRA', script: 'Do geese see God?',
+        place: {
+          caps: { left: 87, base: -146, scale: 0.16, rotate: 4.58, tracking: 0.2 },
+          of: [
+            { right: 474, base: -52, scale: 0.3, tracking: 0.394 },
+            { right: 474, base: -6, scale: 0.3, tracking: 0.05 },
+            { right: 596, base: 3, scale: 0.56, tracking: 0.02 },
+          ],
+          script: { left: 236, base: 26, scale: 0.33, rotate: 8.59 },
+        },
+      },
       texts: [{ t: 'CAVE CANEM', f: 'display', s: 0.6, p: [-13, 4.9, -1.33], c: 'sign' }],
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
@@ -124,7 +141,21 @@ export const PAGES = [
       // Four sliding tiles on a 7 m grid 5 m in front of the cube, straddling
       // its left edge (half building, half sky) below the title.
       device: { type: 'slide', origin: [-20, 0, 5], cell: 8, region: [0, 3, 0, 2], start: [[0, 1], [1, 1], [1, 2], [2, 1]], aim: [1.3, 1.2], frame: false },
-      cluster: { p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2, title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?', scriptTilt: -0.22, scriptShift: [-0.1, -0.4] },
+      // (place, after Claude Design: the script hangs from the title's lower
+      // right, leaving AREPO clear; the caps line ends where the title does.
+      // Off the title it crosses pale sky and the sliding tiles, so it is set
+      // in ink like the home page's motto, not in white)
+      cluster: {
+        p: [-10, 26.5, 8], r: [0.12, 0.8, 0], size: 6.2,
+        title: 'AREPO', cn: '谜面', of: '(SIC)', caps: 'SATOR · TENET · OPERA · ROTAS', script: 'Why is a raven\nlike a writing-desk?',
+        place: {
+          caps: { left: 60, base: -148, scale: 0.16, rotate: 4.58, tracking: 0.03 },
+          script: [
+            { left: 158, base: 210, scale: 0.32, rotate: 10, color: 'motto' },
+            { left: 216, base: 283, scale: 0.32, rotate: 10, color: 'motto' },
+          ],
+        },
+      },
       texts: [{ t: 'PEDO MELLON A MINNO', f: 'display', s: 0.78, p: [-4.4, 3.2, 1.86], c: 'sign' }],
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
@@ -171,7 +202,18 @@ export const PAGES = [
       },
       // (caps: Für Elise in numbered notation, an ideographic space after the key)
       // (U+0323 puts the low-octave dot under 7 and 6, see DOT_BELOW in typography.js)
-      cluster: { p: [-13, 26.8, 6], r: [0.12, -0.05, 0], size: 5.0, title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C\u30003 #2 3 #2 3 7\u0323 2 1 6\u0323', script: 'Draw, O coward!!', scriptTilt: -0.08, scriptShift: [0.55, -0.12] },
+      // (place, after Claude Design: the group 40 lower, the notation clear of
+      // the header and in line with the title's left end; the katakana a
+      // lighter second to 玩心; the script along the title's top edge)
+      cluster: {
+        p: [-13, 25.81, 5.88], r: [0.12, -0.05, 0], size: 5.0,
+        title: 'BAGATELLE', cn: '玩心', of: 'バカタレ', caps: '1=C\u30003 #2 3 #2 3 7\u0323 2 1 6\u0323', script: 'Draw, O coward!!',
+        place: {
+          caps: { shift: [-47, 6] },
+          of: { right: 820, base: -3, scale: 0.33, tracking: 0.05, weight: 700 },
+          script: { left: 300, base: 48, scale: 0.344, rotate: 4.58 },
+        },
+      },
       // On the drum's first-floor band, bent round it (p = drum axis, r = facing angle).
       texts: [{ t: 'FAY CE QUE VOULDRAS', f: 'display', s: 0.75, p: [0, 4.6, -14], r: [0, -0.2, 0], bend: 13.06, c: 'sign' }],
       ribbon: null,
@@ -213,7 +255,17 @@ export const PAGES = [
       // hides the lower half, and a beam from there seemed to come out of the deck.
       device: { type: 'beacon', p: [-21, 30.4, -66], source: 0.7 },
       sea: true,
-      cluster: { p: [-8.8, 17, -52], portrait: { p: [-8.8, 17, -52], scale: 0.92 }, r: [0.12, -0.25, 0], size: 4.0, title: 'COLOPHON', cn: '注脚', of: 'SEE ALSO', caps: 'CF. JUDGES 16:17', script: 'Madam, I’m not Adam.', scriptTilt: -0.3, scriptShift: [-0.15, 0.2] },
+      // (place, after Claude Design: the caps line spaced out to half the
+      // title's width; the script starts in the gap between 注脚 and SEE ALSO
+      // and runs flatter along the title's top edge)
+      cluster: {
+        p: [-8.8, 17, -52], portrait: { p: [-8.8, 17, -52], scale: 0.92 }, r: [0.12, -0.25, 0], size: 4.0,
+        title: 'COLOPHON', cn: '注脚', of: 'SEE ALSO', caps: 'CF. JUDGES 16:17', script: 'Madam, I’m not Adam.',
+        place: {
+          caps: { left: 87, base: -146, scale: 0.16, rotate: 4.58, tracking: 0.28 },
+          script: { left: 288, base: 30, scale: 0.33, rotate: 8 },
+        },
+      },
       texts: [{ t: 'ΓΝΩΘΙ ΣΕΑΥΤΟΝ', f: 'display', s: 0.8, p: [-28.65, 7.15, -59.52], c: 'sign' }],
       ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8, tip: 0.07 },
       trees: [],

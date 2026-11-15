@@ -122,16 +122,88 @@ const items = (pairs) =>
 const script = (s) => esc(s).replace(/(’|&#39;)/g, '<i>$1</i>');
 
 // The content panel sits a fixed gap above the footer strip, however tall the
-// strip's copy makes it (see .panel in style.css).
+// strip's copy makes it (see .panel in style.css). It is measured open, so the
+// panel stays put while the strip folds (see the fold below); the cells' full
+// height also sets how far they open (--cells-h).
 let footEl = null;
 function measureFoot() {
   const strip = footEl?.querySelector('.strip');
   if (!strip) return;
-  const foot = footEl.getBoundingClientRect().bottom - strip.getBoundingClientRect().top;
-  document.documentElement.style.setProperty('--foot', `${Math.max(0, Math.ceil(foot))}px`);
+  const cells = strip.querySelector('.strip-cells');
+  // (the cells' height when open, from their contents, which keep their
+  // places however far the cells are folded; offsets are from .strip)
+  let full = 0;
+  for (const cell of cells.children) {
+    let end = 0;
+    for (const c of cell.children) end = Math.max(end, c.offsetTop - cell.offsetTop + c.offsetHeight);
+    full = Math.max(full, end + parseFloat(getComputedStyle(cell).paddingBottom));
+  }
+  cells.style.setProperty('--cells-h', `${Math.ceil(full)}px`);
+  const foot = footEl.getBoundingClientRect().bottom - strip.getBoundingClientRect().top + (full - cells.clientHeight);
+  const value = `${Math.max(0, Math.ceil(foot))}px`;
+  if (document.documentElement.style.getPropertyValue('--foot') === value) return;
+  document.documentElement.style.setProperty('--foot', value);
   fitPoems(); // (the panels moved)
 }
 const footSize = new ResizeObserver(measureFoot);
+let observedCells = [];
+
+/**
+ * The strip is decoration, so it doesn't stay open: it comes in with each
+ * page, holds a while, then folds down to its script title on one line
+ * (.bottom.is-folded in style.css). Pointing at it opens it again (moving off
+ * folds it after a moment); a click, or Enter / Space when it has the focus,
+ * pins it open, another folds it. On a touch screen a tap does the same.
+ */
+const FOLD_AFTER = 5000; // ms after a page's strip has come in
+const FOLD_OFF = 700; // ms after the pointer moves off it
+const fold = { el: null, timer: 0, pinned: false, inside: false };
+function setFolded(folded) {
+  fold.el.classList.toggle('is-folded', folded);
+  fold.el.querySelector('.strip').setAttribute('aria-expanded', String(!folded));
+}
+function foldLater(ms) {
+  clearTimeout(fold.timer);
+  fold.timer = setTimeout(() => {
+    if (!fold.pinned && !fold.inside) setFolded(true);
+  }, ms);
+}
+function initFold(el) {
+  fold.el = el;
+  const strip = el.querySelector('.strip');
+  strip.tabIndex = 0;
+  strip.setAttribute('role', 'button');
+  strip.setAttribute('aria-label', '底栏：展开或收起');
+  const open = () => {
+    fold.inside = true;
+    clearTimeout(fold.timer);
+    setFolded(false);
+  };
+  const off = () => {
+    fold.inside = false;
+    foldLater(FOLD_OFF);
+  };
+  const toggle = () => {
+    fold.pinned = !fold.pinned;
+    clearTimeout(fold.timer);
+    setFolded(!fold.pinned);
+  };
+  strip.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && open());
+  strip.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && off());
+  strip.addEventListener('focus', () => strip.matches(':focus-visible') && open());
+  strip.addEventListener('blur', off);
+  strip.addEventListener('click', toggle);
+  strip.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggle();
+  });
+}
+/** A page's strip has come in: open (unless pinned, it folds again later). */
+function foldArrive() {
+  setFolded(false);
+  foldLater(FOLD_AFTER);
+}
 
 /**
  * Fill the footer strip (its frame and the key hint are static in index.html):
@@ -157,7 +229,13 @@ export function renderFooter(page, el) {
     footEl = el;
     footSize.observe(el.querySelector('.strip'));
     window.addEventListener('resize', measureFoot);
+    initFold(el);
   }
+  // (the cells too: clipped while folded, their copy can grow without the strip doing so, e.g. as fonts arrive)
+  observedCells.forEach((c) => footSize.unobserve(c));
+  observedCells = [...el.querySelectorAll('.strip-cell')];
+  observedCells.forEach((c) => footSize.observe(c));
+  foldArrive();
 }
 
 export class Drawer {

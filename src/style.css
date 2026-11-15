@@ -845,9 +845,18 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   inset: auto 0 0 0;
   /* (the shade starts just below the content panel: see --panel-gap) */
   padding: 40px clamp(18px, 4.5vw, 80px) 30px;
-  background: linear-gradient(to top, rgba(var(--shade-rgb), 0.8), rgba(var(--shade-rgb), 0));
   color: #fff;
   pointer-events: none;
+  isolation: isolate;
+}
+/* (the shade is a layer of its own so that it can fade as the strip folds) */
+.bottom::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(var(--shade-rgb), 0.8), rgba(var(--shade-rgb), 0));
+  transition: opacity 0.9s var(--ease);
 }
 /* Left and right edges are borders; the top and bottom edges are .strip-rule,
    so that each can break around the text sitting on it. */
@@ -908,6 +917,9 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .strip-cells {
   display: flex;
   align-items: stretch;
+  overflow: hidden;
+  max-height: var(--cells-h, 200px); /* (its full height, measured in ui.js, so that it folds evenly) */
+  transition: max-height 0.75s var(--ease);
 }
 .strip-cell {
   flex: 1.1 1 0;
@@ -981,6 +993,60 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   opacity: 0;
   transform: translateY(6px) scale(0.94);
   transition-duration: 0.35s;
+}
+/* Folded (ui.js folds the strip a while after each page's comes in): the
+   cells close up and their contents, the dividers, the box's ground and the
+   top hairline go, leaving one line with the script title on it, smaller,
+   and the key hint below it. Pointing at it opens it again, by the "in"
+   timings above; it folds with no delays. (A taller target than the folded
+   line: .strip::after.) */
+.strip {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.strip::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+.strip:focus-visible {
+  outline: 1px dashed var(--strip-line);
+  outline-offset: 6px;
+}
+.hint {
+  transition: transform 0.6s var(--ease);
+}
+.bottom.is-folded::before {
+  opacity: 0.45;
+}
+.bottom.is-folded .strip-cells {
+  max-height: 0;
+}
+.bottom.is-folded .strip {
+  border-color: transparent;
+  background-color: rgba(var(--shade-rgb), 0);
+  transition-delay: 0s, 0s;
+}
+.bottom.is-folded .strip-cell > * {
+  opacity: 0;
+  transform: translateY(8px);
+  transition-duration: 0.3s, 0.35s;
+  transition-delay: 0s;
+}
+.bottom.is-folded .strip-cell + .strip-cell {
+  border-color: transparent;
+  transition-delay: 0s;
+}
+.bottom.is-folded .strip-rule--top::before,
+.bottom.is-folded .strip-rule--top::after {
+  transform: scaleX(0);
+  transition-delay: 0s;
+}
+.bottom.is-folded .strip-script {
+  transform: translateY(-6px) scale(0.58);
+}
+.bottom.is-folded .hint {
+  transform: translateY(19px);
 }
 .ft-center {
   flex: 1 1 0;

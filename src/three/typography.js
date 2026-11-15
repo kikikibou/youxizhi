@@ -59,10 +59,11 @@ export async function loadFonts(texts) {
   await Promise.all(jobs);
 }
 
-function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
+function drawText(text, fontKey, align = 'left', tracking, minPad = 0, weight) {
   // (tracking: letter spacing in em, instead of the font's own;
-  //  minPad: room round the letters in em, e.g. for a tag behind them)
-  const f = { ...FONTS[fontKey], spacing: tracking ?? FONTS[fontKey].spacing };
+  //  minPad: room round the letters in em, e.g. for a tag behind them;
+  //  weight: instead of the font's own, e.g. a lighter Chinese)
+  const f = { ...FONTS[fontKey], spacing: tracking ?? FONTS[fontKey].spacing, weight: weight ?? FONTS[fontKey].weight };
   f.pad = Math.max(f.pad, minPad);
   const px = 200;
   const lines = String(text).split('\n');
@@ -134,7 +135,9 @@ function drawText(text, fontKey, align = 'left', tracking, minPad = 0) {
       ink.y1 = Math.max(ink.y1, dy + dot.actualBoundingBoxDescent);
     }
   });
-  return { canvas, px, w, h, pad, ink, lastY: pad + lineH * (lines.length - 0.5) };
+  // (baseY: the first line's baseline; the text is set on its middle)
+  const baseY = pad + lineH / 2 - ctx.measureText(runs[0].l || 'H').alphabeticBaseline;
+  return { canvas, px, w, h, pad, ink, baseY, lastY: pad + lineH * (lines.length - 0.5) };
 }
 
 const vert = /* glsl */ `
@@ -229,7 +232,7 @@ export class TextBlock {
   constructor(spec, maxAniso = 8) {
     // spec.tag { padX, padY } (em): a red tag round the letters, drawn with them
     const tag = spec.tag && { padX: 0.45, padY: 0.25, ...spec.tag };
-    const { canvas, px, w, h, pad: padPx, ink, lastY } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0);
+    const { canvas, px, w, h, pad: padPx, ink, baseY, lastY } = drawText(spec.t, spec.f, spec.align, spec.tracking, tag ? tag.padX + 0.1 : 0, spec.weight);
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = maxAniso;
     tex.generateMipmaps = true;
@@ -242,6 +245,17 @@ export class TextBlock {
     this.glyphWidth = (w - 2 * pad) * scale;
     this.foot = (h / 2 - ink.y1) * scale; // the letters' lowest point (local y, metres)
     this.lastLine = (h / 2 - lastY) * scale; // the middle of the last line (0 for one line)
+    // The block's own canvas (px at a 200px font) and how it maps to the
+    // mesh (metres, y up, about its middle): used to lay blocks out by their
+    // letters, see c.place in buildCluster. (inkLeft / inkRight: the letters'
+    // ends, baseline: the first line's, in local metres)
+    const ax = spec.anchor === 'left' ? (w / 2 - padPx) * scale : spec.anchor === 'right' ? -(w / 2 - padPx) * scale : 0;
+    this.canvasW = w;
+    this.canvasH = h;
+    this.unit = scale;
+    this.inkLeft = (ink.x0 - w / 2) * scale + ax;
+    this.inkRight = (ink.x1 - w / 2) * scale + ax;
+    this.baseline = (h / 2 - baseY) * scale;
     this.material = new THREE.ShaderMaterial({
       vertexShader: vert,
       fragmentShader: frag,
@@ -378,8 +392,50 @@ export function buildCluster(c, aniso) {
     if (c.caps) add({ t: c.caps, f: 'caps', s: cs, tracking: c.capsTracking, tag, p: [x, -cap / 2 - S * 0.2 - cs * 0.5, 0.05], anchor: 'left', c: tag ? 'tag' : 'cone' });
     return { group, blocks };
   }
-  const cn = c.cn && add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });
-  if (c.of) {
+  // c.place: blocks laid out by hand, in the title's plane as the specs from
+  // Claude Design give them: x to the right, y down, in px of the title set at
+  // 200px, from the top left of the title's canvas (its ink starts at about
+  // x 40, its capitals stand from y 27 to the baseline at y 201). Per role
+  // (cn, of, caps, script), one entry for the whole text, or a list with one
+  // per line of it, each
+  //   { left | right: x of the letters' left / right end, base: y of their baseline,
+  //     scale (of the title's size), rotate (degrees clockwise), tracking (em),
+  //     font, weight, color (a PALETTE role; instead of the role's own) }
+  // or { shift: [x, y] } to move the usual layout.
+  const u = title.unit;
+  const plane = (x, y) => [(x - title.canvasW / 2) * u, (title.canvasH / 2 - y) * u];
+  const FONT = { cn: 'cn', of: isCJK(c.of) ? 'cn' : 'display', caps: 'caps', script: 'script' };
+  const shiftOf = (role) => {
+    const p = c.place?.[role];
+    return p && !Array.isArray(p) ? p.shift : null; // (not an array's own shift)
+  };
+  const placed = (role) => {
+    const p = c.place?.[role];
+    if (!p || shiftOf(role)) return false;
+    const list = Array.isArray(p) ? p : [p];
+    const texts = Array.isArray(p) ? String(c[role]).split('\n') : [String(c[role])];
+    list.forEach((q, i) => {
+      if (texts[i] == null) return;
+      const rot = -((q.rotate || 0) * Math.PI) / 180;
+      const z = role === 'script' ? 0.3 : 0.05;
+      const b = add({ t: texts[i], f: q.font || FONT[role], weight: q.weight, s: S * q.scale, tracking: q.tracking, r: [0, 0, rot], p: [0, 0, z], c: q.color || (role === 'script' ? 'inverse' : 'cone') });
+      // (the block turns about its letters' end on the baseline, which lands on the given point)
+      const [x, y] = plane(q.left ?? q.right, q.base);
+      const lx = q.left != null ? b.inkLeft : b.inkRight;
+      const ly = b.baseline;
+      b.mesh.position.set(x - lx * Math.cos(rot) + ly * Math.sin(rot), y - lx * Math.sin(rot) - ly * Math.cos(rot), z);
+      if (role === 'script') b.mesh.renderOrder = 6.5; // over the big letters
+    });
+    return true;
+  };
+  const shift = (role, b) => {
+    const s = shiftOf(role);
+    if (s && b) b.mesh.position.add(new THREE.Vector3(s[0] * u, -s[1] * u, 0));
+  };
+
+  const cn = !placed('cn') && c.cn && add({ t: c.cn, f: 'cn', s: S * 0.56, p: [-half + S * 0.02, rowY + S * 0.06, 0.05], anchor: 'left', c: 'cone' });
+  shift('cn', cn);
+  if (c.of && !placed('of')) {
     // (kana or Chinese: in the Chinese font, a little smaller than the Chinese title)
     const cjk = isCJK(c.of);
     const of = add({ t: c.of, f: cjk ? 'cn' : 'display', s: S * (cjk ? 0.4 : 0.46), p: [half, rowY - S * 0.04, 0.05], anchor: 'right', c: 'cone' });
@@ -393,15 +449,17 @@ export function buildCluster(c, aniso) {
       of.mesh.scale.setScalar(k);
       of.mesh.position.y += of.foot * (1 - k);
     }
+    shift('of', of);
   }
-  if (c.caps)
-    add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.25, rowY + S * 0.62, 0.05], r: [0, 0, -0.08], anchor: 'left', c: 'cone' });
-  if (c.script) {
+  if (c.caps && !placed('caps'))
+    shift('caps', add({ t: c.caps, f: 'caps', s: S * 0.16, p: [-half + S * 0.25, rowY + S * 0.62, 0.05], r: [0, 0, -0.08], anchor: 'left', c: 'cone' }));
+  if (c.script && !placed('script')) {
     // Each page may tilt and shift it a little (scriptTilt, scriptShift in title sizes).
     const [dx, dy] = c.scriptShift || [0, 0];
     // (a long one may be broken in two with \n: the lines are centred on each other)
     const sc = add({ t: c.script, f: 'script', s: S * 0.34, align: 'center', p: [S * (0.15 + dx), rowY * 0.55 + S * dy, 0.3], r: [0, 0, c.scriptTilt ?? -0.26], c: 'inverse' });
     sc.mesh.renderOrder = 6.5; // over the big letters (sorting by distance used to put it under)
+    shift('script', sc);
   }
   return { group, blocks };
 }
