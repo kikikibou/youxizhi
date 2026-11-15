@@ -1075,6 +1075,7 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 }
 .bottom.m-fine .strip-cells {
   max-height: none;
+  overflow: visible; /* (the fold's clipping would cut the title and its shadow off at the line) */
 }
 .fine {
   display: grid;
@@ -1130,6 +1131,10 @@ html[data-theme='night'] .card:hover:not([disabled]) {
   padding: 0 16px;
 }
 .fine .fine-script {
+  /* (centred on the line it hung below it, its descenders at the window's
+     edge: raised so the line runs along its feet, as under a signature) */
+  position: relative;
+  top: -10px;
   font-size: 34px;
 }
 .fine-cell {
