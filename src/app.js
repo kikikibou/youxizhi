@@ -212,7 +212,7 @@ function go(id, mode = 'fly') {
   lastNav = performance.now();
 
   nav.querySelectorAll('a').forEach((a) => a.classList.toggle('is-active', a.dataset.nav === id));
-  document.title = `${PAGES[idx].nav} · 游戏之西柚`;
+  document.title = `${PAGES[idx].nav} · 游戏之纸西柚`;
 
   if (prev >= 0) {
     const old = pageEls[prev];

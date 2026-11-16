@@ -40,9 +40,10 @@ export const PAGES = [
     scene: {
       view: { pos: [-6, 1.5, 28], target: [6, 15.5, 0], fov: 58, roll: 0.03 },
       lamp: { p: [6.5, 13], h: 20 },
-      // The site's name: 游戏之西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
+      // The site's name: 游戏之纸西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
+      // (游·戏·之 | 纸·西·柚 reads the same both ways, like the domain yxzzxy.com)
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之西柚', cnSize: 0.7, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
+      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之纸西柚', cnSize: 0.6, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
       texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
       // Round the lamp post and back, through its beam, in the sky between the
       // poem and the content panel (the far end of the loop is off the picture).
