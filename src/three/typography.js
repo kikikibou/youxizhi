@@ -34,9 +34,6 @@ export const FONTS = {
   caps: { family: '"Oswald", "Anton", "Noto Sans SC Variable", sans-serif', weight: 600, lh: 1.25, pad: 0.2, spacing: 0.08 },
   cn: { family: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", sans-serif', weight: 900, lh: 1.2, pad: 0.2 },
   script: { family: '"Great Vibes", cursive', weight: 400, lh: 0.95, pad: 0.45 }, // (lh: its letters are small for their size)
-  // Kana set beside Anton: Dela Gothic One's are about as heavy (main.js);
-  // squeezed a little (see drawText) they have its proportions too.
-  kana: { family: '"Dela Gothic Kana", "Noto Sans SC Variable", sans-serif', weight: 400, lh: 1.2, pad: 0.2 },
 };
 
 /** Chinese or Japanese (kana) copy, set in the Chinese font rather than a Latin one. */

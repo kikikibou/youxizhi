@@ -506,7 +506,6 @@ export class World {
       ...sc.texts,
       { t: sc.cluster.title, f: 'display' },
       { t: sc.cluster.of || '', f: isCJK(sc.cluster.of) ? 'cn' : 'display' },
-      { t: sc.cluster.of || '', f: 'kana' }, // (kana may be set in their own face, see c.place)
       { t: sc.cluster.cn, f: 'cn' },
       { t: sc.cluster.caps, f: 'caps' },
       { t: sc.cluster.script, f: 'script' },
@@ -985,6 +984,19 @@ export class World {
     this.spot.target.updateMatrixWorld();
   }
 
+  /**
+   * Frames a second to render (0: one per display refresh). The cap, or with
+   * 'auto' every n-th refresh of a fast display, at 55 a second or more:
+   * 144 Hz → 72, 120 → 60, 165 → 55, 240 → 60; up to 100 Hz, every refresh.
+   */
+  get fpsTarget() {
+    const cap = this.quality.fpsCap;
+    if (cap !== 'auto') return cap || 0;
+    const hz = this.perf.refreshHz;
+    if (!hz || hz <= 100) return 0;
+    return hz / Math.floor(hz / 55);
+  }
+
   /** Every animation-frame interval (rendered or skipped by an fps cap). */
   trackRaw(ms) {
     const r = this.perf.raw;
@@ -1045,7 +1057,7 @@ export class World {
 
   adapt(median, gpu, now) {
     const p = this.perf;
-    const budget = 1000 / Math.min(60, this.quality.fpsCap || 60); // ms per frame we aim for
+    const budget = 1000 / Math.min(60, this.fpsTarget || 60); // ms per frame we aim for
     let next = this.pixelRatio;
     let why = '';
     if (gpu !== null) {

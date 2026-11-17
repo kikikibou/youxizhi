@@ -224,8 +224,9 @@ a {
   box-shadow: var(--shadow);
   overflow: hidden;
 }
-/* The "photo" in the polaroid: 游, tilted and larger than the frame, so its
-   edges are cut off by the frame and only its middle shows. */
+/* The "photo" in the polaroid: the page's own character (游 at home, see
+   glyph in pages.js), tilted and larger than the frame, so its edges are
+   cut off by the frame and only its middle shows. */
 .brand-box i {
   position: absolute;
   left: 50%;
@@ -236,6 +237,18 @@ a {
   font-size: 33px;
   line-height: 1;
   transform: translate(-50%, -50%) rotate(-12deg);
+  transition: opacity 0.25s var(--ease), transform 0.35s var(--ease);
+}
+/* (a mark such as ？ smaller: cropped like a character it lost its dot and read as a 2) */
+.brand-box i.is-mark {
+  top: 47%;
+  font-size: 24px;
+}
+/* (each page has its own character: app.js swaps it, dropping the old one out) */
+.brand-box i.is-out {
+  opacity: 0;
+  transform: translate(-50%, -20%) rotate(-12deg);
+  transition-duration: 0.22s;
 }
 .brand-text {
   display: grid;

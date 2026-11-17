@@ -204,6 +204,23 @@ function currentId() {
   return ids.includes(id) ? id : 'home';
 }
 
+// The character in the polaroid icon at the top left is each page's own
+// (PAGES[].glyph): on a page change the old one drops out and the new one in.
+const glyphEl = $('.brand-box i');
+let glyphTimer = 0;
+function setGlyph(g, animate) {
+  if (!g || !glyphEl) return;
+  clearTimeout(glyphTimer);
+  const show = () => {
+    glyphEl.textContent = g;
+    glyphEl.classList.toggle('is-mark', /^[？?！!]$/.test(g)); // (punctuation: set smaller, see style.css)
+    glyphEl.classList.remove('is-out');
+  };
+  if (!animate) return show();
+  glyphEl.classList.add('is-out');
+  glyphTimer = setTimeout(show, 260);
+}
+
 function go(id, mode = 'fly') {
   const idx = ids.indexOf(id);
   if (idx === current) return;
@@ -213,6 +230,7 @@ function go(id, mode = 'fly') {
 
   nav.querySelectorAll('a').forEach((a) => a.classList.toggle('is-active', a.dataset.nav === id));
   document.title = `${PAGES[idx].nav} · 游戏之纸西柚`;
+  setGlyph(PAGES[idx].glyph, prev >= 0);
 
   if (prev >= 0) {
     const old = pageEls[prev];
@@ -311,8 +329,9 @@ function frame(now) {
   requestAnimationFrame(frame);
   world.trackRaw(now - lastRaw);
   lastRaw = now;
-  // Optional frame-rate cap (debug panel): skip frames until the next one is due.
-  const cap = world.quality.fpsCap;
+  // Frame-rate cap (see fpsTarget; the debug panel can change it): skip
+  // frames until the next one is due.
+  const cap = world.fpsTarget;
   if (cap) {
     if (now < due - 3) return;
     due = Math.max(due + 1000 / cap, now);
@@ -335,5 +354,13 @@ function frame(now) {
 })();
 
 /* ------------------------------------------------------------- debug panel */
-// Frame rate, resolution and quality switches (debug mode, see above).
+// Frame rate, resolution and quality switches (debug mode, see above). What
+// is chosen there is kept on this device (per address) and applies with the
+// panel hidden too.
+try {
+  const saved = JSON.parse(localStorage.getItem('youxizhi-quality') || '{}');
+  if (saved && Object.keys(saved).length) world.setQuality(saved);
+} catch {
+  /* storage unavailable */
+}
 if (debugOn) import('./debug.js').then((m) => m.mountDebug(world));

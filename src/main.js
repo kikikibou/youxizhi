@@ -8,7 +8,6 @@ import '@fontsource/eb-garamond/400-italic.css';
 import '@fontsource-variable/noto-sans-sc';
 import latinDot from '@fontsource/oswald/files/oswald-latin-500-normal.woff2?url';
 import antonExtra from './fonts/anton-extra.woff2?url';
-import delaKana from './fonts/dela-gothic-kana.woff2?url';
 import './style.css';
 
 import { gate } from './gate.js';
@@ -21,8 +20,6 @@ document.fonts.add(new FontFace('Latin Dot', `url(${latinDot}) format('woff2')`,
 // What Anton lacks for the 3D lettering, drawn from Anton itself: Greek
 // capitals and the side arrows (see scripts/anton-extra.py; FONTS.display).
 document.fonts.add(new FontFace('Anton Extra', `url(${antonExtra}) format('woff2')`, { unicodeRange: 'U+0391-03A9, U+2190, U+2192', weight: '400' }));
-// Kana to stand beside Anton (FONTS.kana): Dela Gothic One's hiragana and katakana.
-document.fonts.add(new FontFace('Dela Gothic Kana', `url(${delaKana}) format('woff2')`, { unicodeRange: 'U+3041-3096, U+3099-30FF', weight: '400' }));
 
 // Page colours for the chosen scheme before anything is shown (the
 // passphrase screen too); app.js reuses this element when switching.

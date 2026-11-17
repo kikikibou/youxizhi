@@ -51,7 +51,10 @@ export class GpuTimer {
 /** Defaults for the quality switches (the debug panel can change them). */
 export const QUALITY_DEFAULTS = {
   scale: 'auto', // 'auto' or a fraction of the screen's native resolution
-  fpsCap: 0, // 0 = as fast as the display refreshes
+  // 'auto': on a fast display (120 / 144 Hz…) every n-th refresh, near 60 a
+  // second, evenly paced (rendering at the full rate the GPU fell behind and
+  // the motion stuttered); 0 = as fast as the display refreshes; or a number
+  fpsCap: 'auto',
   shadows: true,
   bloom: true, // night glow and the haze while day turns to night
   msaa: true,

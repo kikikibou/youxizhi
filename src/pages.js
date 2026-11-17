@@ -19,6 +19,7 @@
  * scene.plane   a paper plane gliding round a level loop (see PaperPlane in props.js)
  * scene.trees   [x, z, scale]
  *
+ * glyph         the character in the polaroid icon at the top left (index.html)
  * label         the ticket above the content panel: title, optional sub(title),
  *               mark (a script watermark, decoration only), lines (run together
  *               on one line); the stub shows the page's no / en. sub and lines
@@ -35,6 +36,7 @@ export const PAGES = [
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '00',
     nav: '首页',
+    glyph: '游', // (the character in the top-left icon)
     en: 'HOME',
     building: 'home',
     scene: {
@@ -81,6 +83,7 @@ export const PAGES = [
     poemTone: 'inverse', // the poem stands on the split's other-time side
     no: '01',
     nav: '辩论',
+    glyph: '辩',
     en: 'DEBATE',
     building: 'debate',
     scene: {
@@ -137,6 +140,7 @@ export const PAGES = [
     side: 'left', // which side the content panel sits on (away from the beam)
     no: '02',
     nav: '问答',
+    glyph: '问',
     en: 'QUIZ',
     building: 'puzzle',
     scene: {
@@ -192,6 +196,7 @@ export const PAGES = [
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '03',
     nav: '消遣',
+    glyph: '玩',
     en: 'GAMES',
     building: 'games',
     scene: {
@@ -221,9 +226,10 @@ export const PAGES = [
         scriptColor: { dayOut: 'light', dayIn: 'accent', nightOut: 'cream', nightIn: 'accent' },
         place: {
           caps: { shift: [-47, 6] },
-          // (in Dela Gothic, a little narrower: as heavy and as tall as the
-          // Anton subtitles in this place on the other pages)
-          of: { right: 820, base: -3, scale: 0.46, font: 'kana', squeeze: 0.85, tracking: 0.02 },
+          // (the Chinese face at its heaviest, a little narrower: as tall as
+          // the Anton subtitles in this place on the other pages, a shade
+          // lighter than them; Dela Gothic One was heavier still)
+          of: { right: 820, base: -3, scale: 0.42, font: 'cn', weight: 900, squeeze: 0.85, tracking: 0.02 },
           script: { left: 300, base: 48, scale: 0.344, rotate: 4.58 },
         },
       },
@@ -258,6 +264,7 @@ export const PAGES = [
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '04',
     nav: '其他',
+    glyph: '？',
     en: 'ABOUT',
     building: 'about',
     scene: {
