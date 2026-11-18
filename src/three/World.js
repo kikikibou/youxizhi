@@ -12,9 +12,11 @@ import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
-import { PixelArt, EDGES_GLSL } from './pixelart.js';
+import { PixelArt, EDGES_GLSL, rng } from './pixelart.js';
+import { buildDetails, WIND } from './details.js';
 
 const PLAZA_RADIUS = 56;
+const GRASS = new THREE.Color(0xb5d77a);
 const UP = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
@@ -212,6 +214,7 @@ export class World {
     this.scene.add(this.ground);
     this.buildSites();
     this.buildPlazaFurniture();
+    this.buildDetails();
     this.buildSkyline();
     this.buildPost();
     this.px = new PixelArt(this);
@@ -263,6 +266,8 @@ export class World {
     m.tube.emissive.set(p.stripGlow);
     set(m.leaf, p.leaf);
     set(m.trunk, p.trunk);
+    set(m.bush, p.leaf);
+    m.grass.color.set(p.leaf).lerp(GRASS, 0.38); // (fresher than the trees)
     this.ground.material.color.set(p.groundTint);
     // Sky colours are shared Color objects (sky dome, sea, fog).
     SKY.dayTop.set(p.sky.dayTop);
@@ -427,6 +432,18 @@ export class World {
         t.position.set(Math.sin(a + off * 2) * 24, 0, Math.cos(a + off * 2) * 24);
         this.scene.add(t);
       }
+    }
+  }
+
+  /** Each page's planting and flower boxes, low-poly (see details.js; the pixel-art look draws its own). */
+  buildDetails() {
+    const R = rng(20261118);
+    this.details = [];
+    for (const site of this.sites) {
+      const g = buildDetails(site, 'flat', { R, mats: this.mats });
+      if (!g) continue;
+      site.group.add(g);
+      this.details.push(g);
     }
   }
 
@@ -875,6 +892,7 @@ export class World {
     }
     if ('pixel' in patch) {
       this.px.setEnabled(q.pixel);
+      for (const g of this.details) g.visible = !q.pixel;
       SKY_SHARED.uPixel.value = q.pixel ? 1 : 0;
       // (hazier: distant blocks fade to pale silhouettes, as in pixel-art backdrops)
       this.fog.near = q.pixel ? 70 : 150;
@@ -1330,6 +1348,7 @@ export class World {
     });
     this.updatePost(this.night);
     this.px.update(this.time);
+    WIND.value = this.time;
     if (this.sea) this.sea.material.uniforms.uSunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     this.placeSpot();
 

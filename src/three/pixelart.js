@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { buildPixelDetails } from './pixelscene.js';
+import { buildDetails, CELL } from './details.js';
 
 /**
  * The pixel-art look (quality.pixel). The scene is drawn small and shown with
@@ -12,8 +12,8 @@ import { buildPixelDetails } from './pixelscene.js';
  *     round silhouettes and light edges along convex corners
  *   - foliage: tree crowns, grass, flowers and climbers as clumps of painted
  *     cards, shaded in three flat tones
- *   - small details only this look shows (flower boxes, planters, beds: see
- *     pixelscene.js)
+ *   - the page details (flower boxes, planters, beds: see details.js) drawn
+ *     as foliage cards instead of low-poly plants
  * Everything is built the first time the look is switched on; switching it
  * off puts the original materials back.
  */
@@ -336,13 +336,12 @@ function skylineTextures(R) {
 
 /**
  * Foliage atlas, as data, 8 x 8 cells of 16 x 16: r = tone (0 dark rim … 1
- * highlight), g = flower, a = coverage.
+ * highlight), g = flower, a = coverage (cells: see CELL in details.js).
  *   cells 0-7    leaf clumps (tree crowns, bushes, climbers)
  *   cells 8-15   grass tufts
  *   cells 16-23  grass tufts with flowers
  *   cells 24-27  trailing plants (hanging from a box)
  */
-export const CELL = { leaf: 0, grass: 8, flowers: 16, trailing: 24 };
 function foliageAtlas(R) {
   const A = new Paint(128, 128);
   const cell = (i) => [(i % 8) * 16, Math.floor(i / 8) * 16];
@@ -497,12 +496,11 @@ const FRAG_EMIT = /* glsl */ `
 const INFLATE = { value: 0 };
 
 /**
- * A pixel-art twin of a MeshStandardMaterial: the same lighting, painted
- * surfaces. side/top/bottom: textures from Paint.texture(); density: texels
- * per metre.
+ * Paints a MeshStandardMaterial's surfaces with textures mapped by the face's
+ * axis in the object's own frame (in place). side/top/bottom: { tex, w, h }
+ * (e.g. from Paint.texture()); density: texels per metre.
  */
-function surface(base, { side, top = side, bottom = top, density = 6, topDensity = density, defines = {}, emit = null, grime = 0 }) {
-  const m = base.clone();
+export function patchSurface(m, { side, top = side, bottom = top, density = 6, topDensity = density, defines = {}, emit = null, grime = 0 }) {
   const scale = (t, d) => new THREE.Vector2(d / t.w, d / t.h);
   const uni = {
     uPxSide: { value: side.tex },
@@ -528,8 +526,13 @@ function surface(base, { side, top = side, bottom = top, density = 6, topDensity
   };
   const key = `px:${Object.keys(defines).join(',')}`;
   m.customProgramCacheKey = () => key;
-  m.userData.px = uni;
+  m.pxUniforms = uni; // (not in userData: clone() would deep-copy the textures)
   return m;
+}
+
+/** A pixel-art twin of a MeshStandardMaterial: the same lighting, painted surfaces. */
+function surface(base, opts) {
+  return patchSurface(base.clone(), opts);
 }
 
 /* ------------------------------------------------------------- foliage */
@@ -824,7 +827,7 @@ export class PixelArt {
       if (o.userData.tree) this.crown(o, foliage, R);
     });
     for (const site of w.sites) {
-      const g = buildPixelDetails(site, this, foliage, R);
+      const g = buildDetails(site, 'pixel', { R, mats: this.extra, foliage });
       if (g) {
         site.group.add(g);
         this.groups.push(g);
@@ -913,8 +916,8 @@ export class PixelArt {
     }
     // Frames in the facade's own colour; the sky's blue in the panes by day.
     for (const g of [this.twins.glass, this.twins.glassDark]) {
-      g.userData.px.uPxFrame.value.copy(m.white.color).multiplyScalar(0.92);
-      g.userData.px.uPxRefl.value.copy(w.fog.color).multiplyScalar(0.3 * (1 - n));
+      g.pxUniforms.uPxFrame.value.copy(m.white.color).multiplyScalar(0.92);
+      g.pxUniforms.uPxRefl.value.copy(w.fog.color).multiplyScalar(0.3 * (1 - n));
     }
     this.skylineMat.color.copy(m.whiteShade.color);
     this.skylineMat.emissive.copy(m.glass.emissive);
