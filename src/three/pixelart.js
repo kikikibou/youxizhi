@@ -795,6 +795,9 @@ export class PixelArt {
       concrete: t.concrete,
       metal: t.metal,
       trunk: m.trunk,
+      bush: m.bush,
+      flower: m.flower,
+      orange: m.orange,
     };
     this.extra.wood = surface(this.extra.wood, { side: concrete });
     this.extra.pot = surface(this.extra.pot, { side: trim });
