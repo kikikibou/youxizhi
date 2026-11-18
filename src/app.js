@@ -363,4 +363,9 @@ try {
 } catch {
   /* storage unavailable */
 }
+// The pixel-art look being tried out: ?pixel turns it on for this visit, ?pixel=0 off.
+{
+  const px = new URLSearchParams(location.search).get('pixel');
+  if (px !== null) world.setQuality({ pixel: px !== '0' });
+}
 if (debugOn) import('./debug.js').then((m) => m.mountDebug(world));

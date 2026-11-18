@@ -62,4 +62,5 @@ export const QUALITY_DEFAULTS = {
   ribbons: true,
   ribbonShadow: false, // ribbon shadows force a shadow redraw every frame
   grain: true, // paper grain and vignette
+  pixel: false, // pixel-art look (being tried: ?pixel in the address)
 };

@@ -46,6 +46,10 @@ const finalShader = {
     uGrain: { value: 0.03 },
     uVignette: { value: 0.55 },
     uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.62) },
+    tText: { value: null },
+    uText: { value: 0 },
+    uPix: { value: 1 },
+    uLevels: { value: 0 },
     toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -61,28 +65,60 @@ const finalShader = {
     uniform vec3 uSunColor;
     uniform float uGrain;
     uniform float uVignette;
+    uniform sampler2D tText; // pixel-art mode: the lettering, sharp, at full resolution (premultiplied)
+    uniform float uText;
+    uniform float uPix; // screen pixels per scene pixel (1 unless pixel-art mode)
+    uniform float uLevels; // pixel-art mode: the scene's colours in this many steps, dithered (0: off)
     varying vec2 vUv;
     ${MASK_GLSL}
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    // 4x4 ordered dither (Bayer), one cell to a scene pixel: -0.5 .. 0.5
+    float bayer2(vec2 v) { return 2.0 * v.x + 3.0 * v.y - 4.0 * v.x * v.y; } // [0 2; 3 1]
+    float bayer(vec2 p) {
+      vec2 q = mod(floor(p), 4.0);
+      float v = 4.0 * bayer2(mod(q, 2.0)) + bayer2(floor(q / 2.0));
+      return (v + 0.5) / 16.0 - 0.5;
+    }
     void main() {
       vec4 scene = texture2D(tScene, vUv);
       vec3 c = scene.rgb;
       // (alpha below 1 marks a lit sign's letters: less glow lands on them)
       if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb * mix(0.25, 1.0, clamp(scene.a, 0.0, 1.0));
       if (uMix > 0.5) {
-        float k = beamCoverage(gl_FragCoord.xy);
+        // (by uv: in pixel-art mode the mask is the scene's small size, not the screen's)
+        float k = beamCoverage(vUv * uMaskRes);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
       c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
+      if (uLevels > 0.5) {
+        // (stepped in a roughly perceptual space, the steps dithered per scene pixel)
+        vec3 g = pow(max(c, 0.0), vec3(1.0 / 2.2));
+        g = floor(g * uLevels + 0.5 + bayer(gl_FragCoord.xy / uPix)) / uLevels;
+        c = pow(max(g, 0.0), vec3(2.2));
+      }
+      if (uText > 0.5) {
+        vec4 t = texture2D(tText, vUv);
+        c = c * (1.0 - t.a) + t.rgb;
+      }
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
-      // Static paper grain (animated grain read as flicker) and a vignette.
-      gl_FragColor.rgb += (h(floor(gl_FragCoord.xy)) - 0.5) * uGrain;
+      // Static paper grain (animated grain read as flicker), one grain to a
+      // scene pixel, and a vignette.
+      gl_FragColor.rgb += (h(floor(gl_FragCoord.xy / uPix)) - 0.5) * uGrain;
       vec2 q = vUv - 0.5;
       gl_FragColor.rgb *= 1.0 - dot(q, q) * uVignette;
     }`,
 };
+
+// Pixel-art mode (quality.pixel): the scene is drawn small and shown with
+// square pixels, while the title stacks are drawn sharp at full resolution on
+// a layer of their own (TEXT_LAYER) and laid over it in the final pass.
+// Whatever used to be drawn over the lettering (the lamp, the split line:
+// renderOrder 7 and up) cuts it away again from ERASE_LAYER.
+const TEXT_LAYER = 3;
+const ERASE_LAYER = 4;
+const PIXEL_TARGET = 500; // about this many scene pixels across the window
 
 export class World {
   constructor(canvas, pages) {
@@ -427,6 +463,20 @@ export class World {
     }
     MASK.tMask.value = this.maskRT.texture;
     MASK.uMaskRes.value.copy(size);
+    // (the scene targets' size: the drawing buffer's, or far smaller in pixel-art mode)
+    this.rtSize = size.clone();
+    // Pixel-art mode's sharp lettering, at the drawing buffer's size (made when first needed).
+    this.textRT = null;
+    this.eraser = new THREE.MeshBasicMaterial({
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendSrc: THREE.ZeroFactor,
+      blendDst: THREE.ZeroFactor,
+      blendSrcAlpha: THREE.ZeroFactor,
+      blendDstAlpha: THREE.ZeroFactor,
+    });
     this.bloom = new UnrealBloomPass(size.clone(), 0.15, 0.45, 0.95);
     this.bloomQuad = new FullScreenQuad(null);
     this.final = new FullScreenQuad(
@@ -497,8 +547,60 @@ export class World {
     if (bloom) this.renderBloom(this.sceneRT.texture);
     u.uBloom.value = bloom ? 1 : 0;
     u.toneMappingExposure.value = r.toneMappingExposure;
+    u.uText.value = this.quality.pixel ? 1 : 0;
+    u.uLevels.value = this.quality.pixel ? 14 : 0;
+    if (this.quality.pixel) this.renderText();
     r.setRenderTarget(null);
     this.final.render(r);
+  }
+
+  /**
+   * Pixel-art mode: the title stacks, sharp, into textRT (premultiplied, over
+   * nothing), then cut away wherever the lamp and the like stand in front.
+   * (The reveal mask is read at this size: MASK.uMaskRes.)
+   */
+  renderText() {
+    const r = this.renderer;
+    const size = r.getDrawingBufferSize(this._size);
+    if (!this.textRT) this.textRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
+    if (this.textRT.width !== size.x || this.textRT.height !== size.y) this.textRT.setSize(size.x, size.y);
+    this.final.material.uniforms.tText.value = this.textRT.texture;
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    const autoClear = r.autoClear;
+    const layers = this.camera.layers.mask;
+    MASK.uMaskRes.value.copy(size);
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.textRT);
+    r.clear();
+    r.autoClear = false;
+    this.camera.layers.set(TEXT_LAYER);
+    r.render(this.scene, this.camera);
+    this.camera.layers.set(ERASE_LAYER);
+    this.scene.overrideMaterial = this.eraser;
+    r.render(this.scene, this.camera);
+    this.scene.overrideMaterial = null;
+    this.camera.layers.mask = layers;
+    r.autoClear = autoClear;
+    r.setClearColor(this._clear, alpha);
+    MASK.uMaskRes.value.copy(this.rtSize);
+  }
+
+  /** Pixel-art mode on or off: which layer the title stacks (and their cutters) are on. */
+  applyPixelLayers() {
+    const on = this.quality.pixel;
+    for (const site of this.sites) {
+      for (const t of site.texts) {
+        if (t.facade) continue; // (signs on buildings are part of the picture: pixels too)
+        if (on) t.mesh.layers.set(TEXT_LAYER);
+        else t.mesh.layers.set(0);
+      }
+    }
+    this.scene.traverse((o) => {
+      if (!(o.isMesh || o.isLine) || o.renderOrder < 7) return;
+      if (on) o.layers.enable(ERASE_LAYER);
+      else o.layers.disable(ERASE_LAYER);
+    });
   }
 
   async buildTypography() {
@@ -521,11 +623,13 @@ export class World {
       for (const spec of site.page.scene.texts) {
         const block = new TextBlock(spec, aniso);
         block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
+        block.facade = true;
         site.group.add(block.mesh);
         site.texts.push(block);
       }
     }
     this.fitClusters();
+    this.applyPixelLayers();
   }
 
   /**
@@ -650,11 +754,18 @@ export class World {
     this.fitClusters();
     this.renderer.setSize(w, h, false);
     const size = this.renderer.getDrawingBufferSize(this._size);
-    this.sceneRT.setSize(size.x, size.y);
-    this.otherRT.setSize(size.x, size.y);
-    this.maskRT.setSize(size.x, size.y);
-    this.bloom.setSize(size.x, size.y);
-    MASK.uMaskRes.value.copy(size);
+    // Pixel-art mode: about PIXEL_TARGET scene pixels across, each 2-4 CSS px.
+    const rt = this.rtSize;
+    if (this.quality.pixel) {
+      const p = THREE.MathUtils.clamp(Math.round(w / PIXEL_TARGET), 2, 4);
+      rt.set(Math.ceil(w / p), Math.ceil(h / p));
+    } else rt.copy(size);
+    this.final.material.uniforms.uPix.value = size.x / rt.x;
+    this.sceneRT.setSize(rt.x, rt.y);
+    this.otherRT.setSize(rt.x, rt.y);
+    this.maskRT.setSize(rt.x, rt.y);
+    this.bloom.setSize(rt.x, rt.y);
+    MASK.uMaskRes.value.copy(rt);
   }
 
   /**
@@ -701,12 +812,19 @@ export class World {
       this.note(q.scale === 'auto' ? '分辨率：自动' : `分辨率：固定 ${Math.round(q.scale * 100)}%`);
     }
     this.sun.castShadow = q.shadows;
-    const samples = q.msaa ? this.msaaSamples : 0;
+    // (pixel-art mode: no smoothing anywhere, square pixels shown as they are)
+    const samples = q.msaa && !q.pixel ? this.msaaSamples : 0;
+    const filter = q.pixel ? THREE.NearestFilter : THREE.LinearFilter;
     for (const rt of [this.sceneRT, this.otherRT, this.maskRT]) {
-      if (rt.samples !== samples) {
+      if (rt.samples !== samples || rt.texture.magFilter !== filter) {
         rt.samples = samples;
-        rt.dispose(); // re-created with the new sample count on next use
+        rt.texture.magFilter = rt.texture.minFilter = filter;
+        rt.dispose(); // re-created with the new sample count / filter on next use
       }
+    }
+    if ('pixel' in patch) {
+      this.resize(false);
+      this.applyPixelLayers();
     }
     for (const site of this.sites) {
       if (!site.ribbon) continue;
@@ -834,10 +952,11 @@ export class World {
    * render), and the on-screen position/size of its glowing light source.
    */
   updateReveal(site) {
+    // (the box at the scene targets' size, the glow at the screen's: the final pass draws it)
     const size = this.renderer.getDrawingBufferSize(this._size);
     const cam = this.camera;
-    if (site.device.screenBox) site.device.screenBox(size, site.box);
-    else this.maskBox(site, size);
+    if (site.device.screenBox) site.device.screenBox(this.rtSize, site.box);
+    else this.maskBox(site, this.rtSize);
 
     const g = site.device.glow;
     if (!g) return null;
