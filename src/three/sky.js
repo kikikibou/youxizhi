@@ -27,7 +27,6 @@ export const SKY_SHARED = {
   uCloudNightLo: { value: new THREE.Vector3(0.14, 0.18, 0.3) },
   uSeaDay: { value: new THREE.Vector3(0.02, 0.1, 0.18) },
   uSeaNight: { value: new THREE.Vector3(0.004, 0.012, 0.035) },
-  uPixel: { value: 0 }, // pixel-art look: hard-edged clouds in flat tones (see pixelart.js)
 };
 
 export const SKY_GLSL = /* glsl */ `
@@ -43,7 +42,6 @@ export const SKY_GLSL = /* glsl */ `
   uniform vec3 uCloudNightLo;
   uniform vec3 uSeaDay;
   uniform vec3 uSeaNight;
-  uniform float uPixel;
 
   float skyHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
   float skyNoise(vec2 p) {
@@ -83,33 +81,7 @@ export const SKY_GLSL = /* glsl */ `
     vec3 cloudDay = mix(uCloudDayHi, uCloudDayLo, shade * 0.75);
     vec3 cloudNight = mix(uCloudNightHi, uCloudNightLo, shade * 0.85);
     float fade = smoothstep(0.02, 0.22, d.y);
-    if (uPixel > 0.5) {
-      // Pixel art: hard-edged clouds in three flat tones, thinning out
-      // towards the horizon. The same field a little nearer the horizon
-      // (uv further out = lower in the sky) tells top from underside: denser
-      // below = near the cloud's top (lit), thinner below = its underside.
-      float edge = mix(0.68, 0.53, fade) + (1.0 - cloudAmt) * 0.22;
-      float inside = step(edge, c);
-      float below = skyFbm(uv * 0.84 + w, 4) * 0.78 + detail * 0.32;
-      float t = c - below;
-      float lit = t < -0.012 ? 0.0 : t < 0.03 ? 0.42 : 1.0;
-      vec3 cd = mix(uCloudDayHi, uCloudDayLo, lit * 0.85);
-      vec3 cn = mix(uCloudNightHi, uCloudNightLo, lit * 0.9);
-      col = mix(col, mix(cd, cn, night), inside);
-      // A few long streaks of wind across the day sky, a pixel high.
-      float el = asin(clamp(d.y, 0.0, 1.0));
-      float row = floor(el / 0.0042);
-      float hr = skyHash(vec2(row, 17.0));
-      if (hr > 0.982 && el > 0.1 && el < 0.75) {
-        float az = atan(d.x, d.z);
-        float seg = floor(az * 22.0 + uTime * (0.06 + hr * 0.08));
-        float on = step(0.5, skyHash(vec2(seg, row)));
-        col = mix(col, uCloudDayHi, on * 0.55 * (1.0 - night) * (1.0 - inside));
-      }
-      density = inside * cloudAmt;
-    } else {
-      col = mix(col, mix(cloudDay, cloudNight, night), density * fade);
-    }
+    col = mix(col, mix(cloudDay, cloudNight, night), density * fade);
 
     // Stars: steady, with only a slow, faint shimmer.
     vec2 sp = d.xz / (d.y + 0.35) * 70.0;

@@ -12,8 +12,7 @@ import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
-import { PixelArt, EDGES_GLSL, rng } from './pixelart.js';
-import { buildDetails, WIND } from './details.js';
+import { buildDetails, WIND, rng } from './details.js';
 
 const PLAZA_RADIUS = 56;
 const GRASS = new THREE.Color(0xb5d77a);
@@ -49,12 +48,6 @@ const finalShader = {
     uGrain: { value: 0.03 },
     uVignette: { value: 0.55 },
     uSunColor: { value: new THREE.Vector3(1.0, 0.86, 0.62) },
-    tText: { value: null },
-    uText: { value: 0 },
-    uPix: { value: 1 },
-    tND: { value: null },
-    uNDRes: { value: new THREE.Vector2(1, 1) },
-    uND: { value: 0 },
     toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -70,67 +63,28 @@ const finalShader = {
     uniform vec3 uSunColor;
     uniform float uGrain;
     uniform float uVignette;
-    uniform sampler2D tText; // pixel-art mode: the lettering, sharp, at full resolution (premultiplied)
-    uniform float uText;
-    uniform float uPix; // screen pixels per scene pixel (1 unless pixel-art mode)
-    uniform float uND; // pixel-art mode: outlines and light edges from the normal/depth pass
     varying vec2 vUv;
     ${MASK_GLSL}
-    ${EDGES_GLSL}
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-    // 4x4 ordered dither (Bayer), one cell to a scene pixel: -0.5 .. 0.5 (pixel-art glow rings)
-    float bayer2(vec2 v) { return 2.0 * v.x + 3.0 * v.y - 4.0 * v.x * v.y; } // [0 2; 3 1]
-    float bayer(vec2 p) {
-      vec2 q = mod(floor(p), 4.0);
-      float v = 4.0 * bayer2(mod(q, 2.0)) + bayer2(floor(q / 2.0));
-      return (v + 0.5) / 16.0 - 0.5;
-    }
     void main() {
       vec4 scene = texture2D(tScene, vUv);
       vec3 c = scene.rgb;
       // (alpha below 1 marks a lit sign's letters: less glow lands on them)
       if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb * mix(0.25, 1.0, clamp(scene.a, 0.0, 1.0));
       if (uMix > 0.5) {
-        // (by uv: in pixel-art mode the mask is the scene's small size, not the screen's)
-        float k = beamCoverage(vUv * uMaskRes);
+        float k = beamCoverage(gl_FragCoord.xy);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
-      if (uND > 0.5) {
-        vec3 e = pxEdges(vUv);
-        c *= mix(vec3(1.0), vec3(0.4, 0.4, 0.54), e.x); // outline: a darker, cooler shade
-        c *= 1.0 + 0.3 * e.y; // light edge
-        c *= 1.0 - 0.16 * e.z; // crease
-      }
-      if (uPix > 1.0) {
-        // Pixel art: the light source's glow in rings, a scene pixel at a time.
-        vec2 fc = (floor(gl_FragCoord.xy / uPix) + 0.5) * uPix;
-        float g = exp(-length(fc - uSunPos) / uSunR);
-        g = floor(g * 5.0 + 0.5 + bayer(gl_FragCoord.xy / uPix) * 0.4) / 5.0;
-        c += uSunColor * uSun * g;
-      } else c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
-      if (uText > 0.5) {
-        vec4 t = texture2D(tText, vUv);
-        c = c * (1.0 - t.a) + t.rgb;
-      }
+      c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
-      // Static paper grain (animated grain read as flicker), one grain to a
-      // scene pixel, and a vignette.
-      gl_FragColor.rgb += (h(floor(gl_FragCoord.xy / uPix)) - 0.5) * uGrain;
+      // Static paper grain (animated grain read as flicker) and a vignette.
+      gl_FragColor.rgb += (h(floor(gl_FragCoord.xy)) - 0.5) * uGrain;
       vec2 q = vUv - 0.5;
       gl_FragColor.rgb *= 1.0 - dot(q, q) * uVignette;
     }`,
 };
-
-// Pixel-art mode (quality.pixel): the scene is drawn small and shown with
-// square pixels, while the title stacks are drawn sharp at full resolution on
-// a layer of their own (TEXT_LAYER) and laid over it in the final pass.
-// Whatever used to be drawn over the lettering (the lamp, the split line:
-// renderOrder 7 and up) cuts it away again from ERASE_LAYER.
-const TEXT_LAYER = 3;
-const ERASE_LAYER = 4;
-const PIXEL_TARGET = 500; // about this many scene pixels across the window
 
 export class World {
   constructor(canvas, pages) {
@@ -217,7 +171,6 @@ export class World {
     this.buildDetails();
     this.buildSkyline();
     this.buildPost();
-    this.px = new PixelArt(this);
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
@@ -435,15 +388,12 @@ export class World {
     }
   }
 
-  /** Each page's planting and flower boxes, low-poly (see details.js; the pixel-art look draws its own). */
+  /** Each page's planting, flower boxes and the like, low-poly (see details.js). */
   buildDetails() {
     const R = rng(20261118);
-    this.details = [];
     for (const site of this.sites) {
-      const g = buildDetails(site, 'flat', { R, mats: this.mats });
-      if (!g) continue;
-      site.group.add(g);
-      this.details.push(g);
+      const g = buildDetails(site, { R, mats: this.mats });
+      if (g) site.group.add(g);
     }
   }
 
@@ -457,15 +407,7 @@ export class World {
       const d = 170 + rnd() * 120;
       const w = 14 + rnd() * 26;
       const h = 10 + rnd() * 45;
-      const dd = 10 + rnd() * 20;
-      const g = new THREE.BoxGeometry(w, h, dd);
-      // uv in metres on every face (the pixel-art look paints window grids by it)
-      const uv = g.getAttribute('uv');
-      const dims = [[dd, h], [dd, h], [w, dd], [w, dd], [w, h], [w, h]];
-      for (let i = 0; i < uv.count; i++) {
-        const [du, dv] = dims[Math.floor(i / 4)];
-        uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv);
-      }
+      const g = new THREE.BoxGeometry(w, h, 10 + rnd() * 20);
       g.rotateY(a);
       g.translate(Math.sin(a) * d, h / 2, Math.cos(a) * d);
       // No blocks standing in the sea behind the lighthouse.
@@ -499,20 +441,6 @@ export class World {
     }
     MASK.tMask.value = this.maskRT.texture;
     MASK.uMaskRes.value.copy(size);
-    // (the scene targets' size: the drawing buffer's, or far smaller in pixel-art mode)
-    this.rtSize = size.clone();
-    // Pixel-art mode's sharp lettering, at the drawing buffer's size (made when first needed).
-    this.textRT = null;
-    this.eraser = new THREE.MeshBasicMaterial({
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      blending: THREE.CustomBlending,
-      blendSrc: THREE.ZeroFactor,
-      blendDst: THREE.ZeroFactor,
-      blendSrcAlpha: THREE.ZeroFactor,
-      blendDstAlpha: THREE.ZeroFactor,
-    });
     this.bloom = new UnrealBloomPass(size.clone(), 0.15, 0.45, 0.95);
     this.bloomQuad = new FullScreenQuad(null);
     this.final = new FullScreenQuad(
@@ -583,92 +511,8 @@ export class World {
     if (bloom) this.renderBloom(this.sceneRT.texture);
     u.uBloom.value = bloom ? 1 : 0;
     u.toneMappingExposure.value = r.toneMappingExposure;
-    const pixel = this.quality.pixel;
-    u.uText.value = pixel ? 1 : 0;
-    u.uND.value = pixel ? 1 : 0;
-    if (pixel) {
-      this.renderND();
-      this.renderText();
-    }
     r.setRenderTarget(null);
     this.final.render(r);
-  }
-
-  /** Pixel-art mode: normals and depth at the scene's small size, for the outlines (see pixelart.js). */
-  renderND() {
-    const r = this.renderer;
-    const size = this.rtSize;
-    if (!this.ndRT) {
-      this.ndRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
-    }
-    if (this.ndRT.width !== size.x || this.ndRT.height !== size.y) this.ndRT.setSize(size.x, size.y);
-    r.getClearColor(this._clear);
-    const alpha = r.getClearAlpha();
-    const layers = this.camera.layers.mask;
-    const shadows = r.shadowMap.needsUpdate;
-    r.shadowMap.needsUpdate = false;
-    r.setClearColor(0x000000, 0);
-    this.camera.layers.set(0);
-    this.px.renderND(r, this.scene, this.camera, this.ndRT);
-    this.camera.layers.mask = layers;
-    r.shadowMap.needsUpdate = shadows;
-    r.setClearColor(this._clear, alpha);
-    const u = this.final.material.uniforms;
-    u.tND.value = this.ndRT.texture;
-    u.uNDRes.value.copy(size);
-  }
-
-  /**
-   * Pixel-art mode: the title stacks, sharp, into textRT (premultiplied, over
-   * nothing), then cut away wherever the lamp and the like stand in front.
-   * (The reveal mask is read at this size: MASK.uMaskRes.)
-   */
-  renderText() {
-    const r = this.renderer;
-    const size = r.getDrawingBufferSize(this._size);
-    if (!this.textRT) this.textRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
-    if (this.textRT.width !== size.x || this.textRT.height !== size.y) this.textRT.setSize(size.x, size.y);
-    this.final.material.uniforms.tText.value = this.textRT.texture;
-    r.getClearColor(this._clear);
-    const alpha = r.getClearAlpha();
-    const autoClear = r.autoClear;
-    const layers = this.camera.layers.mask;
-    MASK.uMaskRes.value.copy(size);
-    r.setClearColor(0x000000, 0);
-    r.setRenderTarget(this.textRT);
-    r.clear();
-    r.autoClear = false;
-    this.camera.layers.set(TEXT_LAYER);
-    r.render(this.scene, this.camera);
-    this.camera.layers.set(ERASE_LAYER);
-    this.scene.overrideMaterial = this.eraser;
-    r.render(this.scene, this.camera);
-    this.scene.overrideMaterial = null;
-    this.camera.layers.mask = layers;
-    r.autoClear = autoClear;
-    r.setClearColor(this._clear, alpha);
-    MASK.uMaskRes.value.copy(this.rtSize);
-  }
-
-  /** Pixel-art mode on or off: which layer the title stacks (and their cutters) are on. */
-  applyPixelLayers() {
-    const on = this.quality.pixel;
-    for (const site of this.sites) {
-      for (const t of site.texts) {
-        if (t.facade) {
-          // (signs on buildings are part of the picture: pixels too, hard-edged)
-          t.material.uniforms.uCrisp.value = on ? 1 : 0;
-          continue;
-        }
-        if (on) t.mesh.layers.set(TEXT_LAYER);
-        else t.mesh.layers.set(0);
-      }
-    }
-    this.scene.traverse((o) => {
-      if (!(o.isMesh || o.isLine) || o.renderOrder < 7) return;
-      if (on) o.layers.enable(ERASE_LAYER);
-      else o.layers.disable(ERASE_LAYER);
-    });
   }
 
   async buildTypography() {
@@ -691,13 +535,11 @@ export class World {
       for (const spec of site.page.scene.texts) {
         const block = new TextBlock(spec, aniso);
         block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
-        block.facade = true;
         site.group.add(block.mesh);
         site.texts.push(block);
       }
     }
     this.fitClusters();
-    this.applyPixelLayers();
   }
 
   /**
@@ -822,18 +664,11 @@ export class World {
     this.fitClusters();
     this.renderer.setSize(w, h, false);
     const size = this.renderer.getDrawingBufferSize(this._size);
-    // Pixel-art mode: about PIXEL_TARGET scene pixels across, each 2-4 CSS px.
-    const rt = this.rtSize;
-    if (this.quality.pixel) {
-      const p = THREE.MathUtils.clamp(Math.round(w / PIXEL_TARGET), 2, 4);
-      rt.set(Math.ceil(w / p), Math.ceil(h / p));
-    } else rt.copy(size);
-    this.final.material.uniforms.uPix.value = size.x / rt.x;
-    this.sceneRT.setSize(rt.x, rt.y);
-    this.otherRT.setSize(rt.x, rt.y);
-    this.maskRT.setSize(rt.x, rt.y);
-    this.bloom.setSize(rt.x, rt.y);
-    MASK.uMaskRes.value.copy(rt);
+    this.sceneRT.setSize(size.x, size.y);
+    this.otherRT.setSize(size.x, size.y);
+    this.maskRT.setSize(size.x, size.y);
+    this.bloom.setSize(size.x, size.y);
+    MASK.uMaskRes.value.copy(size);
   }
 
   /**
@@ -880,25 +715,12 @@ export class World {
       this.note(q.scale === 'auto' ? '分辨率：自动' : `分辨率：固定 ${Math.round(q.scale * 100)}%`);
     }
     this.sun.castShadow = q.shadows;
-    // (pixel-art mode: no smoothing anywhere, square pixels shown as they are)
-    const samples = q.msaa && !q.pixel ? this.msaaSamples : 0;
-    const filter = q.pixel ? THREE.NearestFilter : THREE.LinearFilter;
+    const samples = q.msaa ? this.msaaSamples : 0;
     for (const rt of [this.sceneRT, this.otherRT, this.maskRT]) {
-      if (rt.samples !== samples || rt.texture.magFilter !== filter) {
+      if (rt.samples !== samples) {
         rt.samples = samples;
-        rt.texture.magFilter = rt.texture.minFilter = filter;
-        rt.dispose(); // re-created with the new sample count / filter on next use
+        rt.dispose(); // re-created with the new sample count on next use
       }
-    }
-    if ('pixel' in patch) {
-      this.px.setEnabled(q.pixel);
-      for (const g of this.details) g.visible = !q.pixel;
-      SKY_SHARED.uPixel.value = q.pixel ? 1 : 0;
-      // (hazier: distant blocks fade to pale silhouettes, as in pixel-art backdrops)
-      this.fog.near = q.pixel ? 70 : 150;
-      this.fog.far = q.pixel ? 430 : 650;
-      this.resize(false);
-      this.applyPixelLayers();
     }
     for (const site of this.sites) {
       if (!site.ribbon) continue;
@@ -906,7 +728,7 @@ export class World {
       site.ribbon.mesh.castShadow = q.ribbonShadow;
     }
     const u = this.final.material.uniforms;
-    u.uGrain.value = q.grain && !q.pixel ? 0.03 : 0; // (pixel art: clean flat colour)
+    u.uGrain.value = q.grain ? 0.03 : 0;
     u.uVignette.value = q.grain ? 0.55 : 0;
     if (!q.reveal) this.clearMask();
     this.shadowDirty = true;
@@ -1000,7 +822,6 @@ export class World {
     this.sites.forEach((site) => site.device.applyTime(n, site.activity));
     if (this.sea) this.sea.material.uniforms.uNight.value = n;
     this.plazaLamps.forEach((l) => l.update(n, 0));
-    this.px.applyTime(n);
   }
 
   /** Post-processing follows the *current* time of day only. */
@@ -1010,7 +831,7 @@ export class World {
     // haze swells over the bright facades and then fades out *smoothly*;
     // by full day bloom is at zero and switched off to save the cost.
     const haze = Math.pow(Math.sin(Math.PI * n), 1.5);
-    this.bloom.strength = (0.45 * n + 0.42 * haze) * (this.quality.pixel ? 0.6 : 1);
+    this.bloom.strength = 0.45 * n + 0.42 * haze;
     this.bloom.threshold = THREE.MathUtils.lerp(0.9, 0.78, haze);
     // At night a soft knee: lights only a little over the threshold (the
     // long strip lights) glow gently instead of in full, so their haze
@@ -1027,11 +848,10 @@ export class World {
    * render), and the on-screen position/size of its glowing light source.
    */
   updateReveal(site) {
-    // (the box at the scene targets' size, the glow at the screen's: the final pass draws it)
     const size = this.renderer.getDrawingBufferSize(this._size);
     const cam = this.camera;
-    if (site.device.screenBox) site.device.screenBox(this.rtSize, site.box);
-    else this.maskBox(site, this.rtSize);
+    if (site.device.screenBox) site.device.screenBox(size, site.box);
+    else this.maskBox(site, size);
 
     const g = site.device.glow;
     if (!g) return null;
@@ -1347,7 +1167,6 @@ export class World {
       });
     });
     this.updatePost(this.night);
-    this.px.update(this.time);
     WIND.value = this.time;
     if (this.sea) this.sea.material.uniforms.uSunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     this.placeSpot();

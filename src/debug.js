@@ -60,7 +60,6 @@ const TOGGLES = [
   ['msaa', '抗锯齿'],
   ['reveal', '反差效果'],
   ['grain', '颗粒/暗角'],
-  ['pixel', '像素风'],
 ];
 
 function load() {

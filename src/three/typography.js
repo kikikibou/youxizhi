@@ -163,13 +163,11 @@ const frag = /* glsl */ `
   uniform vec3 uHaloCol;
   uniform vec4 uTag; // a tag behind the letters: its rectangle in uv (none when empty)
   uniform vec3 uTagCol;
-  uniform float uCrisp; // pixel-art look: hard-edged letters (facade signs drawn into the small scene)
   varying vec2 vUv;
   ${MASK_GLSL}
   void main() {
     float cov = beamCoverage(gl_FragCoord.xy);
     float a = texture2D(map, vUv).a;
-    if (uCrisp > 0.5) a = step(0.42, a);
     // (premultiplied: the letters cover what is behind them, the halo adds light)
     vec3 c = mix(uOut, uIn, cov) * a;
     float glow = mix(uHalo.x, uHalo.y, cov);
@@ -280,7 +278,6 @@ export class TextBlock {
         uHaloCol: { value: new THREE.Color() },
         uTag: { value: new THREE.Vector4(0, 0, 0, 0) },
         uTagCol: { value: new THREE.Color() },
-        uCrisp: { value: 0 },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
       },

@@ -4,16 +4,23 @@ import { Builder } from './buildings.js';
 /**
  * Small additions round the buildings: flower boxes, planters, planted beds,
  * climbers. Each page's layout is written once, in the building's own frame
- * (+Z faces the plaza), and drawn in either look:
- *   'flat'   low-poly, flat-shaded like the trees (the site's own look)
- *   'pixel'  painted foliage cards for the pixel-art look (see pixelart.js)
+ * (+Z faces the plaza), low-poly and flat-shaded like the trees.
  */
-
-/** Foliage atlas cells of the pixel-art look (see foliageAtlas in pixelart.js). */
-export const CELL = { leaf: 0, grass: 8, flowers: 16, trailing: 24 };
 
 /** Wind for the low-poly grass: seconds, set once a frame (World.update). */
 export const WIND = { value: 0 };
+
+/** A small seeded random generator (mulberry32): the same details on every visit. */
+export function rng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 const FLOWERS = [
   [1, 0.55, 0.64],
@@ -35,15 +42,14 @@ const PARTY = [
 
 /**
  * A page's details as a group for its building (null if it has none).
- * mats: materials by key (pot, soil, concrete, bush, flower, orange, white,
- * metal, trunk; and for 'flat' grass); foliage: the Foliage collector ('pixel' only).
+ * mats: materials by key (pot, soil, concrete, bush, grass, flower, orange,
+ * white, metal, trunk).
  */
-export function buildDetails(site, style, { R, mats, foliage }) {
+export function buildDetails(site, { R, mats }) {
   const layout = LAYOUTS[site.page.building];
   if (!layout) return null;
   const b = new Builder(mats);
-  const paint = style === 'pixel' ? cards(site, foliage, R) : meshes(b, R);
-  layout(b, kit(paint, pieces(b, R), R), site, R);
+  layout(b, kit(meshes(b, R), pieces(b, R), R), site, R);
   const group = b.build();
   // (blades and petals are too fine for the shadow map: they only receive)
   group.traverse((o) => {
@@ -56,28 +62,8 @@ export function buildDetails(site, style, { R, mats, foliage }) {
 
 const pick = (R, a) => a[Math.floor(R() * a.length)];
 
-/** Pixel art: cards in world space (one instanced draw for the whole plaza). */
-function cards(site, F, R) {
-  const W = (x, y, z) => site.group.localToWorld(new THREE.Vector3(x, y, z)).toArray();
-  // Grass a little lighter and yellower than the trees.
-  const grassTint = () => [1.08 + R() * 0.22, 1.1 + R() * 0.18, 0.82 + R() * 0.18];
-  const leafTint = () => [0.94 + R() * 0.12, 1, 0.94 + R() * 0.12];
-  return {
-    tuft(x, y, z, h, flowers = null, chance = 0.4) {
-      const fl = R() < chance;
-      F.add(W(x, y, z), [h * (1.05 + R() * 0.3), h], (fl ? CELL.flowers : CELL.grass) + Math.floor(R() * 8), { kind: 1, tint: grassTint(), flower: flowers || pick(R, FLOWERS) });
-    },
-    clump(x, y, z, size, nrm = [0, 1, 0]) {
-      F.add(W(x, y, z), [size, size], CELL.leaf + Math.floor(R() * 8), { nrm, tint: leafTint() });
-    },
-    trail(x, y, z, h, flowers) {
-      F.add(W(x, y, z), [0.5, h], CELL.trailing + Math.floor(R() * 4), { kind: 2, tint: leafTint(), flower: flowers || FLOWERS[0] });
-    },
-  };
-}
-
 /**
- * The site's own look: low-poly and flat-shaded like its trees. Vertex
+ * Grass, shrubs and trailing plants, low-poly like the trees. Vertex
  * colours vary each piece's shade (the material carries the scheme's green);
  * uv.y is how far a vertex sways in the wind (0 at a blade's root).
  */
@@ -162,8 +148,7 @@ function meshes(b, R) {
 }
 
 /**
- * Pieces made of geometry in both looks (hedges, topiary, balloons, bunting,
- * lifebuoys). Vertex colours as in meshes(); uv.y is the sway.
+ * Larger pieces (hedges, topiary, balloons, bunting, lifebuoys). Vertex colours as in meshes(); uv.y is the sway.
  */
 function pieces(b, R) {
   const lin = new THREE.Color();
@@ -286,7 +271,7 @@ function maze(cols, rows, R) {
   return { right, down };
 }
 
-/** Shared helpers on top of a painter (and the geometry pieces). */
+/** Shared helpers on top of the plants and the pieces. */
 function kit(p, g, R) {
   /** A planted bed: a low kerb, soil, and grass with flowers (and a few bushes). */
   const bed = (b, x0, x1, z0, z1, { h = [0.55, 1.15], step = 0.34, flowerChance = 0.35, bushes = 0 } = {}) => {
@@ -424,7 +409,7 @@ function puzzle(b, k, site, R) {
 
 /* ----------------------------------------------------------------- games */
 // A fairground: balloons tied to the ticket booth, bunting from its roof,
-// flowers round the Ferris wheel's base, a ring of shrubs on the drum's roof.
+// flowers round the Ferris wheel's base.
 function games(b, k, site, R) {
   const W = { x: -33, z: -10 }; // the wheel (see buildings.js)
   // Ticket booth: x -23.5 .. -20, z -11 .. -8, its roof's top at 3.4.
@@ -434,13 +419,6 @@ function games(b, k, site, R) {
   k.bunting([-19.9, 3.3, -7.85], [Math.sin((-5 * Math.PI) / 12) * 12.7, 3.9, -14 + Math.cos((-5 * Math.PI) / 12) * 12.7], 0.5);
   // Flowers round the front and sides of the wheel's base (x -42 .. -24, z -14 .. -6).
   k.bed(b, -42.6, -23.4, -5.9, -4.7, { h: [0.35, 0.7], flowerChance: 0.75 });
-  // Shrubs in pots round the front of the drum's roof (radius 13, roof at 17.3).
-  for (let a = -1.75; a <= 1.75; a += 0.21) {
-    const x = Math.sin(a) * 11.6;
-    const z = -14 + Math.cos(a) * 11.6;
-    b.box('pot', [x - 0.45, 17.3, z - 0.45], [x + 0.45, 17.75, z + 0.45]);
-    k.clump(x, 18.3 + R() * 0.25, z, 1.05 + R() * 0.35, [Math.sin(a) * 0.5, 0.9, Math.cos(a) * 0.5]);
-  }
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
 }
 
