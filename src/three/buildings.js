@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * All coordinates are in the building's local frame: the facade facing the
  * plaza is the +Z side, ground is y = 0.
  */
-class Builder {
+export class Builder {
   constructor(mats) {
     this.mats = mats;
     this.parts = {};

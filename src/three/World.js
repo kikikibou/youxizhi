@@ -12,6 +12,7 @@ import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
+import { PixelArt, EDGES_GLSL } from './pixelart.js';
 
 const PLAZA_RADIUS = 56;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -49,7 +50,9 @@ const finalShader = {
     tText: { value: null },
     uText: { value: 0 },
     uPix: { value: 1 },
-    uLevels: { value: 0 },
+    tND: { value: null },
+    uNDRes: { value: new THREE.Vector2(1, 1) },
+    uND: { value: 0 },
     toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -68,11 +71,12 @@ const finalShader = {
     uniform sampler2D tText; // pixel-art mode: the lettering, sharp, at full resolution (premultiplied)
     uniform float uText;
     uniform float uPix; // screen pixels per scene pixel (1 unless pixel-art mode)
-    uniform float uLevels; // pixel-art mode: the scene's colours in this many steps, dithered (0: off)
+    uniform float uND; // pixel-art mode: outlines and light edges from the normal/depth pass
     varying vec2 vUv;
     ${MASK_GLSL}
+    ${EDGES_GLSL}
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-    // 4x4 ordered dither (Bayer), one cell to a scene pixel: -0.5 .. 0.5
+    // 4x4 ordered dither (Bayer), one cell to a scene pixel: -0.5 .. 0.5 (pixel-art glow rings)
     float bayer2(vec2 v) { return 2.0 * v.x + 3.0 * v.y - 4.0 * v.x * v.y; } // [0 2; 3 1]
     float bayer(vec2 p) {
       vec2 q = mod(floor(p), 4.0);
@@ -89,13 +93,19 @@ const finalShader = {
         float k = beamCoverage(vUv * uMaskRes);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
-      c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
-      if (uLevels > 0.5) {
-        // (stepped in a roughly perceptual space, the steps dithered per scene pixel)
-        vec3 g = pow(max(c, 0.0), vec3(1.0 / 2.2));
-        g = floor(g * uLevels + 0.5 + bayer(gl_FragCoord.xy / uPix)) / uLevels;
-        c = pow(max(g, 0.0), vec3(2.2));
+      if (uND > 0.5) {
+        vec3 e = pxEdges(vUv);
+        c *= mix(vec3(1.0), vec3(0.4, 0.4, 0.54), e.x); // outline: a darker, cooler shade
+        c *= 1.0 + 0.3 * e.y; // light edge
+        c *= 1.0 - 0.16 * e.z; // crease
       }
+      if (uPix > 1.0) {
+        // Pixel art: the light source's glow in rings, a scene pixel at a time.
+        vec2 fc = (floor(gl_FragCoord.xy / uPix) + 0.5) * uPix;
+        float g = exp(-length(fc - uSunPos) / uSunR);
+        g = floor(g * 5.0 + 0.5 + bayer(gl_FragCoord.xy / uPix) * 0.4) / 5.0;
+        c += uSunColor * uSun * g;
+      } else c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
       if (uText > 0.5) {
         vec4 t = texture2D(tText, vUv);
         c = c * (1.0 - t.a) + t.rgb;
@@ -204,6 +214,7 @@ export class World {
     this.buildPlazaFurniture();
     this.buildSkyline();
     this.buildPost();
+    this.px = new PixelArt(this);
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
@@ -429,7 +440,15 @@ export class World {
       const d = 170 + rnd() * 120;
       const w = 14 + rnd() * 26;
       const h = 10 + rnd() * 45;
-      const g = new THREE.BoxGeometry(w, h, 10 + rnd() * 20);
+      const dd = 10 + rnd() * 20;
+      const g = new THREE.BoxGeometry(w, h, dd);
+      // uv in metres on every face (the pixel-art look paints window grids by it)
+      const uv = g.getAttribute('uv');
+      const dims = [[dd, h], [dd, h], [w, dd], [w, dd], [w, h], [w, h]];
+      for (let i = 0; i < uv.count; i++) {
+        const [du, dv] = dims[Math.floor(i / 4)];
+        uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv);
+      }
       g.rotateY(a);
       g.translate(Math.sin(a) * d, h / 2, Math.cos(a) * d);
       // No blocks standing in the sea behind the lighthouse.
@@ -547,11 +566,39 @@ export class World {
     if (bloom) this.renderBloom(this.sceneRT.texture);
     u.uBloom.value = bloom ? 1 : 0;
     u.toneMappingExposure.value = r.toneMappingExposure;
-    u.uText.value = this.quality.pixel ? 1 : 0;
-    u.uLevels.value = this.quality.pixel ? 14 : 0;
-    if (this.quality.pixel) this.renderText();
+    const pixel = this.quality.pixel;
+    u.uText.value = pixel ? 1 : 0;
+    u.uND.value = pixel ? 1 : 0;
+    if (pixel) {
+      this.renderND();
+      this.renderText();
+    }
     r.setRenderTarget(null);
     this.final.render(r);
+  }
+
+  /** Pixel-art mode: normals and depth at the scene's small size, for the outlines (see pixelart.js). */
+  renderND() {
+    const r = this.renderer;
+    const size = this.rtSize;
+    if (!this.ndRT) {
+      this.ndRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
+    }
+    if (this.ndRT.width !== size.x || this.ndRT.height !== size.y) this.ndRT.setSize(size.x, size.y);
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    const layers = this.camera.layers.mask;
+    const shadows = r.shadowMap.needsUpdate;
+    r.shadowMap.needsUpdate = false;
+    r.setClearColor(0x000000, 0);
+    this.camera.layers.set(0);
+    this.px.renderND(r, this.scene, this.camera, this.ndRT);
+    this.camera.layers.mask = layers;
+    r.shadowMap.needsUpdate = shadows;
+    r.setClearColor(this._clear, alpha);
+    const u = this.final.material.uniforms;
+    u.tND.value = this.ndRT.texture;
+    u.uNDRes.value.copy(size);
   }
 
   /**
@@ -591,7 +638,11 @@ export class World {
     const on = this.quality.pixel;
     for (const site of this.sites) {
       for (const t of site.texts) {
-        if (t.facade) continue; // (signs on buildings are part of the picture: pixels too)
+        if (t.facade) {
+          // (signs on buildings are part of the picture: pixels too, hard-edged)
+          t.material.uniforms.uCrisp.value = on ? 1 : 0;
+          continue;
+        }
         if (on) t.mesh.layers.set(TEXT_LAYER);
         else t.mesh.layers.set(0);
       }
@@ -823,6 +874,11 @@ export class World {
       }
     }
     if ('pixel' in patch) {
+      this.px.setEnabled(q.pixel);
+      SKY_SHARED.uPixel.value = q.pixel ? 1 : 0;
+      // (hazier: distant blocks fade to pale silhouettes, as in pixel-art backdrops)
+      this.fog.near = q.pixel ? 70 : 150;
+      this.fog.far = q.pixel ? 430 : 650;
       this.resize(false);
       this.applyPixelLayers();
     }
@@ -832,7 +888,7 @@ export class World {
       site.ribbon.mesh.castShadow = q.ribbonShadow;
     }
     const u = this.final.material.uniforms;
-    u.uGrain.value = q.grain ? 0.03 : 0;
+    u.uGrain.value = q.grain && !q.pixel ? 0.03 : 0; // (pixel art: clean flat colour)
     u.uVignette.value = q.grain ? 0.55 : 0;
     if (!q.reveal) this.clearMask();
     this.shadowDirty = true;
@@ -926,6 +982,7 @@ export class World {
     this.sites.forEach((site) => site.device.applyTime(n, site.activity));
     if (this.sea) this.sea.material.uniforms.uNight.value = n;
     this.plazaLamps.forEach((l) => l.update(n, 0));
+    this.px.applyTime(n);
   }
 
   /** Post-processing follows the *current* time of day only. */
@@ -935,7 +992,7 @@ export class World {
     // haze swells over the bright facades and then fades out *smoothly*;
     // by full day bloom is at zero and switched off to save the cost.
     const haze = Math.pow(Math.sin(Math.PI * n), 1.5);
-    this.bloom.strength = 0.45 * n + 0.42 * haze;
+    this.bloom.strength = (0.45 * n + 0.42 * haze) * (this.quality.pixel ? 0.6 : 1);
     this.bloom.threshold = THREE.MathUtils.lerp(0.9, 0.78, haze);
     // At night a soft knee: lights only a little over the threshold (the
     // long strip lights) glow gently instead of in full, so their haze
@@ -1272,6 +1329,7 @@ export class World {
       });
     });
     this.updatePost(this.night);
+    this.px.update(this.time);
     if (this.sea) this.sea.material.uniforms.uSunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     this.placeSpot();
 

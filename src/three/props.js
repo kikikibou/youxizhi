@@ -156,19 +156,22 @@ function makeTreeVariants() {
   const variants = [];
   for (let v = 0; v < 4; v++) {
     const blobs = [];
+    const lobes = []; // (kept for the pixel-art look, which draws the crown as foliage cards)
     const count = 5 + v;
     for (let i = 0; i < count; i++) {
       const r = 1.1 + Math.random() * 1.0;
       const g = new THREE.IcosahedronGeometry(r, 1);
       const a = Math.random() * Math.PI * 2;
       const d = Math.random() * 1.6;
-      g.translate(Math.cos(a) * d, 4.2 + Math.random() * 2.6, Math.sin(a) * d);
+      const y = 4.2 + Math.random() * 2.6;
+      g.translate(Math.cos(a) * d, y, Math.sin(a) * d);
       blobs.push(g);
+      lobes.push({ x: Math.cos(a) * d, y, z: Math.sin(a) * d, r });
     }
     const foliage = mergeGeometries(blobs);
     const trunk = new THREE.CylinderGeometry(0.14, 0.22, 4.6, 8);
     trunk.translate(0, 2.3, 0);
-    variants.push({ foliage, trunk });
+    variants.push({ foliage, trunk, lobes });
   }
   return variants;
 }
@@ -184,6 +187,7 @@ export function createTree(mats, scale = 1) {
   g.add(f, t);
   g.scale.setScalar(scale);
   g.rotation.y = Math.random() * Math.PI * 2;
+  g.userData.tree = { blobs: v.lobes };
   return g;
 }
 
