@@ -531,9 +531,11 @@ function debate(mats) {
   const group = b.build();
 
   // Small trees in the two sky gardens.
-  // (the left one's three, one in each bay between its columns, on its gravel bed 0.25 up)
+  // (the left one's three, loosely: a pair on the left, one in front of
+  // the other, and a bigger one on its own to the right; one in each bay
+  // stood too evenly. Clear of the two columns. On its gravel bed, 0.25 up.)
   const ga = GARDENS.a.y0 + 0.25;
-  for (const [x, z, y, s] of [[-17.4, A.z1 - 2.5, ga, 0.5], [-13, A.z1 - 2.8, ga, 0.52], [-8.6, A.z1 - 2.6, ga, 0.48], [18.6, B.z1 - 1.6, GARDENS.b.y0, 0.42]]) {
+  for (const [x, z, y, s] of [[-17.9, A.z1 - 2.1, ga, 0.52], [-16, A.z1 - 2.9, ga, 0.42], [-8.7, A.z1 - 2.6, ga, 0.56], [18.6, B.z1 - 1.6, GARDENS.b.y0, 0.42]]) {
     const tree = createTree(mats, s);
     tree.position.set(x, y, z);
     group.add(tree);
