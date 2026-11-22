@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Builder } from './buildings.js';
+import { Builder, GARDENS } from './buildings.js';
 
 /**
  * Small additions round the buildings: flower boxes, planters, planted beds,
@@ -361,6 +361,14 @@ function debate(b, k, site, R) {
   k.bed(b, -27, -10, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   k.bed(b, 12, 29, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
+  // The sky gardens (GARDENS in buildings.js; their trees are planted there):
+  // a planter along the left one's edge, trailing over it; potted shrubs in
+  // the right one's loggia. (On a sequence of their own: drawing on the
+  // shared one would reshuffle every page after this, the maze too.)
+  const R2 = rng(20261125);
+  const g = kit(meshes(b, R2), pieces(b, R2), R2);
+  g.planter(b, -19.5, -6.5, GARDENS.a.y0, -3.0, { key: 'concrete', depth: 0.6 });
+  for (const [x, z] of [[14.6, -2.4], [21, -2.4], [9.6, -8.5], [9.6, -12]]) g.topiary(x, z, { y: GARDENS.b.y0, r: 0.45, stem: 0.4 });
 }
 
 /* ---------------------------------------------------------------- puzzle */

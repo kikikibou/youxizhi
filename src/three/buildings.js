@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createTree } from './props.js';
 
 const THIN = new Set(['pane', 'paneLit', 'frosted', 'blind', 'beacon']);
 
@@ -229,6 +230,14 @@ function home(mats) {
 /* ------------------------------------------------------------------------ */
 // The gap between the bridge arms: the split device in pages.js pivots here.
 export const FORUM = { gap: [1, 23.05, -3] };
+// The two towers' sky gardens, at about the same height across the gap
+// (floor and ceiling; see debate() and the planting in details.js). The right
+// tower's floors: five glazed ones, gH tall, with 0.95 m bands between.
+const B_GH = (FORUM.gap[1] - 1.55 - 0.08 - 0.06 - 5.3 - 4 * 0.95) / 5;
+export const GARDENS = {
+  a: { y0: 12.4, y1: 19.25, depth: 4.2 }, // two of the left tower's floors (3.6 m), opened up
+  b: { y0: 5.3 + 2 * (B_GH + 0.95), y1: 5.3 + 2 * (B_GH + 0.95) + 2 * B_GH + 0.95, back: 3.2 }, // its 3rd and 4th
+};
 
 function debate(mats) {
   // ('pane': a window lit at night only, laid on the glass, see THIN)
@@ -260,20 +269,36 @@ function debate(mats) {
   // a plane with the slab edges' and flicker)
   const finsX = Array.from({ length: nF }, (_, k) => A.x0 + 0.13 + (k * (A.x1 - A.x0 - 0.26)) / (nF - 1));
   const zL = A.z1 - 1.45; // the sky bridge arm's front (see below)
+  // A sky garden two floors high across the front (GARDENS.a): there the
+  // glass and the slab between stand back by `depth`, the fins break off,
+  // two slim columns and the corner fins carry it, and a light strip runs
+  // under its ceiling. (Planting: details.js; trees: below.)
+  const G = GARDENS.a;
+  const zr = A.z1 - G.depth; // the garden's back wall
   for (let y = 5.2; y < A.top - 3; y += fhA) {
     const yt = y + fhA - 0.35;
-    b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, A.z1 - 0.3]);
-    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, A.z1]);
+    const inGarden = y >= G.y0 && yt <= G.y1 + 0.01;
+    const gf = inGarden ? zr : A.z1 - 0.3; // the glass front
+    b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, gf]);
+    // (the slab between the garden's two floors stands back with the glass)
+    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, inGarden && yt < G.y1 ? zr + 0.3 : A.z1]);
+    if (inGarden) for (const x of finsX.slice(1, -1)) b.box('white', [x - 0.05, y, zr], [x + 0.05, yt, zr + 0.1]); // (mullions on the back wall)
     // The top floors stay dark: the title is read against them, day and night.
     if (y > A.top - 14) continue;
     finsX.slice(1).forEach((f, k) => {
       if (R() > 0.48) return;
-      const [a0, a1] = [finsX[k] + 0.11, f - 0.11];
-      b.box('pane', [a0, y + 0.05, A.z1 - 0.3], [a1, yt - 0.05, A.z1 - 0.27]);
-      if (R() < 0.15) b.box('blind', [a0 + 0.04, yt - 0.06 - (0.5 + R() * 1.2), A.z1 - 0.27], [a1 - 0.04, yt - 0.06, A.z1 - 0.25]);
+      const a0 = Math.max(A.x0 + 0.3, finsX[k] + (inGarden ? 0.05 : 0.11));
+      const a1 = Math.min(A.x1 - 0.3, f - (inGarden ? 0.05 : 0.11));
+      b.box('pane', [a0, y + 0.05, gf], [a1, yt - 0.05, gf + 0.03]);
+      if (R() < 0.15) b.box('blind', [a0 + 0.04, yt - 0.06 - (0.5 + R() * 1.2), gf + 0.03], [a1 - 0.04, yt - 0.06, gf + 0.05]);
     });
   }
-  for (const x of finsX) b.box('white', [x - 0.11, 5.2, A.z1 - 0.3], [x + 0.11, A.top - 2, A.z1 + 0.55]);
+  finsX.forEach((x, k) => {
+    const corner = k === 0 || k === finsX.length - 1;
+    for (const [f0, f1] of corner ? [[5.2, A.top - 2]] : [[5.2, G.y0], [G.y1, A.top - 2]]) b.box('white', [x - 0.11, f0, A.z1 - 0.3], [x + 0.11, f1, A.z1 + 0.55]);
+  });
+  for (const x of [A.x0 + (A.x1 - A.x0) / 3, A.x1 - (A.x1 - A.x0) / 3]) b.cyl('white', x, A.z1 - 1.0, G.y0, G.y1, 0.22, 16);
+  b.box('strip', [A.x0 + 0.4, G.y1 - 0.08, A.z1 - 1.5], [A.x1 - 0.4, G.y1, A.z1 - 0.8]); // (a slim cove line: the whole ceiling lit read as a slab)
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
@@ -388,15 +413,38 @@ function debate(mats) {
   const by0 = FORUM.gap[1] - 1.55 - 0.08 - 0.06;
   const by1 = FORUM.gap[1] + 1.55;
   const gH = (by0 - 5.3 - 4 * 0.95) / 5; // five glazed floors and four bands below it
+  // The 3rd and 4th floors (GARDENS.b) are a garden loggia round the corner:
+  // their glass and the band between stand far back (lit all through at
+  // night), slim columns at the edge, a railing round it, a light strip under
+  // its ceiling. (Potted shrubs: details.js; a tree: below.)
+  const GB = GARDENS.b;
+  const back = -GB.back;
+  const inner = outline(back + 0.06);
   let fy = 5.3;
   for (let i = 0; i < 5; i++) {
-    footprint('glassDark', fy, fy + gH, -0.25);
-    windows(fy, fy + gH, true);
+    const loggia = i === 2 || i === 3;
+    if (loggia) {
+      footprint('pane', fy, fy + gH, back);
+      for (const p of inner.points(Math.round(inner.L / 1.8))) b.box('white', [p.x - 0.05, fy, p.z - 0.05], [p.x + 0.05, fy + gH, p.z + 0.05]);
+    } else {
+      footprint('glassDark', fy, fy + gH, -0.25);
+      windows(fy, fy + gH, true);
+    }
     fy += gH;
     if (i === 4) break;
-    footprint('white', fy, fy + 0.95, 0.35);
+    footprint('white', fy, fy + 0.95, i === 2 ? back + 0.3 : 0.35);
     fy += 0.95;
   }
+  for (const p of outline(-0.45).points(Math.round(outline(-0.45).L / 3.4))) b.cyl('white', p.x, p.z, GB.y0, GB.y1, 0.2, 14);
+  const rail = outline(0.12).points(Math.round(outline(0.12).L / 1.4));
+  for (const p of rail) b.cyl('metal', p.x, p.z, GB.y0, GB.y0 + 1.05, 0.03, 6);
+  rail.slice(1).forEach((p, k) => {
+    const q = rail[k];
+    b.boxRot('metal', [(p.x + q.x) / 2, GB.y0 + 1.05, (p.z + q.z) / 2], [Math.hypot(p.x - q.x, p.z - q.z) + 0.04, 0.06, 0.06], [0, Math.atan2(-(p.z - q.z), p.x - q.x), 0]);
+  });
+  // (a slim cove line near the edge: the strip, its inner part covered by the white ceiling just below it)
+  footprint('strip', GB.y1 - 0.08, GB.y1, -0.6);
+  footprint('white', GB.y1 - 0.1, GB.y1 - 0.02, -1.3);
   footprint('white', by0, by1, 0.35);
   footprint('glass', FORUM.gap[1] - 1.55 + 0.75, by1 - 0.45, 0.39); // (level with the bridge's window, and as proud of it)
   footprint('glassDark', by1, B.top - 1.2, -0.25); // top floor
@@ -467,6 +515,13 @@ function debate(mats) {
   b.bench(16, 12.5);
 
   const group = b.build();
+
+  // Small trees in the two sky gardens.
+  for (const [x, z, y, s] of [[-17.4, A.z1 - 2.4, GARDENS.a.y0, 0.5], [-8.8, A.z1 - 2.7, GARDENS.a.y0, 0.46], [18.6, B.z1 - 1.6, GARDENS.b.y0, 0.42]]) {
+    const tree = createTree(mats, s);
+    tree.position.set(x, y, z);
+    group.add(tree);
+  }
 
   // LED "speaking time" displays under the bridge glass: one side counts
   // down, then the other, like a debate timer.
