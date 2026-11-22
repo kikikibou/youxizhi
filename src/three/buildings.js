@@ -231,8 +231,8 @@ function home(mats) {
 export const FORUM = { gap: [1, 23.05, -3] };
 
 function debate(mats) {
-  // ('pane': a lit window laid on the glass, see THIN)
-  const b = new Builder({ ...mats, pane: mats.glass });
+  // ('pane': a window lit at night only, laid on the glass, see THIN)
+  const b = new Builder({ ...mats, pane: mats.paneNight });
   const R = seeded(20261122);
 
   /* --- Affirmative tower (left): tall, glass behind dense vertical fins --- */
@@ -250,42 +250,30 @@ function debate(mats) {
   b.box('white', [A.x0, 4.6, A.z0], [A.x1, 5.2, A.z1 + 1.6]);
   b.box('strip', [A.x0 + 0.4, 4.52, A.z1 - 0.4], [A.x1 - 0.4, 4.6, A.z1 + 1.4]);
   for (const x of [A.x0 + 1, A.x1 - 1]) b.box('white', [x - 0.3, 0, A.z1 - 0.3], [x + 0.3, 4.6, A.z1 + 0.3]);
-  // Floors: glass with slim slab edges and a sill bar a metre up; behind
-  // the fins, some windows lit (warm at night), some with blinds down.
+  // Floors: glass with slim slab edges, behind vertical fins spaced evenly
+  // across the front, one on each corner (the side looking at the other
+  // tower is plain glass: finned too, it read as a thick extra layer down
+  // the right edge). Some windows lit at night, a few with a blind down.
   const fhA = 3.6;
-  const finsX = [];
-  for (let x = A.x0 + 0.6; x <= A.x1 - 0.5; x += 1.3) finsX.push(x);
-  const finsZ = [];
-  for (let z = A.z0 + 0.8; z <= A.z1 - 0.5; z += 1.3) finsZ.push(z);
-  const bays = (fins, end) => [...fins.slice(0, -1).map((f, k) => [f + 0.11, fins[k + 1] - 0.11]), [fins[fins.length - 1] + 0.11, end]];
-  const zL = finsZ[finsZ.length - 1] - 0.65; // the sky bridge arm's front (see below)
+  const nF = 12;
+  // (the corner ones 2 cm in from the corners: flush, their faces would share
+  // a plane with the slab edges' and flicker)
+  const finsX = Array.from({ length: nF }, (_, k) => A.x0 + 0.13 + (k * (A.x1 - A.x0 - 0.26)) / (nF - 1));
+  const zL = A.z1 - 1.45; // the sky bridge arm's front (see below)
   for (let y = 5.2; y < A.top - 3; y += fhA) {
     const yt = y + fhA - 0.35;
     b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, A.z1 - 0.3]);
     b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, A.z1]);
-    b.box('white', [A.x0 + 0.3, y + 0.95, A.z1 - 0.3], [A.x1 - 0.3, y + 1.05, A.z1 - 0.2]);
-    b.box('white', [A.x1 - 0.3, y + 0.95, A.z0 + 0.3], [A.x1 - 0.2, y + 1.05, A.z1 - 0.2]);
     // The top floors stay dark: the title is read against them, day and night.
     if (y > A.top - 14) continue;
-    const room = (a0, a1, face) => {
+    finsX.slice(1).forEach((f, k) => {
       if (R() > 0.48) return;
-      const drop = R() < 0.4 ? yt - 0.06 - (0.5 + R() * 1.6) : null; // a blind's lower edge
-      if (face === 'front') {
-        b.box('pane', [a0, y + 0.05, A.z1 - 0.3], [a1, yt - 0.05, A.z1 - 0.27]);
-        if (drop) b.box('blind', [a0 + 0.04, drop, A.z1 - 0.27], [a1 - 0.04, yt - 0.06, A.z1 - 0.25]);
-      } else {
-        b.box('pane', [A.x1 - 0.3, y + 0.05, a0], [A.x1 - 0.27, yt - 0.05, a1]);
-        if (drop) b.box('blind', [A.x1 - 0.27, drop, a0 + 0.04], [A.x1 - 0.25, yt - 0.06, a1 - 0.04]);
-      }
-    };
-    for (const [a0, a1] of bays(finsX, A.x1 - 0.3)) room(a0, a1, 'front');
-    // (not where the sky bridge's arm runs into the side, at 21.4..24.7)
-    const armHere = yt > 21.4 && y < 24.7;
-    for (const [a0, a1] of bays(finsZ, A.z1 - 0.3)) if (a1 - a0 > 0.6 && !(armHere && a1 > zL - 6.1 && a0 < zL + 0.1)) room(a0, a1, 'side');
+      const [a0, a1] = [finsX[k] + 0.11, f - 0.11];
+      b.box('pane', [a0, y + 0.05, A.z1 - 0.3], [a1, yt - 0.05, A.z1 - 0.27]);
+      if (R() < 0.15) b.box('blind', [a0 + 0.04, yt - 0.06 - (0.5 + R() * 1.2), A.z1 - 0.27], [a1 - 0.04, yt - 0.06, A.z1 - 0.25]);
+    });
   }
-  // Vertical fins on the front and on the face looking at the other tower.
   for (const x of finsX) b.box('white', [x - 0.11, 5.2, A.z1 - 0.3], [x + 0.11, A.top - 2, A.z1 + 0.55]);
-  for (const z of finsZ) b.box('white', [A.x1 - 0.3, 5.2, z - 0.11], [A.x1 + 0.55, A.top - 2, z + 0.11]);
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
@@ -374,7 +362,7 @@ function debate(mats) {
   b.box('strip', [cx, 4.32, B.z1 - 0.2], [B.x1, 4.4, B.z1 + 0.5]);
   // Window frames on the glazing, some windows lit, some with blinds down.
   const glassLine = outline(-0.25);
-  const nW = Math.round(glassLine.L / 1.6);
+  const nW = Math.round(glassLine.L / 2.4); // (wide windows: finer, the frames read busy)
   const frames = glassLine.points(nW, 0.08);
   const edges = glassLine.points(nW);
   const windows = (y0, y1, lit) => {
@@ -382,7 +370,7 @@ function debate(mats) {
     if (!lit) return;
     for (let k = 0; k < nW; k++) {
       if (R() > 0.45) continue;
-      const drop = R() < 0.4 ? y1 - 0.06 - (0.4 + R() * 1.2) : null;
+      const drop = R() < 0.15 ? y1 - 0.06 - (0.4 + R() * 1.2) : null;
       // (pulled in clear of the frames; a window across two parts is left dark)
       const p = glassLine.at(((k + 0.06) * glassLine.L) / nW);
       const q = glassLine.at(((k + 0.94) * glassLine.L) / nW);
@@ -431,12 +419,10 @@ function debate(mats) {
   const y1 = gy + 1.55;
   const half = 1.2; // half the gap
   // The right arm runs into B's bridge storey, its front at the gap's z. The
-  // left one leaves A's flank one fin bay behind the front corner (its front
-  // half-way between the first two side fins) and starts inside the glass, so
-  // the side fins run down past it and the corner stays whole; the two arms
+  // left one leaves A's flank a little behind the front corner (zL, above)
+  // and starts inside the glass, so the corner stays whole; the two arms
   // needn't line up.
-  // (zL, the left arm's front: half-way between the last two side fins, above)
-  const finOut = A.x1 + 0.55; // (the side fins' outer face)
+  const finOut = A.x1; // (A's flank: its glass side, no fins on it)
   const arms = [
     { x0: A.x1 - 0.6, x1: gx - half, z: zL, strip0: finOut + 0.05 },
     { x0: gx + half, x1: cx, z: gz, strip0: gx + half },
@@ -790,8 +776,7 @@ function puzzle(mats) {
 /* Ferris wheel turning beside it, and a tower of stacked toy blocks.        */
 /* ------------------------------------------------------------------------ */
 function games(mats) {
-  const b = new Builder({ ...mats, pane: mats.glass });
-  const rand = seeded(20261124);
+  const b = new Builder(mats);
 
   /* --- The drum, with a spiral ramp (a slide) wrapped round it --- */
   const cz = -14;
@@ -801,24 +786,12 @@ function games(mats) {
   for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) b.cyl('white', Math.sin(a) * (R - 0.5), cz + Math.cos(a) * (R - 0.5), 0, 4, 0.22, 10);
   const fh = 3.6;
   const floors = 3;
-  // The glass bands: window frames all round, some windows lit (warm at
-  // night), some with a blind down. (Angles as CylinderGeometry's: from +z.)
-  const rg = R - 0.55;
-  const nW = Math.round((Math.PI * 2 * rg) / 1.6);
+  // The glass bands stay whole, unframed ribbons (the 辩论 towers have the
+  // window frames; here they made the two pages look alike).
   for (let i = 0; i < floors; i++) {
     const y = 4 + i * fh;
     b.cyl('white', 0, cz, y, y + 1.15, R, 72);
-    b.cyl('glassDark', 0, cz, y + 1.15, y + fh, rg, 72);
-    for (let k = 0; k < nW; k++) {
-      const a = (k / nW) * Math.PI * 2;
-      b.cyl('white', Math.sin(a) * (rg + 0.08), cz + Math.cos(a) * (rg + 0.08), y + 1.15, y + fh, 0.07, 6);
-      if (rand() > 0.45) continue;
-      const a0 = a + 0.012;
-      const da = (Math.PI * 2) / nW - 0.024;
-      const pane = (key, r, y0, y1) => b.geo(key, new THREE.CylinderGeometry(r, r, y1 - y0, 6, 1, true, a0, da), 0, (y0 + y1) / 2, cz);
-      pane('pane', rg + 0.03, y + 1.2, y + fh - 0.05);
-      if (rand() < 0.4) pane('blind', rg + 0.05, y + fh - 0.06 - (0.4 + rand() * 1.1), y + fh - 0.06);
-    }
+    b.cyl(i === 1 ? 'glassDark' : 'glass', 0, cz, y + 1.15, y + fh, R - 0.55, 72);
   }
   const top = 4 + floors * fh;
   b.cyl('white', 0, cz, top, top + 2.2, R, 72);

@@ -222,6 +222,7 @@ export class World {
     set(m.trunk, p.trunk);
     set(m.bush, p.leaf);
     m.grass.color.set(p.leaf).lerp(GRASS, 0.38); // (fresher than the trees)
+    set(m.paneNight, p.glassDark, p.glassGlow);
     m.blind.emissive.set(p.glassGlow);
     m.skyWin.color.copy(m.whiteShade.color).lerp(m.glassDark.color, 0.42);
     m.skyWinLit.color.copy(m.skyWin.color);

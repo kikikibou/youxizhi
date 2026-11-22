@@ -77,6 +77,9 @@ export function createMaterials() {
   sways(grass);
   sways(flower);
 
+  // A window lit at night only: by day the same as the dark glass round it
+  // (so a facade doesn't look patchy), warm like `glass` at night.
+  const paneNight = new THREE.MeshStandardMaterial({ color: 0x1b2633, roughness: 0.1, metalness: 0.6, emissive: new THREE.Color(0xffa95a), emissiveIntensity: 0 });
   // Blinds drawn part way down a lit window: pale by day, lit from inside at night.
   const blind = new THREE.MeshStandardMaterial({ color: 0xece3d3, roughness: 0.9, emissive: new THREE.Color(0xffc98a), emissiveIntensity: 0 });
   // An aircraft warning light on a mast: blinks at night (userData.on, set by its building).
@@ -87,7 +90,7 @@ export function createMaterials() {
   const skyWin = new THREE.MeshStandardMaterial({ color: 0x8f98a3, roughness: 0.8 });
   const skyWinLit = new THREE.MeshStandardMaterial({ color: 0x8f98a3, roughness: 0.8, emissive: new THREE.Color(0xffb46a), emissiveIntensity: 0 });
 
-  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, blind, beacon, skyWin, skyWinLit };
+  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit };
 }
 
 /** Blades and petals sway in the wind, as far as their uv.y says (0 at the root). */
@@ -113,6 +116,7 @@ export function updateMaterials(m, night) {
   m.orange.emissiveIntensity = 0.3 + night * 0.8;
   m.tube.color.copy(m.tube.userData.day).lerp(m.tube.userData.night, night);
   m.tube.emissiveIntensity = night * 1.8;
+  m.paneNight.emissiveIntensity = night * 1.2;
   m.blind.emissiveIntensity = night * 0.85;
   m.beacon.emissiveIntensity = night * (m.beacon.userData.on ? 5 : 0.25);
   m.skyWinLit.emissiveIntensity = night * 0.9;
