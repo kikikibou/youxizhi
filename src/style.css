@@ -239,16 +239,23 @@ a {
   transform: translate(-50%, -50%) rotate(-12deg);
   transition: opacity 0.25s var(--ease), transform 0.35s var(--ease);
 }
-/* (a mark such as ？ smaller: cropped like a character it lost its dot and read as a 2) */
+/* (a mark such as ? in Anton, widened to fill the frame like a character,
+   but whole: cropped, it lost its dot and read as a 2) */
 .brand-box i.is-mark {
-  top: 47%;
-  font-size: 24px;
+  top: calc(50% + 0.7px);
+  font-family: 'Anton', var(--cn);
+  font-weight: 400;
+  font-size: 24.5px;
+  transform: translate(-50%, -50%) rotate(-12deg) scaleX(1.3);
 }
 /* (each page has its own character: app.js swaps it, dropping the old one out) */
 .brand-box i.is-out {
   opacity: 0;
   transform: translate(-50%, -20%) rotate(-12deg);
   transition-duration: 0.22s;
+}
+.brand-box i.is-mark.is-out {
+  transform: translate(-50%, -20%) rotate(-12deg) scaleX(1.3);
 }
 .brand-text {
   display: grid;
@@ -594,11 +601,27 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   transition: transform 0.9s var(--ease) 0.3s;
 }
 .poem-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* (a line longer than the block runs out leftwards) */
   margin: 12px 0 14px;
   font-family: var(--serif);
   font-style: italic;
   font-size: 28px;
   line-height: 1.14;
+}
+.poem-lines > span {
+  white-space: nowrap; /* (each line of the poem stays one line) */
+}
+/* A Chinese poem (消遣's autogram): upright, in the Chinese sans, smaller and
+   more open than the English. */
+.poem-lines[lang='zh'] {
+  font-family: var(--cn);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 .poem-small {
   font-family: 'Oswald', 'Noto Sans SC Variable', sans-serif;

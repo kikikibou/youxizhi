@@ -105,7 +105,7 @@ export function renderPages(pages, el) {
     <section class="page" data-page="${p.id}" data-side="${p.side || 'right'}"${p.poemTone ? ` data-poem="${p.poemTone}"` : ''} aria-label="${esc(p.nav)}">
       <div class="poem">
         <div class="poem-eyebrow reveal" style="--d:1">${esc(p.eyebrow)}</div>
-        <div class="poem-lines reveal" style="--d:2">${p.poem.map(esc).join('<br>')}</div>
+        <div class="poem-lines reveal" style="--d:2" lang="${lang(p.poem.join(''))}">${p.poem.map((l) => `<span>${esc(l)}</span>`).join('')}</div>
         <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
       </div>
       <div class="panel">

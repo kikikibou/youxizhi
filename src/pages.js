@@ -42,10 +42,10 @@ export const PAGES = [
     scene: {
       view: { pos: [-6, 1.5, 28], target: [6, 15.5, 0], fov: 58, roll: 0.03 },
       lamp: { p: [6.5, 13], h: 20 },
-      // The site's name: 游戏之纸西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
-      // (游·戏·之 | 纸·西·柚 reads the same both ways, like the domain yxzzxy.com)
+      // The site's name: 游戏之致西柚 · Jeu de pamplemousse (layout 'name', see buildCluster).
+      // (游·戏·之 | 致·西·柚 reads the same both ways, like the domain yxzzxy.com)
       // portrait: where it moves (and how much it shrinks) on a narrow, upright screen
-      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之纸西柚', cnSize: 0.6, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
+      cluster: { p: [-1.8, 11.3, 11.4], portrait: { p: [0.4, 12.9, 11.4], scale: 0.74 }, r: [0.08, -0.06, 0], size: 3.4, layout: 'name', title: 'PAMPLEMOUSSE', cn: '游戏之致西柚', cnSize: 0.6, cnShift: 0.62, script: 'Jeu de', decor: 'Engage le jeu que je le gagne', caps: 'YXZZXY.COM', capsSize: 0.19, capsTracking: 0.14, capsTag: true },
       texts: [{ t: 'SI SEDES NON IS', f: 'display', s: 1.95, p: [-8.6, 7.0, -0.85], c: 'sign' }],
       // Round the lamp post and back, through its beam, in the sky between the
       // poem and the content panel (the far end of the loop is off the picture).
@@ -114,9 +114,9 @@ export const PAGES = [
       texts: [{ t: 'CAVE CANEM', f: 'display', s: 0.6, p: [-13, 4.9, -1.33], c: 'sign' }],
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
-    eyebrow: 'DEBATE',
-    poem: ['Every motion is a door', 'left half open on purpose.', 'Walk through it twice.'],
-    poemSmall: '立场是门 · 论证是钥匙',
+    eyebrow: 'POI',
+    poem: ['Silence is a golden hammer.', 'Speech is a silver bullet.', 'One sees nails. One takes aim.'],
+    poemSmall: '沉默是马斯洛的金槌，雄辩是欧立希的银弹',
     label: {
       title: '辩论工具箱',
       mark: 'Toolbox',
@@ -130,9 +130,9 @@ export const PAGES = [
       { no: '04', title: '辩题库', en: 'Motion Bank', desc: '按议题分类的辩题', ready: false },
     ],
     footer: {
-      left: { title: 'STRUCTURE', stars: 4, items: [['Definition', '30%'], ['Burden of Proof', '30%'], ['Clash', '40%']] },
-      center: { script: 'Rebuttal', lines: ['The strongest case is the one that survives', 'its most generous opponent'] },
-      right: { title: 'INSPECTION PANEL', badge: 'THE PODIUM', items: [['CONSTRUCTIVE', '3:30'], ['CROSS-EXAMINATION', '1:30'], ['FREE DEBATE', '4:00']] },
+      left: { title: 'INGREDIENTS', stars: 4, items: [['Straw', '0 g'], ['Steel', '100%'], ['Red Herring', 'trace']] },
+      center: { script: 'Au contraire', lines: ['Positions may shift during cross-examination.', 'This is not a defect.'] },
+      right: { title: 'ADJUDICATION', badge: 'THE PODIUM', items: [['BURDEN OF PROOF', 'theirs'], ['SIDE', 'drawn by lot'], ['BEST BEFORE', 'rebuttal']] },
     },
   },
   {
@@ -170,9 +170,11 @@ export const PAGES = [
       texts: [{ t: 'PEDO MELLON A MINNO', f: 'display', s: 0.78, p: [-4.4, 3.2, 1.86], c: 'sign' }],
       trees: [[-22, 7, 1.1], [44, 6, 1.0]],
     },
-    eyebrow: 'QUIZ',
-    poem: ['A good puzzle is a locked room', 'whose key was in your pocket', 'the whole time.'],
-    poemSmall: '答案只有一个 · 门有很多扇',
+    // (eyebrow and poem together hold each of the 26 letters exactly twice:
+    // not a letter of them may change; the small line reads the same backwards)
+    eyebrow: 'Q',
+    poem: ['Sphinx vs. DJ Jack', 'Q: Why fix my dumb black TV?', 'Wrong puzzle. Forget.'],
+    poemSmall: '数字算盘，盘算字数',
     label: {
       title: '谜题研究所',
       mark: 'Enigma',
@@ -186,9 +188,9 @@ export const PAGES = [
       { no: '04', title: '横向思维', en: 'Lateral', desc: '换个角度就有答案', ready: false },
     ],
     footer: {
-      left: { title: 'DIFFICULTY', stars: 5, items: [['Obvious', '15%'], ['Satisfying', '60%'], ['Sleepless', '25%']] },
-      center: { script: 'Insight', lines: ['Every locked room is only a question', 'asked in the wrong order'] },
-      right: { title: 'INSPECTION PANEL', badge: 'THE LABORATORY', items: [['DEDUCTION', '30%'], ['ARITHMETIC', '25%'], ['LEAP OF FAITH', '20%']] },
+      left: { title: 'INGREDIENTS', stars: 5, items: [['Drunk Bird', '34%'], ['Goats', '⅔'], ['Camels', '17 + 1'], ['Pigeons', 'n + 1']] },
+      center: { script: 'Esprit d’escalier', lines: ['Answers tend to arrive on the stairs,', 'shortly after you close the tab.'] },
+      right: { title: 'PEER REVIEW', badge: 'THE LABORATORY', items: [['INSPECTED BY', 'a Cretan'], ['CLASSIFICATION', 'Berry, capital B'], ['SHIPPED', 'halfway, then halfway again']] },
     },
   },
   {
@@ -238,9 +240,20 @@ export const PAGES = [
       ribbon: null,
       trees: [[-44, 6, 1.1], [32, 8, 1.0]],
     },
-    eyebrow: 'GAMES',
-    poem: ['Play is the oldest laboratory.', 'Nobody told the children', 'they were doing research.'],
-    poemSmall: '游戏是最古老的实验室',
+    // (an autogram: the sentence counts its own strokes, 93 characters and
+    // 611 strokes in all; no character may change, only where the lines break.
+    // Chinese poems are set in their own type, see .poem-lines[lang='zh'])
+    eyebrow: 'AUTOGRAM',
+    poem: [
+      '叶小古说：此记录应包含',
+      '一百七十五横、一百零八竖、一百零一撇、九十二点，',
+      '二十八捺、二十六横折、十七竖钩、',
+      '十六提、十一横折钩、十横撇，',
+      '六个竖弯钩、六个撇折、六个竖提，',
+      '三个竖折折钩、三个横钩、',
+      '两个横折提、一个横折弯钩和零个竖弯。',
+    ],
+    poemSmall: 'Anticlockwise.',
     label: {
       title: '网页游乐场',
       mark: 'Arcade',
@@ -254,9 +267,9 @@ export const PAGES = [
       { no: '04', title: '更多', en: 'More', desc: '欢迎来提建议', ready: false },
     ],
     footer: {
-      left: { title: 'GAMEPLAY', stars: 4, items: [['Thinking', '50%'], ['Trying Again', '30%'], ['One More Round', '20%']] },
-      center: { script: 'Playtime', lines: ['A game is a problem that decided', 'to be kind to you'] },
-      right: { title: 'INSPECTION PANEL', badge: 'THE ARCADE', items: [['SOCIAL WARMTH', '30%'], ['ESSENTIAL COOLNESS', '25%'], ['DIAGNOSTIC RECTANGLE', '20%']] },
+      left: { title: 'INGREDIENTS', stars: 4, items: [['Agôn', '1 v 1'], ['Alea', '2d6'], ['Mimicry', 'Lv. 1'], ['Ilinx', '720°']] },
+      center: { script: 'Encore une partie', lines: ['Serving size: one more turn.', 'Servings per night: not yet determined.'] },
+      right: { title: 'MAY CONTAIN', badge: 'THE ARCADE', items: [['Cake', 'a lie'], ['Mushrooms', '1UP'], ['Elixirs', '99, unused']] },
     },
   },
   {
@@ -264,7 +277,7 @@ export const PAGES = [
     side: 'right', // which side the content panel sits on (away from the beam)
     no: '04',
     nav: '其他',
-    glyph: '？',
+    glyph: '?', // (a mark: set in Anton, see .is-mark in style.css)
     en: 'ABOUT',
     building: 'about',
     scene: {
@@ -293,9 +306,9 @@ export const PAGES = [
       ribbon: { p: [-40, 15, -58], r: [0, 0.5, 0.15], length: 22, width: 1.1, seed: 8.8, tip: 0.07 },
       trees: [],
     },
-    eyebrow: 'ABOUT',
-    poem: ['I build small rooms for thinking', 'and leave the lights on', 'for whoever walks by.'],
-    poemSmall: '欢迎路过 · 欢迎留下',
+    eyebrow: 'STRENGTH: WEAK',
+    poem: ['Sorry, Master: your safe word needs', '12+ characters, upper and lower case,', 'a number, and a special symbol.'],
+    poemSmall: '甜的 · 从强者出来',
     label: {
       title: '关于这条街',
       mark: 'Signal',
@@ -308,9 +321,9 @@ export const PAGES = [
       { no: '03', title: '更新日志', en: 'Changelog', desc: '这条街每一次扩建', ready: false },
     ],
     footer: {
-      left: { title: 'INGREDIENTS', stars: 5, items: [['Harmonious Conflict', '15%'], ['Suspended Existence', '10%'], ['Late Nights', '75%']] },
-      center: { script: 'Signature', lines: ['Built slowly, one building at a time,', 'under a single street lamp'] },
-      right: { title: 'INSPECTION PANEL', badge: 'THE SELF PORTRAIT', items: [['SOCIAL WARMTH', '30%'], ['ESSENTIAL COOLNESS', '25%'], ['DIAGNOSTIC RECTANGLE', '20%']] },
+      left: { title: 'INGREDIENTS', stars: 5, items: [['Honey', '1 lion'], ['Wine', '0%'], ['Locks', '7'], ['Rope', 'new']] },
+      center: { script: 'Mon cœur s’ouvre', lines: ['Keep away from razors.', 'Strength sold separately.'] },
+      right: { title: 'SECURITY CHECK', badge: 'THE SELF PORTRAIT', items: [['INSPECTED BY', 'someone in Sorek'], ['CLASSIFICATION', '████'], ['SHIPPED', 'under another name']] },
     },
   },
 ];
