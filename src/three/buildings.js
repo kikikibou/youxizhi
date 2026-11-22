@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const THIN = new Set(['pane', 'blind', 'beacon']);
+const THIN = new Set(['pane', 'paneLit', 'frosted', 'blind', 'beacon']);
 
 /** A small seeded random generator (mulberry32): the same building on every visit. */
 function seeded(seed) {
@@ -167,7 +167,7 @@ function home(mats) {
   // Upper cantilever volume.
   b.box('white', [-30, 9.7, -14], [4, 21.5, 4.6]);
   b.box('strip', [-29, 9.58, 0.6], [3, 9.7, 4.2]);
-  b.winZ('glass', -28, -11, 13.0, 14.6, 4.6);
+  // (no ribbon window behind the title any more: the left of the picture read heavy)
   b.winZ('glassDark', -28, -17, 17.0, 18.6, 4.6);
   // The side that faces the lamp: two ribbons behind a row of vertical fins.
   b.winX('glass', -11, 2.5, 13.0, 14.6, 4);
@@ -525,7 +525,9 @@ function debate(mats) {
 export const CUBE = { x0: -10, y0: 4, z: 0, cell: 5, n: 4 };
 
 function puzzle(mats) {
-  const b = new Builder(mats);
+  // ('pane': a lit window laid on the glass; 'frosted': a soft unlit pane, see THIN)
+  const b = new Builder({ ...mats, pane: mats.glass, frosted: mats.skyWin, paneLit: mats.skyWinLit });
+  const R = seeded(20261123);
   const { x0, y0, z: Z, cell, n } = CUBE;
   const x1 = x0 + cell * n;
   const top = y0 + cell * n;
@@ -579,9 +581,21 @@ function puzzle(mats) {
       const cx = (mx0 + mx1) / 2;
       const cy = (my0 + my1) / 2;
       const s = style[r][c];
-      if (s === 'square') b.winZ('glass', cx - 1.4, cx + 1.4, cy - 1.4, cy + 1.4, front);
+      // (frames stand on the glass: square windows get a cross, bands
+      // mullions; most are lit at night, some not, some have a blind down)
+      const f = front + 0.06;
+      const lit = R() < 0.7 ? 'glass' : 'glassDark';
+      if (s === 'square') {
+        b.winZ(lit, cx - 1.4, cx + 1.4, cy - 1.4, cy + 1.4, front);
+        if (lit === 'glass' && R() < 0.4) b.box('blind', [cx - 1.36, cy + 1.36 - (0.6 + R() * 1.2), f], [cx + 1.36, cy + 1.36, f + 0.02]);
+        b.box('white', [cx - 1.4, cy - 0.05, f], [cx + 1.4, cy + 0.05, f + 0.06]);
+        b.box('white', [cx - 0.05, cy - 1.4, f], [cx + 0.05, cy + 1.4, f + 0.06]);
+      }
       if (s === 'slots') for (const ox of [-1.5, 0, 1.5]) b.winZ('glassDark', cx + ox - 0.3, cx + ox + 0.3, cy - 1.65, cy + 1.65, front);
-      if (s === 'band') b.winZ('glass', mx0 + 0.6, mx1 - 0.6, cy - 0.5, cy + 0.5, front);
+      if (s === 'band') {
+        b.winZ(lit, mx0 + 0.6, mx1 - 0.6, cy - 0.5, cy + 0.5, front);
+        for (let x = mx0 + 1.55; x < mx1 - 0.9; x += 0.95) b.box('white', [x - 0.05, cy - 0.5, f], [x + 0.05, cy + 0.5, f + 0.06]);
+      }
       if (s === 'orange') b.winZ('orange', mx0 + 0.45, mx1 - 0.45, my0 + 0.45, my1 - 0.45, front);
     }
   }
@@ -594,8 +608,14 @@ function puzzle(mats) {
     // the cube's front face and flickered along that edge)
     const zc = Z - 3 - k * cell;
     const yc = y0 + r * cell + cell / 2;
-    b.winX(k % 2 === r % 2 ? 'glass' : 'glassDark', zc - 1.1, zc + 1.1, yc - 1.1, yc + 1.1, x1);
+    const lit = k % 2 === r % 2;
+    b.winX(lit ? 'glass' : 'glassDark', zc - 1.1, zc + 1.1, yc - 1.1, yc + 1.1, x1);
+    if (lit && R() < 0.4) b.box('blind', [x1 + 0.06, yc + 1.06 - (0.5 + R() * 1.0), zc - 1.06], [x1 + 0.08, yc + 1.06, zc + 1.06]);
+    b.box('white', [x1 + 0.06, yc - 0.05, zc - 1.1], [x1 + 0.12, yc + 0.05, zc + 1.1]);
+    b.box('white', [x1 + 0.06, yc - 1.1, zc - 0.05], [x1 + 0.12, yc + 1.1, zc + 0.05]);
   }
+  // A railing along the roof's front edge (round the gap the missing module left).
+  b.railingX('metal', x0 + 0.2, hole.x - 0.2, Z - 1.6, top + 0.4, 1.0, 1.5);
 
   // Zigzag stair up the right side: three flights with landings, then a
   // last flight across the roof that rises into the air and stops.
@@ -633,9 +653,27 @@ function puzzle(mats) {
   const wz = -6;
   b.box('white', [wx0, 0, -20], [wx1, 11, wz]);
   b.winZ('warm', wx0 + 1, wx1 - 1, 0.4, 3.2, wz);
+  // A shop front on it: mullions, a transom, double doors in the middle.
+  const sf = wz + 0.09;
+  b.mullionsZ('metal', wx0 + 1, wx1 - 1, 0.4, 3.2, sf, 1.8, 0.05);
+  b.box('metal', [wx0 + 1, 2.35, sf - 0.05], [wx1 - 1, 2.45, sf + 0.05]);
+  b.box('glassDark', [wx0 + 8.2, 0, sf - 0.03], [wx0 + 11.8, 2.35, sf + 0.03]);
+  for (const x of [wx0 + 9.75, wx0 + 10.25]) b.box('metal', [x - 0.03, 0.95, sf + 0.03], [x + 0.03, 1.75, sf + 0.1]);
   b.box('white', [wx0, 3.6, wz], [wx1, 4.0, wz + 1.2]);
   b.box('strip', [wx0 + 0.5, 3.52, wz + 0.2], [wx1 - 0.5, 3.6, wz + 1.1]);
-  // Maze walls on a 2 m grid between y 4.6 and 10.4.
+  // Maze walls on a 2 m grid between y 4.6 and 10.4, framing windows: the
+  // cells are panes, most a soft frosted grey, some lit at night, a few
+  // with a blind down.
+  for (let i = 0; i < 10; i++) {
+    for (let j = 0; j < 3; j++) {
+      const px = wx0 + 0.5 + i * 1.9;
+      const py = 10.2 - (j + 1) * 2;
+      const u = R();
+      const key = u < 0.3 ? 'paneLit' : u < 0.4 ? 'blind' : 'frosted';
+      b.box(key, [px + 0.05, py + 0.2, wz], [px + 1.85, py + 1.95, wz + 0.04]);
+    }
+  }
+  b.railingX('metal', wx0 + 0.3, wx1 - 0.3, wz - 0.5, 11.4, 1.0, 1.5);
   const maze = [
     'H.H.HHH.HH',
     '.V..V...V.',
@@ -752,7 +790,8 @@ function puzzle(mats) {
 /* Ferris wheel turning beside it, and a tower of stacked toy blocks.        */
 /* ------------------------------------------------------------------------ */
 function games(mats) {
-  const b = new Builder(mats);
+  const b = new Builder({ ...mats, pane: mats.glass });
+  const rand = seeded(20261124);
 
   /* --- The drum, with a spiral ramp (a slide) wrapped round it --- */
   const cz = -14;
@@ -762,14 +801,31 @@ function games(mats) {
   for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) b.cyl('white', Math.sin(a) * (R - 0.5), cz + Math.cos(a) * (R - 0.5), 0, 4, 0.22, 10);
   const fh = 3.6;
   const floors = 3;
+  // The glass bands: window frames all round, some windows lit (warm at
+  // night), some with a blind down. (Angles as CylinderGeometry's: from +z.)
+  const rg = R - 0.55;
+  const nW = Math.round((Math.PI * 2 * rg) / 1.6);
   for (let i = 0; i < floors; i++) {
     const y = 4 + i * fh;
     b.cyl('white', 0, cz, y, y + 1.15, R, 72);
-    b.cyl(i === 1 ? 'glassDark' : 'glass', 0, cz, y + 1.15, y + fh, R - 0.55, 72);
+    b.cyl('glassDark', 0, cz, y + 1.15, y + fh, rg, 72);
+    for (let k = 0; k < nW; k++) {
+      const a = (k / nW) * Math.PI * 2;
+      b.cyl('white', Math.sin(a) * (rg + 0.08), cz + Math.cos(a) * (rg + 0.08), y + 1.15, y + fh, 0.07, 6);
+      if (rand() > 0.45) continue;
+      const a0 = a + 0.012;
+      const da = (Math.PI * 2) / nW - 0.024;
+      const pane = (key, r, y0, y1) => b.geo(key, new THREE.CylinderGeometry(r, r, y1 - y0, 6, 1, true, a0, da), 0, (y0 + y1) / 2, cz);
+      pane('pane', rg + 0.03, y + 1.2, y + fh - 0.05);
+      if (rand() < 0.4) pane('blind', rg + 0.05, y + fh - 0.06 - (0.4 + rand() * 1.1), y + fh - 0.06);
+    }
   }
   const top = 4 + floors * fh;
   b.cyl('white', 0, cz, top, top + 2.2, R, 72);
   b.cyl('whiteShade', 0, cz, top + 2.2, top + 2.5, R + 0.15, 72);
+  // A railing round the roof's edge.
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 30) b.cyl('metal', Math.sin(a) * (R - 0.4), cz + Math.cos(a) * (R - 0.4), top + 2.5, top + 3.5, 0.04, 6);
+  b.geo('metal', new THREE.TorusGeometry(R - 0.4, 0.06, 6, 96).rotateX(Math.PI / 2), 0, top + 3.5, cz);
 
   // Spiral ramp: 1.4 turns from the ground to the roof, with an orange
   // parapet on its outer edge (it reads as a slide).
@@ -841,12 +897,20 @@ function games(mats) {
     g.translate(T.x + dx, ty + h / 2, T.z + dz);
     b.geo(key, g);
     if (key === 'white') {
-      // a row of windows on the block's front
+      // a row of windows on the block's front, with white mullions
       const wg = new THREE.BoxGeometry(w * 0.7, h * 0.28, 0.12);
       wg.translate(0, 0, d / 2 + 0.02);
       wg.rotateY(yaw);
       wg.translate(T.x + dx, ty + h * 0.55, T.z + dz);
       b.geo('glassDark', wg);
+      const nm = Math.round((w * 0.7) / 1.3);
+      for (let k = 1; k < nm; k++) {
+        const mg = new THREE.BoxGeometry(0.12, h * 0.28, 0.1);
+        mg.translate(-w * 0.35 + (k * w * 0.7) / nm, 0, d / 2 + 0.11);
+        mg.rotateY(yaw);
+        mg.translate(T.x + dx, ty + h * 0.55, T.z + dz);
+        b.geo('white', mg);
+      }
     }
     ty += h;
   }
@@ -949,6 +1013,17 @@ function about(mats) {
   b.railingZ('metal', LZ + 6, Q - 0.6, LX + 3.3, 1.0, 1.0, 2.0);
   for (let z = Q - 4; z > LZ + 6; z -= 5) for (const x of [LX - 3.2, LX + 3.2]) b.box('concrete', [x - 0.3, -2, z - 0.3], [x + 0.3, 0.05, z + 0.3]);
   for (let z = Q - 6; z > LZ + 8; z -= 9) b.bollard(LX + 2.6, z);
+  // Two lamps along the left railing, out towards the island (nearer ones
+  // stood cut off at the picture's edge), clear of the planters and the
+  // lifebuoy (details.js).
+  for (const z of [-51, -59.4]) {
+    const x = LX - 2.9;
+    b.box('metal', [x - 0.14, 1.0, z - 0.14], [x + 0.14, 1.3, z + 0.14]);
+    b.cyl('metal', x, z, 1.3, 5.3, 0.06, 8);
+    b.box('metal', [x - 0.03, 5.15, z - 0.03], [x + 0.5, 5.21, z + 0.03]);
+    b.cyl('white', x + 0.5, z, 5.0, 5.18, 0.3, 16);
+    b.geo('bulb', new THREE.SphereGeometry(0.17, 12, 8), x + 0.5, 4.95, z);
+  }
 
   // Rock island with a round platform.
   b.cyl('concrete', LX, LZ, 0, 1.6, 12, 48);
@@ -970,6 +1045,9 @@ function about(mats) {
   for (const y of [5.5, 14.5, 23]) {
     const r = radiusAt(y);
     b.box('glassDark', [LX - 0.45, y, LZ + r - 0.25], [LX + 0.45, y + 1.3, LZ + r + 0.08]);
+    // (a sill below and a hood above, so each reads as a window in a thick wall)
+    b.box('white', [LX - 0.62, y - 0.16, LZ + r - 0.2], [LX + 0.62, y - 0.02, LZ + r + 0.26]);
+    b.box('white', [LX - 0.62, y + 1.32, LZ + r - 0.2], [LX + 0.62, y + 1.48, LZ + r + 0.2]);
   }
   // Gallery with railing.
   b.cyl('white', LX, LZ, y1, y1 + 0.5, 3.7, 40);
