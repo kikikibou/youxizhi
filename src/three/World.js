@@ -93,6 +93,7 @@ export class World {
     this.night = 0;
     this.nightTarget = 0;
     this.time = 0;
+    this.overlays = []; // { render(renderer, night) } drawn over each finished frame
     this.pointer = new THREE.Vector2();
     this.parallax = new THREE.Vector2();
     this.active = 0;
@@ -513,6 +514,8 @@ export class World {
     u.toneMappingExposure.value = r.toneMappingExposure;
     r.setRenderTarget(null);
     this.final.render(r);
+    // Drawn over the finished frame, e.g. the poems' letters (poemink.js).
+    for (const o of this.overlays) o.render(r, this.night);
   }
 
   async buildTypography() {

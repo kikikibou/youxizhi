@@ -4,6 +4,7 @@ import { renderNav, renderPages, renderFooter, Drawer } from './ui.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
+import { PoemInk } from './poemink.js';
 
 const TOOLS = { timer: mountTimer, daily: mountDaily };
 const ids = PAGES.map((p) => p.id);
@@ -20,6 +21,10 @@ renderNav(PAGES, nav);
 renderPages(PAGES, stage);
 
 const world = new World($('#gl'), PAGES);
+// The poems' letters drawn again over the 3D frame, so they change colour
+// inside the reveal like the 3D titles (poemink.js).
+const poemInk = new PoemInk([...stage.querySelectorAll('.page')]);
+world.overlays.push(poemInk);
 
 // Debug mode ("back office"): open the site once with ?debug (?debug=0 turns
 // it off again); remembered on this device. Shows the performance panel and
@@ -57,6 +62,7 @@ function applyPalette(id, persist) {
   const p = paletteById(id);
   paletteStyle.textContent = paletteCss(p);
   world.setPalette(p);
+  poemInk.setInk(p.ink);
   palEl.querySelector('.pal-dots').innerHTML = swatches(p);
   palEl.querySelector('.pal-name').textContent = p.name;
   palMenu.querySelectorAll('.pal-item').forEach((b) => b.classList.toggle('is-on', b.dataset.pal === p.id));

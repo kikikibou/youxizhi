@@ -587,8 +587,8 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   letter-spacing: 0.34em;
 }
 /* the rule before the eyebrow draws out leftwards from the word */
-.poem-eyebrow::before {
-  content: '';
+.poem-rule {
+  flex: none;
   width: 56px;
   height: 1.5px;
   background: currentColor;
@@ -596,9 +596,21 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   transform-origin: right center;
   transition: transform 0.4s var(--ease);
 }
-.page.is-active.is-in .poem-eyebrow::before {
+.page.is-active.is-in .poem-rule {
   transform: none;
   transition: transform 0.9s var(--ease) 0.3s;
+}
+/* The poem's letters and rule are drawn over the 3D frame instead, where
+   they can change colour inside the reveal (poemink.js); here they keep their
+   places, unseen. (Not the opening quote mark, nor a blank to fill in.) */
+html.poem-ink .poem-eyebrow-text,
+html.poem-ink .poem-lines,
+html.poem-ink .poem-small {
+  color: transparent;
+  text-shadow: none;
+}
+html.poem-ink .poem-rule {
+  background: transparent;
 }
 
 /* An eyebrow that is a blank to fill in (pages.js eyebrow: { blank }, wired

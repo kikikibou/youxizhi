@@ -128,8 +128,9 @@ export function renderPages(pages, el) {
  * letter, "?" until it is typed; the right one lights up (.blank in style.css).
  */
 function eyebrowHtml(e) {
-  if (typeof e === 'string') return esc(e);
-  return `<label class="blank">
+  const rule = '<i class="poem-rule"></i>';
+  if (typeof e === 'string') return `${rule}<span class="poem-eyebrow-text">${esc(e)}</span>`;
+  return `${rule}<label class="blank">
       <input class="blank-input" maxlength="1" placeholder="?" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="填一个字母" data-answer="${esc(e.blank)}">
       <span class="blank-letter" aria-hidden="true">${esc(e.blank)}</span>
     </label>`;
