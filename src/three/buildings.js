@@ -1,6 +1,20 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+const THIN = new Set(['pane', 'blind', 'beacon']);
+
+/** A small seeded random generator (mulberry32): the same building on every visit. */
+function seeded(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /**
  * Collects primitive geometries per material key and merges them into a
  * handful of meshes, so each building costs only a few draw calls.
@@ -114,7 +128,9 @@ export class Builder {
       new Set([...list, ...geos]).forEach((g) => g.dispose());
       const mesh = new THREE.Mesh(merged, this.mats[key]);
       const lightish = key === 'strip';
-      mesh.castShadow = !lightish;
+      // (thin pieces laid on a face, like lit panes and blinds, would only
+      // speckle the face behind them with their shadow)
+      mesh.castShadow = !lightish && !THIN.has(key);
       mesh.receiveShadow = !lightish;
       group.add(mesh);
     }
@@ -215,30 +231,82 @@ function home(mats) {
 export const FORUM = { gap: [1, 23.05, -3] };
 
 function debate(mats) {
-  const b = new Builder(mats);
+  // ('pane': a lit window laid on the glass, see THIN)
+  const b = new Builder({ ...mats, pane: mats.glass });
+  const R = seeded(20261122);
 
   /* --- Affirmative tower (left): tall, glass behind dense vertical fins --- */
   const A = { x0: -20, x1: -6, z0: -15, z1: -3, top: 38 };
-  // Lobby: warm glazing under a deep slab with a light strip.
-  b.box('warm', [A.x0 + 0.5, 0, A.z0 + 1], [A.x1 - 0.5, 4.6, A.z1 - 0.6]);
+  // Lobby: a glass front (mullions, a transom, double doors) before a warm
+  // interior set back behind it, under a deep slab with a light strip.
+  const zg = A.z1 - 0.6; // the glazing line
+  b.box('warm', [A.x0 + 0.4, 0, A.z0 + 1], [A.x1 - 0.4, 4.6, zg - 1.3]);
+  for (const [x0, x1] of [[A.x0, A.x0 + 0.6], [A.x1 - 0.6, A.x1]]) b.box('white', [x0, 0, A.z0 + 1], [x1, 4.6, zg + 0.1]);
+  b.mullionsZ('metal', A.x0 + 0.6, A.x1 - 0.6, 0, 4.6, zg, 1.6, 0.06);
+  b.box('metal', [A.x0 + 0.6, 2.75, zg - 0.06], [A.x1 - 0.6, 2.85, zg + 0.06]);
+  // (under CAVE CANEM: darker than the lit lobby, with push bars)
+  b.box('glassDark', [-14.6, 0, zg - 0.03], [-11.4, 2.75, zg + 0.03]);
+  for (const x of [-13.25, -12.75]) b.box('metal', [x - 0.03, 0.95, zg + 0.03], [x + 0.03, 1.75, zg + 0.1]);
   b.box('white', [A.x0, 4.6, A.z0], [A.x1, 5.2, A.z1 + 1.6]);
   b.box('strip', [A.x0 + 0.4, 4.52, A.z1 - 0.4], [A.x1 - 0.4, 4.6, A.z1 + 1.4]);
   for (const x of [A.x0 + 1, A.x1 - 1]) b.box('white', [x - 0.3, 0, A.z1 - 0.3], [x + 0.3, 4.6, A.z1 + 0.3]);
-  // Floors: glass with slim slab edges.
+  // Floors: glass with slim slab edges and a sill bar a metre up; behind
+  // the fins, some windows lit (warm at night), some with blinds down.
   const fhA = 3.6;
-  for (let y = 5.2, i = 0; y < A.top - 3; y += fhA, i++) {
+  const finsX = [];
+  for (let x = A.x0 + 0.6; x <= A.x1 - 0.5; x += 1.3) finsX.push(x);
+  const finsZ = [];
+  for (let z = A.z0 + 0.8; z <= A.z1 - 0.5; z += 1.3) finsZ.push(z);
+  const bays = (fins, end) => [...fins.slice(0, -1).map((f, k) => [f + 0.11, fins[k + 1] - 0.11]), [fins[fins.length - 1] + 0.11, end]];
+  const zL = finsZ[finsZ.length - 1] - 0.65; // the sky bridge arm's front (see below)
+  for (let y = 5.2; y < A.top - 3; y += fhA) {
+    const yt = y + fhA - 0.35;
+    b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, A.z1 - 0.3]);
+    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, A.z1]);
+    b.box('white', [A.x0 + 0.3, y + 0.95, A.z1 - 0.3], [A.x1 - 0.3, y + 1.05, A.z1 - 0.2]);
+    b.box('white', [A.x1 - 0.3, y + 0.95, A.z0 + 0.3], [A.x1 - 0.2, y + 1.05, A.z1 - 0.2]);
     // The top floors stay dark: the title is read against them, day and night.
-    const dark = y > A.top - 14 || i % 4 === 2;
-    b.box(dark ? 'glassDark' : 'glass', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, y + fhA - 0.35, A.z1 - 0.3]);
-    b.box('white', [A.x0, y + fhA - 0.35, A.z0], [A.x1, y + fhA, A.z1]);
+    if (y > A.top - 14) continue;
+    const room = (a0, a1, face) => {
+      if (R() > 0.48) return;
+      const drop = R() < 0.4 ? yt - 0.06 - (0.5 + R() * 1.6) : null; // a blind's lower edge
+      if (face === 'front') {
+        b.box('pane', [a0, y + 0.05, A.z1 - 0.3], [a1, yt - 0.05, A.z1 - 0.27]);
+        if (drop) b.box('blind', [a0 + 0.04, drop, A.z1 - 0.27], [a1 - 0.04, yt - 0.06, A.z1 - 0.25]);
+      } else {
+        b.box('pane', [A.x1 - 0.3, y + 0.05, a0], [A.x1 - 0.27, yt - 0.05, a1]);
+        if (drop) b.box('blind', [A.x1 - 0.27, drop, a0 + 0.04], [A.x1 - 0.25, yt - 0.06, a1 - 0.04]);
+      }
+    };
+    for (const [a0, a1] of bays(finsX, A.x1 - 0.3)) room(a0, a1, 'front');
+    // (not where the sky bridge's arm runs into the side, at 21.4..24.7)
+    const armHere = yt > 21.4 && y < 24.7;
+    for (const [a0, a1] of bays(finsZ, A.z1 - 0.3)) if (a1 - a0 > 0.6 && !(armHere && a1 > zL - 6.1 && a0 < zL + 0.1)) room(a0, a1, 'side');
   }
   // Vertical fins on the front and on the face looking at the other tower.
-  for (let x = A.x0 + 0.6; x <= A.x1 - 0.5; x += 1.3) b.box('white', [x - 0.11, 5.2, A.z1 - 0.3], [x + 0.11, A.top - 2, A.z1 + 0.55]);
-  for (let z = A.z0 + 0.8; z <= A.z1 - 0.5; z += 1.3) b.box('white', [A.x1 - 0.3, 5.2, z - 0.11], [A.x1 + 0.55, A.top - 2, z + 0.11]);
+  for (const x of finsX) b.box('white', [x - 0.11, 5.2, A.z1 - 0.3], [x + 0.11, A.top - 2, A.z1 + 0.55]);
+  for (const z of finsZ) b.box('white', [A.x1 - 0.3, 5.2, z - 0.11], [A.x1 + 0.55, A.top - 2, z + 0.11]);
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
   b.box('whiteShade', [-16, A.top, -12], [-10, A.top + 2.2, -7]);
+  // Roof: a railing round the front corner, a water tank on legs, plant
+  // boxes, and a mast with a red warning light (blinks at night). (Seen from
+  // the plaza, steeply up: only what stands near the front edge shows over
+  // it; on the left, clear of the title.)
+  b.railingX('metal', A.x0 + 0.4, A.x1 - 0.4, A.z1 + 0.1, A.top, 1.0, 1.5);
+  b.railingZ('metal', A.z0 + 0.4, A.z1 + 0.1, A.x1 - 0.4, A.top, 1.0, 1.5);
+  const [tx, tz, legs] = [-15.6, -5.8, 2.2];
+  for (const [dx, dz] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) b.box('metal', [tx + dx - 0.07, A.top, tz + dz - 0.07], [tx + dx + 0.07, A.top + legs, tz + dz + 0.07]);
+  b.box('metal', [tx - 1.05, A.top + legs - 0.05, tz - 1.05], [tx + 1.05, A.top + legs + 0.05, tz + 1.05]);
+  b.cyl('whiteShade', tx, tz, A.top + legs + 0.05, A.top + legs + 2.3, 1.0, 20);
+  b.taper('whiteShade', tx, tz, A.top + legs + 2.3, A.top + legs + 2.8, 1.0, 0.12, 20);
+  for (const x of [-11.4, -9.8]) b.box('concrete', [x - 0.6, A.top, -5.4], [x + 0.6, A.top + 0.9, -4.4]);
+  const [mx, mz] = [-18.9, -3.9];
+  b.cyl('metal', mx, mz, A.top, A.top + 9, 0.09, 8);
+  b.box('metal', [mx - 0.7, A.top + 6.2, mz - 0.03], [mx + 0.7, A.top + 6.27, mz + 0.03]);
+  b.box('metal', [mx - 0.45, A.top + 7.6, mz - 0.03], [mx + 0.45, A.top + 7.67, mz + 0.03]);
+  b.cyl('beacon', mx, mz, A.top + 9, A.top + 9.35, 0.17, 10);
 
   /* --- Negative tower (right): lower, horizontal bands, rounded corner --- */
   // (Its front stands 2 m proud of the bridge arms, so the right arm runs
@@ -252,9 +320,77 @@ function debate(mats) {
     b.box(key, [B.x0 - e, y0, B.z0], [cx, y1, cz]);
     b.cyl(key, cx, cz, y0, y1, B.r + e, 40);
   };
-  footprint('warm', 0, 4.4, -0.6);
+  // The footprint's outline towards the gap and the plaza, grown by e: up the
+  // left face from the back, round the corner, along the front. at(s): the
+  // point s metres along it, the way it runs (dx, dz) and which part it's on.
+  const outline = (e) => {
+    const rad = B.r + e;
+    const L1 = cz - (B.z0 + 0.6);
+    const L2 = (rad * Math.PI) / 2;
+    const L3 = B.x1 + e - 0.6 - cx;
+    const at = (s) => {
+      if (s <= L1) return { x: B.x0 - e, z: B.z0 + 0.6 + s, dx: 0, dz: 1, part: 0 };
+      if (s <= L1 + L2) {
+        const t = -Math.PI / 2 + (s - L1) / rad;
+        return { x: cx + rad * Math.sin(t), z: cz + rad * Math.cos(t), dx: Math.cos(t), dz: -Math.sin(t), part: 1, t };
+      }
+      return { x: cx + (s - L1 - L2), z: B.z1 + e, dx: 1, dz: 0, part: 2 };
+    };
+    // n points spaced evenly along it, each moved out by `out` (the outward normal is (-dz, dx))
+    const points = (n, out = 0) =>
+      Array.from({ length: n + 1 }, (_, k) => {
+        const p = at((k * (L1 + L2 + L3)) / n);
+        return { ...p, x: p.x - p.dz * out, z: p.z + p.dx * out };
+      });
+    return { L: L1 + L2 + L3, at, points, rad };
+  };
+  // A thin panel laid on the outline's face between two of its points (both
+  // on one part), `off` proud of it.
+  const lay = (key, o, p, q, y0, y1, off) => {
+    if (p.part === 0) b.box(key, [p.x - off, y0, p.z], [p.x, y1, q.z]);
+    else if (p.part === 2) b.box(key, [p.x, y0, p.z], [q.x, y1, p.z + off]);
+    else {
+      const rr = o.rad + off;
+      b.geo(key, new THREE.CylinderGeometry(rr, rr, y1 - y0, 8, 1, true, p.t, q.t - p.t), cx, (y0 + y1) / 2, cz);
+    }
+  };
+  // Lobby: glazing round the corner (mullions, a transom, double doors on
+  // the front) before a warm interior set back behind it.
+  footprint('warm', 0, 4.4, -1.9);
+  const shop = outline(-0.6);
+  const sp = shop.points(Math.round(shop.L / 1.6));
+  for (const p of sp) b.box('metal', [p.x - 0.06, 0, p.z - 0.06], [p.x + 0.06, 4.4, p.z + 0.06]);
+  sp.slice(1).forEach((p, k) => {
+    const q = sp[k];
+    b.boxRot('metal', [(p.x + q.x) / 2, 2.8, (p.z + q.z) / 2], [Math.hypot(p.x - q.x, p.z - q.z), 0.1, 0.12], [0, Math.atan2(-(p.z - q.z), p.x - q.x), 0]);
+  });
+  const fr = sp.map((p, k) => k).filter((k) => sp[k].part === 2 && sp[k - 1]?.part === 2 && sp[k + 1]?.part === 2);
+  const dm = fr[Math.floor(fr.length / 2)];
+  b.box('glassDark', [sp[dm - 1].x, 0, B.z1 - 0.63], [sp[dm + 1].x, 2.75, B.z1 - 0.57]);
+  for (const x of [sp[dm].x - 0.25, sp[dm].x + 0.25]) b.box('metal', [x - 0.03, 0.95, B.z1 - 0.57], [x + 0.03, 1.75, B.z1 - 0.5]);
+  b.box('white', [B.x0 + 0.5, 0, B.z0], [B.x0 + 2.0, 4.4, B.z0 + 0.6]); // (the recess closed at its ends)
+  b.box('white', [sp[sp.length - 1].x + 0.06, 0, B.z1 - 2.0], [B.x1 - 0.5, 4.4, B.z1 - 0.5]);
   footprint('white', 4.4, 5.3, 0.6); // canopy
   b.box('strip', [cx, 4.32, B.z1 - 0.2], [B.x1, 4.4, B.z1 + 0.5]);
+  // Window frames on the glazing, some windows lit, some with blinds down.
+  const glassLine = outline(-0.25);
+  const nW = Math.round(glassLine.L / 1.6);
+  const frames = glassLine.points(nW, 0.08);
+  const edges = glassLine.points(nW);
+  const windows = (y0, y1, lit) => {
+    for (const p of frames) b.box('white', [p.x - 0.06, y0, p.z - 0.06], [p.x + 0.06, y1, p.z + 0.06]);
+    if (!lit) return;
+    for (let k = 0; k < nW; k++) {
+      if (R() > 0.45) continue;
+      const drop = R() < 0.4 ? y1 - 0.06 - (0.4 + R() * 1.2) : null;
+      // (pulled in clear of the frames; a window across two parts is left dark)
+      const p = glassLine.at(((k + 0.06) * glassLine.L) / nW);
+      const q = glassLine.at(((k + 0.94) * glassLine.L) / nW);
+      if (p.part !== q.part || edges[k].part !== edges[k + 1].part) continue;
+      lay('pane', glassLine, p, q, y0 + 0.05, y1 - 0.05, 0.03);
+      if (drop) lay('blind', glassLine, p, q, drop, y1 - 0.06, 0.05);
+    }
+  };
   // Floors: glazing set back behind proud white bands, and at the sky
   // bridge's height a "bridge storey" flush with the bands that carries the
   // bridge's window ribbon round the tower, so the bridge arm runs into one
@@ -266,7 +402,8 @@ function debate(mats) {
   const gH = (by0 - 5.3 - 4 * 0.95) / 5; // five glazed floors and four bands below it
   let fy = 5.3;
   for (let i = 0; i < 5; i++) {
-    footprint(i % 3 === 1 ? 'glass' : 'glassDark', fy, fy + gH, -0.25);
+    footprint('glassDark', fy, fy + gH, -0.25);
+    windows(fy, fy + gH, true);
     fy += gH;
     if (i === 4) break;
     footprint('white', fy, fy + 0.95, 0.35);
@@ -275,8 +412,18 @@ function debate(mats) {
   footprint('white', by0, by1, 0.35);
   footprint('glass', FORUM.gap[1] - 1.55 + 0.75, by1 - 0.45, 0.39); // (level with the bridge's window, and as proud of it)
   footprint('glassDark', by1, B.top - 1.2, -0.25); // top floor
+  windows(by1, B.top - 1.2, false); // (frames only: the title is read against it)
   footprint('white', B.top - 1.2, B.top + 0.4, 0.35); // parapet
   b.box('whiteShade', [14, B.top + 0.4, -12], [19, B.top + 2.6, -7]);
+  // Roof: a railing along the front, a slatted pergola over a terrace at the
+  // round corner, an aerial on the stair hut.
+  const ry = B.top + 0.4;
+  b.railingX('metal', cx, B.x1 - 0.3, B.z1 - 0.3, ry, 1.0, 1.5);
+  const [px0, px1, pz0, pz1, ph] = [9.2, 13.6, -8.4, -2.6, 2.7];
+  for (const [x, z] of [[px0, pz0], [px1, pz0], [px0, pz1], [px1, pz1]]) b.box('white', [x - 0.12, ry, z - 0.12], [x + 0.12, ry + ph, z + 0.12]);
+  for (const z of [pz0, pz1]) b.box('white', [px0 - 0.3, ry + ph, z - 0.12], [px1 + 0.3, ry + ph + 0.25, z + 0.12]);
+  for (let x = px0; x <= px1 + 1e-3; x += 0.55) b.box('white', [x - 0.05, ry + ph + 0.25, pz0 - 0.4], [x + 0.05, ry + ph + 0.4, pz1 + 0.4]);
+  b.cyl('metal', 18.2, -11.2, B.top + 2.6, B.top + 6.4, 0.06, 6);
 
   /* --- Sky bridges: two arms that stop 2 m short of each other --- */
   const [gx, gy, gz] = FORUM.gap;
@@ -288,9 +435,7 @@ function debate(mats) {
   // half-way between the first two side fins) and starts inside the glass, so
   // the side fins run down past it and the corner stays whole; the two arms
   // needn't line up.
-  let finZ = A.z0 + 0.8;
-  while (finZ + 1.3 <= A.z1 - 0.5) finZ += 1.3;
-  const zL = finZ - 0.65;
+  // (zL, the left arm's front: half-way between the last two side fins, above)
   const finOut = A.x1 + 0.55; // (the side fins' outer face)
   const arms = [
     { x0: A.x1 - 0.6, x1: gx - half, z: zL, strip0: finOut + 0.05 },
@@ -357,6 +502,7 @@ function debate(mats) {
   }
   const turn = 9; // seconds per speech
   group.userData.animate = (t) => {
+    mats.beacon.userData.on = t % 1.6 < 0.22 ? 1 : 0; // (the mast's light: a short blink, see updateMaterials)
     const k = (t / turn) % 2;
     bars.forEach((bar, i) => {
       const mine = Math.floor(k) === i;

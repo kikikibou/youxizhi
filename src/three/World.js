@@ -222,6 +222,10 @@ export class World {
     set(m.trunk, p.trunk);
     set(m.bush, p.leaf);
     m.grass.color.set(p.leaf).lerp(GRASS, 0.38); // (fresher than the trees)
+    m.blind.emissive.set(p.glassGlow);
+    m.skyWin.color.copy(m.whiteShade.color).lerp(m.glassDark.color, 0.42);
+    m.skyWinLit.color.copy(m.skyWin.color);
+    m.skyWinLit.emissive.set(p.glassGlow);
     this.ground.material.color.set(p.groundTint);
     // Sky colours are shared Color objects (sky dome, sea, fog).
     SKY.dayTop.set(p.sky.dayTop);
@@ -401,28 +405,72 @@ export class World {
   buildSkyline() {
     // A ring of quiet distant blocks so the horizon is never empty.
     const geos = [];
+    const wins = [];
+    const lit = [];
     let seed = 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    // (the windows draw from a sequence of their own: the blocks stay where they were)
+    let seed2 = 90211;
+    const r2 = () => ((seed2 = (seed2 * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < 70; i++) {
       const a = (i / 70) * Math.PI * 2 + rnd() * 0.05;
       const d = 170 + rnd() * 120;
       const w = 14 + rnd() * 26;
       const h = 10 + rnd() * 45;
-      const g = new THREE.BoxGeometry(w, h, 10 + rnd() * 20);
-      g.rotateY(a);
-      g.translate(Math.sin(a) * d, h / 2, Math.cos(a) * d);
+      const dd = 10 + rnd() * 20;
       // No blocks standing in the sea behind the lighthouse.
       const sea = this.sites.find((x) => x.page.scene.sea);
       if (sea) {
         const local = sea.group.worldToLocal(new THREE.Vector3(Math.sin(a) * d, 0, Math.cos(a) * d));
         if (inSea(local.x, local.z)) continue;
       }
-      geos.push(g);
+      // In the block's own frame (centred; -z faces the plaza), then put in place.
+      const place = (g) => {
+        g.rotateY(a);
+        g.translate(Math.sin(a) * d, h / 2, Math.cos(a) * d);
+        return g;
+      };
+      geos.push(place(new THREE.BoxGeometry(w, h, dd)));
+      // Windows on the face towards the plaza: punched, in ribbons, or none.
+      const pane = (pw, ph, x, y, list) => {
+        const p = new THREE.PlaneGeometry(pw, ph);
+        p.rotateY(Math.PI);
+        p.translate(x, y - h / 2, -dd / 2 - 0.15);
+        list.push(place(p));
+      };
+      const style = r2();
+      const fh = 3.2 + r2() * 0.8; // storey height
+      if (style < 0.5) {
+        const sx = 2.4 + r2() * 1.2;
+        const pw = sx * (0.42 + r2() * 0.2);
+        const ph = fh * (0.45 + r2() * 0.15);
+        const cols = Math.floor((w - 3) / sx);
+        const x0 = -((cols - 1) * sx) / 2;
+        for (let y = 3; y + ph < h - 1.5; y += fh) {
+          for (let c = 0; c < cols; c++) pane(pw, ph, x0 + c * sx, y + ph / 2, r2() < 0.22 ? lit : wins);
+        }
+      } else if (style < 0.85) {
+        const pw = w - 2.4 - r2() * 2;
+        const ph = fh * (0.35 + r2() * 0.15);
+        for (let y = 3; y + ph < h - 1.5; y += fh) pane(pw, ph, 0, y + ph / 2, r2() < 0.18 ? lit : wins);
+      }
+      // A plant room or two on the roof, so the skyline isn't all flat tops.
+      for (let k = Math.floor(r2() * 3); k > 0; k--) {
+        const bw = 2 + r2() * 4;
+        const bh = 1 + r2() * 3;
+        const bd = 2 + r2() * 4;
+        const g = new THREE.BoxGeometry(bw, bh, bd);
+        g.translate((r2() - 0.5) * (w - bw - 1), h / 2 + bh / 2, (r2() - 0.5) * (dd - bd - 1));
+        geos.push(place(g));
+      }
     }
     const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats.whiteShade);
     mesh.receiveShadow = true;
     this.scene.add(mesh);
     this.skyline = mesh;
+    for (const [list, mat] of [[wins, this.mats.skyWin], [lit, this.mats.skyWinLit]]) {
+      if (list.length) this.scene.add(new THREE.Mesh(mergeGeometries(list), mat));
+    }
   }
 
   buildPost() {
