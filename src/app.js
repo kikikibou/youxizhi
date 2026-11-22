@@ -234,6 +234,7 @@ function go(id, mode = 'fly') {
 
   if (prev >= 0) {
     const old = pageEls[prev];
+    if (old.contains(document.activeElement)) document.activeElement.blur(); // (no typing into a page that's gone)
     old.classList.remove('is-in', 'is-settled');
     setTimeout(() => {
       if (current !== prev) old.classList.remove('is-active');
@@ -291,6 +292,7 @@ window.addEventListener(
 
 window.addEventListener('keydown', (e) => {
   if (drawer.isOpen) return;
+  if (e.target.closest?.('input, textarea')) return; // (typing, e.g. in a poem's blank)
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') step(1);
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') step(-1);
 });

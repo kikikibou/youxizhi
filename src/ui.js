@@ -104,7 +104,7 @@ export function renderPages(pages, el) {
       (p) => `
     <section class="page" data-page="${p.id}" data-side="${p.side || 'right'}"${p.poemTone ? ` data-poem="${p.poemTone}"` : ''} aria-label="${esc(p.nav)}">
       <div class="poem">
-        <div class="poem-eyebrow reveal" style="--d:1">${esc(p.eyebrow)}</div>
+        <div class="poem-eyebrow reveal" style="--d:1">${eyebrowHtml(p.eyebrow)}</div>
         <div class="poem-lines reveal" style="--d:2" lang="${lang(p.poem.join(''))}">${p.poem.map((l) => `<span>${esc(l)}</span>`).join('')}</div>
         <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
       </div>
@@ -120,6 +120,51 @@ export function renderPages(pages, el) {
     .join('');
   el.querySelectorAll('.poem, .panel').forEach((n) => panelSizes.observe(n));
   el.querySelectorAll('.ticket-lines span').forEach((n) => ticketSizes.observe(n));
+  el.querySelectorAll('.blank').forEach(wireBlank);
+}
+
+/**
+ * A poem's eyebrow: words, or a blank to fill in ({ blank: 'Q' }): one
+ * letter, "?" until it is typed; the right one lights up (.blank in style.css).
+ */
+function eyebrowHtml(e) {
+  if (typeof e === 'string') return esc(e);
+  return `<label class="blank">
+      <input class="blank-input" maxlength="1" placeholder="?" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="填一个字母" data-answer="${esc(e.blank)}">
+      <span class="blank-letter" aria-hidden="true">${esc(e.blank)}</span>
+    </label>`;
+}
+
+function wireBlank(box) {
+  const input = box.querySelector('input');
+  const answer = input.dataset.answer.toUpperCase();
+  let clear = 0;
+  const check = () => {
+    const v = input.value.trim().slice(-1).toUpperCase();
+    if (!v || box.classList.contains('is-solved')) return;
+    clearTimeout(clear);
+    if (v === answer) {
+      input.value = v;
+      input.readOnly = true;
+      input.tabIndex = -1;
+      input.blur();
+      input.setAttribute('aria-label', `答对了：${answer}`);
+      box.classList.add('is-solved');
+      return;
+    }
+    // Wrong: a shake, and the letter goes again.
+    box.classList.remove('is-wrong');
+    void box.offsetWidth; // (restarts the animation)
+    box.classList.add('is-wrong');
+    clear = setTimeout(() => {
+      input.value = '';
+      box.classList.remove('is-wrong');
+    }, 420);
+  };
+  // (with an input method, only once the letter is committed)
+  input.addEventListener('input', (e) => !e.isComposing && check());
+  input.addEventListener('compositionend', check);
+  input.addEventListener('keydown', (e) => e.key === 'Escape' && input.blur());
 }
 
 /** [label, value] pairs, each set as a label over its value. */

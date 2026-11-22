@@ -115,7 +115,7 @@ export const PAGES = [
       trees: [[-24, 7, 1.1], [26, 8, 1.0]],
     },
     eyebrow: 'POI',
-    poem: ['Silence is a golden hammer.', 'Speech is a silver bullet.', 'One sees nails. One takes aim.'],
+    poem: ['Silence is a golden hammer.', 'Speech is a silver bullet.', 'Tell the nails from the werewolves.'],
     poemSmall: '沉默是马斯洛的金槌，雄辩是欧立希的银弹',
     label: {
       title: '辩论工具箱',
@@ -172,7 +172,9 @@ export const PAGES = [
     },
     // (eyebrow and poem together hold each of the 26 letters exactly twice:
     // not a letter of them may change; the small line reads the same backwards)
-    eyebrow: 'Q',
+    // The eyebrow is a blank to fill in: the one letter the poem holds only
+    // once (see blankHtml in ui.js).
+    eyebrow: { blank: 'Q' },
     poem: ['Sphinx vs. DJ Jack', 'Q: Why fix my dumb black TV?', 'Wrong puzzle. Forget.'],
     poemSmall: '数字算盘，盘算字数',
     label: {
@@ -245,7 +247,7 @@ export const PAGES = [
     // Chinese poems are set in their own type, see .poem-lines[lang='zh'])
     eyebrow: 'AUTOGRAM',
     poem: [
-      '叶小古说：此记录应包含',
+      '叶小古说，此记录应包含：',
       '一百七十五横、一百零八竖、一百零一撇、九十二点，',
       '二十八捺、二十六横折、十七竖钩、',
       '十六提、十一横折钩、十横撇，',
@@ -307,7 +309,7 @@ export const PAGES = [
       trees: [],
     },
     eyebrow: 'STRENGTH: WEAK',
-    poem: ['Sorry, Master: your safe word needs', '12+ characters, upper and lower case,', 'a number, and a special symbol.'],
+    poem: ['Sorry, Master:', 'your safe word needs', '12+ characters, upper and lower case,', 'a number, and a special symbol.'],
     poemSmall: '甜的 · 从强者出来',
     label: {
       title: '关于这条街',

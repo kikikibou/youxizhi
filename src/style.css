@@ -600,6 +600,138 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   transform: none;
   transition: transform 0.9s var(--ease) 0.3s;
 }
+
+/* An eyebrow that is a blank to fill in (pages.js eyebrow: { blank }, wired
+   in ui.js): one big letter on an underline, "?" until it's typed. The right
+   letter pops up larger in shifting rainbow colours with a soft glow; a wrong
+   one shakes and goes. */
+.blank {
+  position: relative;
+  display: inline-block;
+  width: 1.05em;
+  height: 1.12em;
+  margin: -0.22em 4.4px 0 0; /* (4.4px: the room the eyebrow's letter-spacing leaves at its end) */
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: auto;
+  cursor: text;
+}
+.blank > * {
+  position: absolute;
+  inset: 0;
+}
+.blank-input {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 3px solid currentColor;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  caret-color: var(--orange);
+  transition: border-color 0.2s var(--ease);
+}
+.blank-input::placeholder {
+  color: inherit;
+  opacity: 0.6;
+}
+.blank-input:focus {
+  border-bottom-color: var(--orange);
+}
+.blank-input:focus::placeholder {
+  opacity: 0.22;
+}
+.blank.is-wrong .blank-input {
+  color: var(--orange);
+}
+.blank.is-wrong {
+  animation: blank-shake 0.4s var(--ease);
+}
+@keyframes blank-shake {
+  20% { transform: translateX(-5px) rotate(-4deg); }
+  45% { transform: translateX(4px) rotate(3deg); }
+  70% { transform: translateX(-2px); }
+}
+.blank-letter {
+  display: flex;
+  align-items: center; /* (where the input sets its letter) */
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+.blank.is-solved {
+  cursor: default;
+}
+.blank.is-solved .blank-input {
+  -webkit-text-fill-color: transparent; /* (not color: the underline keeps currentColor) */
+}
+/* (the gradient fills the letter itself, so no text shadow over it: the glow is a filter) */
+.blank.is-solved .blank-letter {
+  opacity: 1;
+  text-shadow: none;
+  color: transparent;
+  background: linear-gradient(100deg, #ff5f6d, #ffb35c, #ffe76a, #6fe3a5, #5cc8ff, #a58bff, #ff7ec8, #ff5f6d) 0 0 / 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.75)) drop-shadow(0 0 14px rgba(255, 150, 200, 0.6));
+  transform-origin: 50% 70%;
+  animation:
+    blank-pop 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    blank-hue 3s linear infinite;
+}
+@keyframes blank-pop {
+  0% { opacity: 0; transform: scale(0.3) rotate(-25deg); }
+  60% { opacity: 1; transform: scale(1.6) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1.35); }
+}
+@keyframes blank-hue {
+  to { background-position: 300% 0; }
+}
+/* A ring of light bursts out once from the letter. */
+.blank::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.3em;
+  height: 1.3em;
+  margin: -0.65em 0 0 -0.65em;
+  border-radius: 50%;
+  border: 3px solid #ffe76a;
+  box-shadow: 0 0 12px #ff7ec8, inset 0 0 10px #5cc8ff;
+  opacity: 0;
+  pointer-events: none;
+}
+.blank.is-solved::after {
+  animation: blank-ring 0.9s ease-out 0.1s both;
+}
+@keyframes blank-ring {
+  0% { opacity: 0.95; transform: scale(0.3); }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+/* (no shimmer on pages out of sight, nor for those who'd rather not have motion) */
+.page:not(.is-active) .blank-letter {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .blank.is-solved .blank-letter {
+    animation: none;
+    transform: scale(1.35);
+  }
+  .blank.is-solved::after {
+    animation: none;
+  }
+}
 .poem-lines {
   display: flex;
   flex-direction: column;
