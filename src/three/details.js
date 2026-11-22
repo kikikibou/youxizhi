@@ -228,6 +228,31 @@ function pieces(b, R) {
         b.push('flower', colour(g, PARTY[i % PARTY.length], (k) => (k === 2 ? 1 : 0)));
       }
     },
+    /** A clump of bamboo: slim canes leaning a little, sprays of leaves up their upper half. */
+    bamboo(x, y, z, h = 4.5, n = 8) {
+      const shear = new THREE.Matrix4();
+      for (let i = 0; i < n; i++) {
+        const hh = h * (0.7 + R() * 0.3);
+        const a = R() * Math.PI * 2;
+        const d = R() * 0.35;
+        const [bx, bz] = [x + Math.cos(a) * d, z + Math.sin(a) * d];
+        const [lx, lz] = [(R() - 0.5) * 0.12, (R() - 0.5) * 0.12]; // (lean, per metre up)
+        const cane = new THREE.CylinderGeometry(0.03, 0.045, hh, 5);
+        cane.translate(0, hh / 2, 0);
+        cane.applyMatrix4(shear.set(1, lx, 0, 0, 0, 1, 0, 0, 0, lz, 1, 0, 0, 0, 0, 1));
+        cane.translate(bx, y, bz);
+        b.push('bush', colour(cane, [1.12, 1.22, 0.85]));
+        for (let j = 0; j < 4; j++) {
+          const ly = hh * (0.45 + R() * 0.55);
+          const s = 0.22 + R() * 0.18;
+          const leaf = new THREE.IcosahedronGeometry(s, 0);
+          leaf.scale(1.6, 0.45, 0.8);
+          leaf.rotateY(R() * Math.PI);
+          leaf.translate(bx + lx * ly + (R() < 0.5 ? -1 : 1) * s * 0.9, y + ly, bz + lz * ly + (R() - 0.5) * 0.3);
+          b.push('bush', colour(leaf, [1 + R() * 0.15, 1.1, 0.9]));
+        }
+      }
+    },
     /** A lifebuoy hung on a railing, facing along +z turned by rotY. */
     lifebuoy(x, y, z, rotY) {
       const ring = new THREE.TorusGeometry(0.34, 0.085, 8, 24);
@@ -362,14 +387,16 @@ function debate(b, k, site, R) {
   k.bed(b, 12, 29, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
   // The sky gardens (GARDENS in buildings.js; their trees are planted there):
-  // in the left one a meadow of tall grass and wildflowers behind its
-  // railing (a planter of shrubs and trailing plants, like the canopy's just
-  // below, read as the same thing twice); potted shrubs in the right one's
-  // loggia. (On a sequence of their own: drawing on the shared one would
-  // reshuffle every page after this, the maze too.)
+  // in the left one a bamboo grove on a low gravel bed behind its railing
+  // (shrubs with trailing plants, like the canopy's just below, and then
+  // grass and flowers, like the beds on the plaza, both read as repeats);
+  // potted shrubs in the right one's loggia. (On a sequence of their own:
+  // drawing on the shared one would reshuffle every page after this, the maze too.)
   const R2 = rng(20261125);
   const g = kit(meshes(b, R2), pieces(b, R2), R2);
-  g.bed(b, -19.15, -6.85, -4.9, -3.5, { y: GARDENS.a.y0, h: [0.7, 1.5], step: 0.3, flowerChance: 0.55 });
+  const ga = GARDENS.a.y0;
+  b.box('concrete', [-19.4, ga, -5.2], [-6.6, ga + 0.25, -3.5]);
+  for (const [x, z, h] of [[-19, -4.5, 5.2], [-13.6, -4.5, 5.8], [-12.1, -4.3, 4.6], [-6.9, -4.6, 5]]) g.bamboo(x, ga + 0.25, z, h);
   for (const [x, z] of [[14.6, -2.4], [21, -2.4], [9.6, -8.5], [9.6, -12]]) g.topiary(x, z, { y: GARDENS.b.y0, r: 0.45, stem: 0.4 });
 }
 

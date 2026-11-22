@@ -600,8 +600,9 @@ function puzzle(mats) {
   // Cube body (set back a little so the modules can stand proud or sink),
   // with the top right corner cut out where the missing module was.
   const hole = { x: x1 - cell, y: top - cell, z: Z - 6 };
-  b.box('white', [x0, y0, back], [x1, top, hole.z]);
-  b.box('white', [x0, y0, hole.z], [x1, hole.y, Z - 1.4]);
+  // (the right side set back too: modules stand there as well, see below)
+  b.box('white', [x0, y0, back], [x1 - 1.4, top, hole.z]);
+  b.box('white', [x0, y0, hole.z], [x1 - 1.4, hole.y, Z - 1.4]);
   b.box('white', [x0, hole.y, hole.z], [hole.x, top, Z - 1.4]);
 
   // Front modules: depth offset (+ out, - in) and a window style each.
@@ -657,17 +658,51 @@ function puzzle(mats) {
   b.box('whiteShade', [x0 - 0.2, top, back - 0.2], [x1 + 0.2, top + 0.4, hole.z]);
   b.box('whiteShade', [x0 - 0.2, top, hole.z], [hole.x, top + 0.4, Z - 1.2]);
 
-  // The right side: a plain grid of square windows.
-  for (let r = 0; r < n; r++) for (let k = 0; k < 4; k++) {
-    // (inset from the front: a window reaching the corner shared a plane with
-    // the cube's front face and flickered along that edge)
-    const zc = Z - 3 - k * cell;
-    const yc = y0 + r * cell + cell / 2;
-    const lit = k % 2 === r % 2;
-    b.winX(lit ? 'glass' : 'glassDark', zc - 1.1, zc + 1.1, yc - 1.1, yc + 1.1, x1);
-    if (lit && R() < 0.4) b.box('blind', [x1 + 0.06, yc + 1.06 - (0.5 + R() * 1.0), zc - 1.06], [x1 + 0.08, yc + 1.06, zc + 1.06]);
-    b.box('white', [x1 + 0.06, yc - 0.05, zc - 1.1], [x1 + 0.12, yc + 0.05, zc + 1.1]);
-    b.box('white', [x1 + 0.06, yc - 1.1, zc - 0.05], [x1 + 0.12, yc + 1.1, zc + 0.05]);
+  // The right side: modules too, round the corner from the front's (a flat
+  // wall there made the front read as a skin laid on a box). Along the
+  // zigzag stair (the first three cells from the front) they only sink in or
+  // stand flush; behind it some stand out. [r][k], k counted from the front;
+  // the top front one is the missing module's gap.
+  const sideDepth = [
+    [-1.2, 0.1, -0.5, 1.2],
+    [0.1, -1.1, 0.1, 0.6],
+    [-1, 0.1, -1.2, 1.4],
+    [null, -0.9, 0, 0.8],
+  ];
+  const sideStyle = [
+    ['slots', 'square', 'blank', 'band'],
+    ['square', 'band', 'slots', 'square'],
+    ['band', 'blank', 'square', 'slots'],
+    [null, 'slots', 'band', 'orange'],
+  ];
+  const zs = Z - 1.6; // (the front modules' back: the side's cells run from there to the back)
+  const sc = (zs - back) / 4;
+  for (let r = 0; r < n; r++) {
+    for (let k = 0; k < 4; k++) {
+      const ds = sideDepth[r][k];
+      if (ds === null) continue;
+      const [za, zb] = [zs - k * sc - g, zs - (k + 1) * sc + g];
+      const [my0, my1] = [y0 + r * cell + g, y0 + (r + 1) * cell - g];
+      const xf = x1 + ds; // the module's face
+      b.box('white', [x1 - 1.6, my0, zb], [xf, my1, za]);
+      const zc = (za + zb) / 2;
+      const cy = (my0 + my1) / 2;
+      const f = xf + 0.06;
+      const lit = R() < 0.7 ? 'glass' : 'glassDark';
+      const s = sideStyle[r][k];
+      if (s === 'square') {
+        b.winX(lit, zc - 1.4, zc + 1.4, cy - 1.4, cy + 1.4, xf);
+        if (lit === 'glass' && R() < 0.4) b.box('blind', [f, cy + 1.36 - (0.6 + R() * 1.2), zc - 1.36], [f + 0.02, cy + 1.36, zc + 1.36]);
+        b.box('white', [f, cy - 0.05, zc - 1.4], [f + 0.06, cy + 0.05, zc + 1.4]);
+        b.box('white', [f, cy - 1.4, zc - 0.05], [f + 0.06, cy + 1.4, zc + 0.05]);
+      }
+      if (s === 'slots') for (const oz of [-1.5, 0, 1.5]) b.winX('glassDark', zc + oz - 0.3, zc + oz + 0.3, cy - 1.65, cy + 1.65, xf);
+      if (s === 'band') {
+        b.winX(lit, zb + 0.6, za - 0.6, cy - 0.5, cy + 0.5, xf);
+        for (let z = zb + 1.55; z < za - 0.9; z += 0.95) b.box('white', [f, cy - 0.5, z - 0.05], [f + 0.06, cy + 0.5, z + 0.05]);
+      }
+      if (s === 'orange') b.winX('orange', zb + 0.45, za - 0.45, my0 + 0.45, my1 - 0.45, xf);
+    }
   }
   // A railing along the roof's front edge (round the gap the missing module left).
   b.railingX('metal', x0 + 0.2, hole.x - 0.2, Z - 1.6, top + 0.4, 1.0, 1.5);
