@@ -309,7 +309,8 @@ export const PAGES = [
       trees: [],
     },
     eyebrow: 'STRENGTH: WEAK',
-    poem: ['Sorry, Master:', 'your safe word needs', '12+ characters, upper and lower case,', 'a number, and a special symbol.'],
+    // (short last lines: lower down, the title's SEE ALSO and its script reach this far right)
+    poem: ['Sorry, Master:', 'your safe word needs 12+ characters,', 'upper and lower case, a number,', 'and a special symbol.'],
     poemSmall: '甜的 · 从强者出来',
     label: {
       title: '关于这条街',

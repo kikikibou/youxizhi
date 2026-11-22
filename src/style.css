@@ -528,11 +528,13 @@ html[data-theme='night'] .dn-moon {
 .page.is-crowded .poem {
   visibility: hidden; /* see fitPoems() in ui.js */
 }
+/* (Below 960px tall the poem shrinks with the window, as the 3D scene does,
+   so it keeps its place beside the titles instead of running into them.) */
 .poem {
   position: absolute;
   top: 11vh;
   right: clamp(18px, 4vw, 70px); /* same right edge as .panel */
-  width: 372px;
+  width: clamp(306px, 38.75vh, 372px);
   text-align: right;
   color: var(--navy);
   pointer-events: none;
@@ -560,7 +562,7 @@ html[data-theme='night'] .page[data-poem='inverse'] .poem {
   left: -4px;
   top: -22px;
   font-family: var(--serif);
-  font-size: 132px;
+  font-size: clamp(108px, 13.75vh, 132px);
   line-height: 1;
   color: var(--orange);
   text-shadow: 0 1px 12px rgba(var(--shade-rgb), 0.3);
@@ -751,7 +753,7 @@ html.poem-ink .poem-rule {
   margin: 12px 0 14px;
   font-family: var(--serif);
   font-style: italic;
-  font-size: 28px;
+  font-size: clamp(23px, 2.92vh, 28px); /* (28px from 960px tall) */
   line-height: 1.14;
 }
 .poem-lines > span {
@@ -763,7 +765,7 @@ html.poem-ink .poem-rule {
   font-family: var(--cn);
   font-style: normal;
   font-weight: 500;
-  font-size: 16px;
+  font-size: clamp(14px, 1.67vh, 16px);
   line-height: 1.6;
   letter-spacing: 0.02em;
 }
