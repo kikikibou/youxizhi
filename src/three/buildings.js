@@ -259,46 +259,60 @@ function debate(mats) {
   b.box('white', [A.x0, 4.6, A.z0], [A.x1, 5.2, A.z1 + 1.6]);
   b.box('strip', [A.x0 + 0.4, 4.52, A.z1 - 0.4], [A.x1 - 0.4, 4.6, A.z1 + 1.4]);
   for (const x of [A.x0 + 1, A.x1 - 1]) b.box('white', [x - 0.3, 0, A.z1 - 0.3], [x + 0.3, 4.6, A.z1 + 0.3]);
-  // Floors: glass with slim slab edges, behind vertical fins spaced evenly
-  // across the front, one on each corner (the side looking at the other
-  // tower is plain glass: finned too, it read as a thick extra layer down
-  // the right edge). Some windows lit at night, a few with a blind down.
+  // The front: white piers and full-height glass slots of varied widths,
+  // like a barcode (one pattern of fins, floor after floor, read as a dense
+  // dark grid); the side looking at the other tower is plain glass.
   const fhA = 3.6;
-  const nF = 12;
-  // (the corner ones 2 cm in from the corners: flush, their faces would share
-  // a plane with the slab edges' and flicker)
-  const finsX = Array.from({ length: nF }, (_, k) => A.x0 + 0.13 + (k * (A.x1 - A.x0 - 0.26)) / (nF - 1));
   const zL = A.z1 - 1.45; // the sky bridge arm's front (see below)
   // A sky garden two floors high across the front (GARDENS.a): there the
-  // glass and the slab between stand back by `depth`, the fins break off,
-  // two slim columns and the corner fins carry it, and a light strip runs
-  // under its ceiling. (Planting: details.js; trees: below.)
+  // glass and the slab between stand back by `depth`, the inner piers break
+  // off, two slim columns carry it, and a light strip runs under its
+  // ceiling. (Planting: details.js; trees: below.)
   const G = GARDENS.a;
   const zr = A.z1 - G.depth; // the garden's back wall
+  const [s0, s1] = [5.2, A.top - 2.6]; // the shaft: from the lobby's slab to the crown
+  const front = A.z1 - 0.45; // the glass, in the slots
+  const slabFront = front + 0.15; // (the floor edges show as lines in the slots)
+  const bays = []; // the slots [x0, x1]: lit windows go in them
+  const backMullions = []; // where the garden's back wall gets mullions
+  // Piers and slots, alternately, from the left (14 m in all).
+  const piers = [0.8, 0.5, 0.5, 1.4, 0.5, 0.5, 0.8, 1.2];
+  const slots = [0.6, 1.8, 0.6, 0.6, 2.4, 0.6, 1.2];
+  let px = A.x0;
+  piers.forEach((pw, k) => {
+    const corner = k === 0 || k === piers.length - 1;
+    // (the corner piers 2 cm in: flush, their faces would share a plane with the slabs' and flicker)
+    const [p0, p1] = [k === 0 ? px + 0.02 : px, corner && k > 0 ? px + pw - 0.02 : px + pw];
+    for (const [y0, y1] of corner ? [[s0, s1]] : [[s0, G.y0], [G.y1, s1]]) b.box('white', [p0, y0, front], [p1, y1, A.z1]);
+    if (!corner) backMullions.push(px + pw / 2);
+    px += pw;
+    if (k < slots.length) {
+      bays.push([px, px + slots[k]]);
+      px += slots[k];
+    }
+  });
+  // Floors: glass with slab edges; some windows lit at night, a few with a blind down.
   for (let y = 5.2; y < A.top - 3; y += fhA) {
     const yt = y + fhA - 0.35;
     const inGarden = y >= G.y0 && yt <= G.y1 + 0.01;
-    const gf = inGarden ? zr : A.z1 - 0.3; // the glass front
+    const gf = inGarden ? zr : front;
     b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, gf]);
     // (the slab between the garden's two floors stands back with the glass)
-    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, inGarden && yt < G.y1 ? zr + 0.3 : A.z1]);
-    if (inGarden) for (const x of finsX.slice(1, -1)) b.box('white', [x - 0.05, y, zr], [x + 0.05, yt, zr + 0.1]); // (mullions on the back wall)
+    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, inGarden && yt < G.y1 ? zr + 0.3 : slabFront]);
+    if (inGarden) for (const x of backMullions) b.box('white', [x - 0.05, y, zr], [x + 0.05, yt, zr + 0.1]); // (mullions on the back wall)
     // The top floors stay dark: the title is read against them, day and night.
     if (y > A.top - 14) continue;
-    finsX.slice(1).forEach((f, k) => {
-      if (R() > 0.48) return;
-      const a0 = Math.max(A.x0 + 0.3, finsX[k] + (inGarden ? 0.05 : 0.11));
-      const a1 = Math.min(A.x1 - 0.3, f - (inGarden ? 0.05 : 0.11));
+    for (const [x0, x1] of bays) {
+      if (R() > 0.48) continue;
+      const a0 = Math.max(A.x0 + 0.3, x0 + (inGarden ? 0.06 : 0));
+      const a1 = Math.min(A.x1 - 0.3, x1 - (inGarden ? 0.06 : 0));
       b.box('pane', [a0, y + 0.05, gf], [a1, yt - 0.05, gf + 0.03]);
       if (R() < 0.15) b.box('blind', [a0 + 0.04, yt - 0.06 - (0.5 + R() * 1.2), gf + 0.03], [a1 - 0.04, yt - 0.06, gf + 0.05]);
-    });
+    }
   }
-  finsX.forEach((x, k) => {
-    const corner = k === 0 || k === finsX.length - 1;
-    for (const [f0, f1] of corner ? [[5.2, A.top - 2]] : [[5.2, G.y0], [G.y1, A.top - 2]]) b.box('white', [x - 0.11, f0, A.z1 - 0.3], [x + 0.11, f1, A.z1 + 0.55]);
-  });
   for (const x of [A.x0 + (A.x1 - A.x0) / 3, A.x1 - (A.x1 - A.x0) / 3]) b.cyl('white', x, A.z1 - 1.0, G.y0, G.y1, 0.22, 16);
   b.box('strip', [A.x0 + 0.4, G.y1 - 0.08, A.z1 - 1.5], [A.x1 - 0.4, G.y1, A.z1 - 0.8]); // (a slim cove line: the whole ceiling lit read as a slab)
+  b.railingX('metal', A.x0 + 0.85, A.x1 - 1.25, A.z1 - 0.38, G.y0, 1.0, 1.4); // (between the corner piers)
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);

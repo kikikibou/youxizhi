@@ -274,18 +274,18 @@ function maze(cols, rows, R) {
 /** Shared helpers on top of the plants and the pieces. */
 function kit(p, g, R) {
   /** A planted bed: a low kerb, soil, and grass with flowers (and a few bushes). */
-  const bed = (b, x0, x1, z0, z1, { h = [0.55, 1.15], step = 0.34, flowerChance = 0.35, bushes = 0 } = {}) => {
-    b.box('concrete', [x0, 0, z0], [x1, 0.28, z1]);
-    b.box('soil', [x0 + 0.15, 0.28, z0 + 0.15], [x1 - 0.15, 0.31, z1 - 0.15]);
+  const bed = (b, x0, x1, z0, z1, { y = 0, h = [0.55, 1.15], step = 0.34, flowerChance = 0.35, bushes = 0 } = {}) => {
+    b.box('concrete', [x0, y, z0], [x1, y + 0.28, z1]);
+    b.box('soil', [x0 + 0.15, y + 0.28, z0 + 0.15], [x1 - 0.15, y + 0.31, z1 - 0.15]);
     for (let x = x0 + 0.3; x < x1 - 0.2; x += step) {
       for (let z = z0 + 0.35; z < z1 - 0.2; z += step * 1.6) {
-        p.tuft(x + (R() - 0.5) * step, 0.3, z + (R() - 0.5) * step, h[0] + R() * (h[1] - h[0]), null, flowerChance);
+        p.tuft(x + (R() - 0.5) * step, y + 0.3, z + (R() - 0.5) * step, h[0] + R() * (h[1] - h[0]), null, flowerChance);
       }
     }
     for (let i = 0; i < bushes; i++) {
       const x = x0 + 1 + R() * (x1 - x0 - 2);
       const z = (z0 + z1) / 2;
-      for (let k = 0; k < 4; k++) p.clump(x + (R() - 0.5) * 0.9, 0.7 + R() * 0.4, z + (R() - 0.5) * 0.8, 0.9 + R() * 0.3, [(R() - 0.5) * 0.6, 1, 0.4]);
+      for (let k = 0; k < 4; k++) p.clump(x + (R() - 0.5) * 0.9, y + 0.7 + R() * 0.4, z + (R() - 0.5) * 0.8, 0.9 + R() * 0.3, [(R() - 0.5) * 0.6, 1, 0.4]);
     }
   };
   /** Grass round the foot of a tree. */
@@ -362,12 +362,14 @@ function debate(b, k, site, R) {
   k.bed(b, 12, 29, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
   // The sky gardens (GARDENS in buildings.js; their trees are planted there):
-  // a planter along the left one's edge, trailing over it; potted shrubs in
-  // the right one's loggia. (On a sequence of their own: drawing on the
-  // shared one would reshuffle every page after this, the maze too.)
+  // in the left one a meadow of tall grass and wildflowers behind its
+  // railing (a planter of shrubs and trailing plants, like the canopy's just
+  // below, read as the same thing twice); potted shrubs in the right one's
+  // loggia. (On a sequence of their own: drawing on the shared one would
+  // reshuffle every page after this, the maze too.)
   const R2 = rng(20261125);
   const g = kit(meshes(b, R2), pieces(b, R2), R2);
-  g.planter(b, -19.5, -6.5, GARDENS.a.y0, -3.0, { key: 'concrete', depth: 0.6 });
+  g.bed(b, -19.15, -6.85, -4.9, -3.5, { y: GARDENS.a.y0, h: [0.7, 1.5], step: 0.3, flowerChance: 0.55 });
   for (const [x, z] of [[14.6, -2.4], [21, -2.4], [9.6, -8.5], [9.6, -12]]) g.topiary(x, z, { y: GARDENS.b.y0, r: 0.45, stem: 0.4 });
 }
 
