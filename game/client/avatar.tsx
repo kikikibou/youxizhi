@@ -1,12 +1,13 @@
 /**
- * 头像：每个人是一个「国家」，头像就是自己的国旗。
- * - 默认图案 'p:<0–23>'：8 种旗面 × 3 种配色；没设置过的人按 id 分一个。
+ * 头像：出现在圆桌、护照和档案里。
+ * - 默认头像 'p:<0–23>'：卡通人物和小动物（avatar-art.tsx）；没设置过的人按 id 分一个。
  * - 手绘 'd:<笔画>'：64×64 的格子，见 shared/protocol.ts 的 AVATAR_RE。
  */
 
 import { createContext } from 'preact';
 import { useContext, useMemo, useRef, useState } from 'preact/hooks';
 import { AVATAR_MAX, AVATAR_PRESETS } from '../shared/protocol.ts';
+import { PresetArt } from './avatar-art.tsx';
 
 /** 房间里所有人的头像（id → 头像字符串），由 RoomScreen 提供。 */
 export const AvatarContext = createContext<Record<string, string>>({});
@@ -51,79 +52,6 @@ export function randomPreset(except?: string | null): string {
 
 const INK = '#0a0a0a';
 const PAPER = '#ffffff';
-const CORAL = '#ff5a46';
-const BLUE = '#1f14ff';
-/** [底色, 主色, 点缀] */
-const PALETTES: [string, string, string][] = [
-  [PAPER, CORAL, INK],
-  [PAPER, BLUE, CORAL],
-  [INK, CORAL, PAPER],
-];
-
-function star(cx: number, cy: number, r: number): string {
-  const pts: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    const rr = i % 2 ? r * 0.42 : r;
-    pts.push(`${(cx + rr * Math.cos(a)).toFixed(1)},${(cy + rr * Math.sin(a)).toFixed(1)}`);
-  }
-  return pts.join(' ');
-}
-
-/** 默认图案：8 种旗面 × 3 种配色。 */
-function PresetArt({ n }: { n: number }) {
-  const [bg, fg, ac] = PALETTES[Math.floor(n / 8) % 3];
-  const k = n % 8;
-  return (
-    <>
-      <rect width="64" height="64" fill={bg} />
-      {k === 0 ? (
-        <>
-          <rect y="0" width="64" height="21" fill={fg} />
-          <rect y="43" width="64" height="21" fill={ac} />
-        </>
-      ) : k === 1 ? (
-        <>
-          <rect width="26" height="64" fill={fg} />
-          <circle cx="44" cy="32" r="11" fill={ac} />
-        </>
-      ) : k === 2 ? (
-        <>
-          <path d="M0 64 L0 8 L56 64 Z" fill={fg} />
-          <rect x="42" y="8" width="14" height="14" fill={ac} />
-        </>
-      ) : k === 3 ? (
-        <>
-          <circle cx="32" cy="32" r="18" fill={fg} />
-          <circle cx="32" cy="32" r="25" fill="none" stroke={ac} stroke-width="3" stroke-dasharray="4 4" />
-        </>
-      ) : k === 4 ? (
-        <>
-          <rect x="18" width="14" height="64" fill={fg} />
-          <rect y="25" width="64" height="14" fill={fg} />
-          <rect x="23" width="4" height="64" fill={ac} />
-          <rect y="30" width="64" height="4" fill={ac} />
-        </>
-      ) : k === 5 ? (
-        <>
-          <rect width="32" height="32" fill={fg} />
-          <rect x="32" y="32" width="32" height="32" fill={fg} />
-          <path d="M32 20 L44 32 L32 44 L20 32 Z" fill={ac} />
-        </>
-      ) : k === 6 ? (
-        <>
-          <rect y="0" width="64" height="32" fill={fg} />
-          <path d="M0 0 L30 32 L0 64 Z" fill={ac} />
-        </>
-      ) : (
-        <>
-          <rect x="6" y="6" width="52" height="52" fill={fg} />
-          <polygon points={star(32, 33, 18)} fill={ac} />
-        </>
-      )}
-    </>
-  );
-}
 
 function DrawnArt({ strokes }: { strokes: Stroke[] }) {
   return (
@@ -152,7 +80,7 @@ export function Avatar({ id, value, size = 24, class: cls }: { id: string; value
   );
 }
 
-/** 画板：在 64×64 的格子上画。 */
+/** 画板：在 64×64 的格子上画；淡淡的头和肩膀轮廓只是参考，不会画进头像。 */
 export function DrawPad({ initial, onSave, onCancel }: { initial: string | null; onSave: (v: string) => void; onCancel: () => void }) {
   const [strokes, setStrokes] = useState<Stroke[]>(() => (initial?.startsWith('d:') ? decodeDrawing(initial) : []));
   const cur = useRef<Stroke | null>(null);
@@ -193,9 +121,12 @@ export function DrawPad({ initial, onSave, onCancel }: { initial: string | null;
 
   return (
     <div class="drawpad">
-      <svg ref={box} class="drawpad-board" viewBox="0 0 64 64" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} role="img" aria-label="画板：用手指画你的国旗">
+      <svg ref={box} class="drawpad-board" viewBox="0 0 64 64" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} role="img" aria-label="画板：用手指画你的头像">
         <DrawnArt strokes={strokes} />
-        <path d="M32 0 V64 M0 32 H64" class="drawpad-guide" />
+        <g class="drawpad-guide">
+          <ellipse cx="32" cy="30" rx="14.5" ry="15.5" />
+          <path d="M7 64 C8 52 19 46.5 32 46.5 C45 46.5 56 52 57 64" />
+        </g>
       </svg>
       <div class="drawpad-meter" aria-hidden="true">
         <i style={{ width: `${Math.min(100, (encoded.length / AVATAR_MAX) * 100)}%` }} />
@@ -215,6 +146,28 @@ export function DrawPad({ initial, onSave, onCancel }: { initial: string | null;
           用这个
         </button>
       </div>
+    </div>
+  );
+}
+
+/** 挑一个默认头像：24 个排成格子，点一下就换上。 */
+export function AvatarPicker({ current, onPick, onDone }: { current: string | null; onPick: (v: string) => void; onDone: () => void }) {
+  return (
+    <div class="avatar-picker">
+      <div class="avatar-grid" role="listbox" aria-label="默认头像">
+        {Array.from({ length: AVATAR_PRESETS }, (_, i) => {
+          const v = `p:${i}`;
+          const on = v === current;
+          return (
+            <button key={v} type="button" role="option" aria-selected={on} class={`avatar-opt${on ? ' is-on' : ''}`} onClick={() => onPick(v)}>
+              <Avatar id={v} value={v} size={48} />
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" class="btn btn--accent" onClick={onDone}>
+        好了
+      </button>
     </div>
   );
 }

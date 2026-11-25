@@ -6,7 +6,7 @@ import { renderSVG } from 'uqr';
 import { DEFAULT_TIMERS, MAX_PLAYERS, MIN_PLAYERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
 import type { RoomSettings, RoomView } from '../shared/protocol.ts';
 import type { RoomConnection, Snapshot } from './net.ts';
-import { Avatar, DrawPad, defaultAvatar, randomPreset } from './avatar.tsx';
+import { Avatar, AvatarPicker, DrawPad, defaultAvatar, randomPreset } from './avatar.tsx';
 import { RULE_INFO, resultLine } from './text.ts';
 import { Card, RoundTable, Ticks, pad2, previewFlags } from './ui.tsx';
 
@@ -80,7 +80,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
         {moderator ? ` · 主持人 ${moderator.name} 不入座` : ''}
       </p>
 
-      {isModerator ? null : <FlagCard conn={conn} me={room.me} current={snap.avatars[room.me] ?? null} />}
+      {isModerator ? null : <AvatarCard conn={conn} me={room.me} current={snap.avatars[room.me] ?? null} />}
 
       <Legend settings={room.settings} n={n} hasPassword={room.hasPassword} />
 
@@ -464,33 +464,39 @@ function Rule({ label, en, info, children }: { label: string; en: string; info?:
   );
 }
 
-/** 我的国旗：大厅里换头像。 */
-function FlagCard({ conn, me, current }: { conn: RoomConnection; me: string; current: string | null }) {
-  const [drawing, setDrawing] = useState(previewFlags.drawing);
+/** 我的头像：大厅里自己画、挑一个默认的，或者随机。 */
+function AvatarCard({ conn, me, current }: { conn: RoomConnection; me: string; current: string | null }) {
+  const [mode, setMode] = useState<'view' | 'draw' | 'pick'>(previewFlags.drawing ? 'draw' : previewFlags.picking ? 'pick' : 'view');
+  const shown = current ?? defaultAvatar(me);
   return (
-    <Card class="flag-card">
+    <Card class="avatar-card">
       <h3 class="section-title">
-        <span>我的国旗</span>
-        <small>FLAG · 头像</small>
+        <span>我的头像</span>
+        <small>AVATAR</small>
       </h3>
-      {drawing ? (
+      {mode === 'draw' ? (
         <DrawPad
           initial={current}
           onSave={(v) => {
             conn.send({ t: 'avatar', avatar: v });
-            setDrawing(false);
+            setMode('view');
           }}
-          onCancel={() => setDrawing(false)}
+          onCancel={() => setMode('view')}
         />
+      ) : mode === 'pick' ? (
+        <AvatarPicker current={shown} onPick={(v) => conn.send({ t: 'avatar', avatar: v })} onDone={() => setMode('view')} />
       ) : (
-        <div class="flag-row">
-          <Avatar id={me} value={current ?? defaultAvatar(me)} size={92} class="flag-big" />
-          <div class="flag-side">
-            <p class="lead">每个人都是一个国家</p>
-            <p class="note">画一面你的国旗，会出现在圆桌、护照和档案里。不想画就点「随机」。</p>
-            <div class="flag-actions">
-              <button type="button" class="btn" onClick={() => setDrawing(true)}>
-                ✎ 画一面
+        <div class="avatar-row">
+          <Avatar id={me} value={shown} size={92} class="avatar-big" />
+          <div class="avatar-side">
+            <p class="lead">给自己画个头像</p>
+            <p class="note">会出现在圆桌、护照和档案里。不想画就挑一个，或者点「随机」。</p>
+            <div class="avatar-actions">
+              <button type="button" class="btn" onClick={() => setMode('draw')}>
+                ✎ 画一个
+              </button>
+              <button type="button" class="btn" onClick={() => setMode('pick')}>
+                ☺ 挑一个
               </button>
               <button type="button" class="btn" onClick={() => conn.send({ t: 'avatar', avatar: randomPreset(current) })}>
                 ⟳ 随机

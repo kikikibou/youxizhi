@@ -44,7 +44,7 @@ const NAMES: [string, string][] = [
 const CLUES = ['海边', '下锅', '涨停', '红色', '翻身', '潮汐', '牛市'];
 const CODE = '3572';
 
-/** 预览用的一面手绘国旗：一只简笔鱿鱼。 */
+/** 预览用的一个手绘头像：一只简笔鱿鱼。 */
 function squid(): string {
   const strokes: Stroke[] = [];
   const body: Stroke = [];
@@ -223,6 +223,8 @@ export interface SceneFlags {
   dossier?: 'clues' | 'votes' | 'secret' | 'all';
   revealed?: boolean;
   drawing?: boolean;
+  /** 大厅里打开挑默认头像的格子 */
+  picking?: boolean;
 }
 export type SceneData = { kind: 'home' } | { kind: 'logos' } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
 
@@ -314,11 +316,18 @@ export const SCENES: Scene[] = [
     },
   },
   {
-    id: 'flag-draw',
+    id: 'avatar-draw',
     group: '大厅',
-    title: '画国旗',
-    note: '大厅里画自己的头像，会同步到圆桌、护照和档案',
+    title: '画头像',
+    note: '大厅里画自己的头像，会同步到圆桌、护照和档案；淡淡的头肩轮廓只是参考',
     build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })), drawing: true }),
+  },
+  {
+    id: 'avatar-pick',
+    group: '大厅',
+    title: '挑头像',
+    note: '24 个默认头像：16 个卡通人物 + 8 只小动物，点一下就换上',
+    build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })), picking: true }),
   },
   {
     id: 'night-start',

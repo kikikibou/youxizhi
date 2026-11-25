@@ -1234,27 +1234,58 @@ html:has(.is-night) {
   color: var(--ink-2);
 }
 
-/* 我的国旗 + 画板 */
-.flag-row {
+/* 我的头像 + 画板 + 挑头像 */
+.avatar-row {
   display: flex;
   align-items: center;
   gap: 14px;
 }
-.flag-big {
+.avatar-big {
   border: 2px solid var(--ink);
   box-shadow: 4px 4px 0 var(--ghost);
 }
-.flag-side {
+.avatar-side {
   flex: 1;
   min-width: 0;
 }
-.flag-side .lead {
+.avatar-side .lead {
   margin: 0;
 }
-.flag-actions {
+.avatar-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.avatar-opt {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1.5px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+.avatar-opt .avatar {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+.avatar-opt.is-on {
+  border-color: var(--ink);
+  background: var(--hl);
+  box-shadow: 3px 3px 0 var(--ghost);
+}
+.avatar-opt:active .avatar {
+  transform: scale(0.92);
 }
 .drawpad {
   display: flex;
@@ -1272,9 +1303,11 @@ html:has(.is-night) {
   box-shadow: 5px 5px 0 var(--ghost);
 }
 .drawpad-guide {
-  stroke: #d9d9e3;
-  stroke-width: 0.4;
-  stroke-dasharray: 1 1;
+  fill: none;
+  stroke: #c9c9d6;
+  stroke-width: 0.5;
+  stroke-dasharray: 1.4 1.2;
+  pointer-events: none;
 }
 .drawpad-meter {
   width: min(260px, 100%);

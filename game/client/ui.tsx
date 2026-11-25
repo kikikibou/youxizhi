@@ -18,6 +18,7 @@ export const previewFlags = {
   dossier: null as null | 'clues' | 'votes' | 'secret' | 'all',
   revealed: false,
   drawing: false,
+  picking: false,
   noPhaseCard: false,
 };
 
@@ -360,7 +361,7 @@ export function Passport({ v }: { v: PlayerView }) {
       <div class="pp-top">
         <div class="pp-photo" aria-hidden="true">
           <Avatar id={v.me.id} size={78} />
-          <small>国旗 / FLAG</small>
+          <small>照片 / PHOTO</small>
         </div>
         <dl class="pp-fields">
           <div>

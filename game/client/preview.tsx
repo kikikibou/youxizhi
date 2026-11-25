@@ -60,6 +60,7 @@ function SceneView({ id }: { id: string }) {
   previewFlags.dossier = room?.dossier ?? null;
   previewFlags.revealed = !!room?.revealed;
   previewFlags.drawing = !!room?.drawing;
+  previewFlags.picking = !!room?.picking;
   previewFlags.noPhaseCard = !!room?.dossier || !!room?.hold;
   return (
     <>
