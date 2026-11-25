@@ -4,11 +4,15 @@ import type { BlankRole, Faction } from '../engine/rules.ts';
 import type { LogEntry, PlayerView, StepView } from '../engine/view.ts';
 
 export const FACTION: Record<Faction, string> = { big: '大国', small: '小国', blank: '白板' };
-export const ROLE: Record<BlankRole, string> = { black: '黑板', white: '白板', both: '白板（独自一人）' };
+/**
+ * 白板阵营的两种子身份按职责起名（规则文档里叫「黑板」「白板」，容易和阵营名混）：
+ * 起点白板定谁先说，方向白板定顺 / 逆时针；只有一个白板时他两样都定。
+ */
+export const ROLE: Record<BlankRole, string> = { black: '起点白板', white: '方向白板', both: '独行白板' };
 export const ROLE_DUTY: Record<BlankRole, string> = {
-  black: '每晚决定当天从谁开始发言',
-  white: '每晚决定发言方向（顺时针或逆时针）',
-  both: '每晚决定从谁开始发言，以及发言方向',
+  black: '每晚决定当天从谁开始给身份提示',
+  white: '每晚决定给提示的方向（顺时针或逆时针）',
+  both: '每晚决定从谁开始、按什么方向给身份提示',
 };
 export const DIR: Record<'cw' | 'ccw', string> = { cw: '顺时针', ccw: '逆时针' };
 export const ANSWER: Record<string, string> = { yes: '是', no: '否', unknown: '无法判断', invalid: '无效问题' };
@@ -22,9 +26,9 @@ export function phaseTitle(v: { day: number; step: { k: StepView['k'] } }): { cn
     case 'night':
       return { cn: `第 ${v.day} 夜`, en: `NIGHT ${d}` };
     case 'clue':
-      return { cn: '发言', en: `DAY ${d} · CLUES` };
+      return { cn: '身份提示', en: `DAY ${d} · CLUES` };
     case 'discussion':
-      return { cn: '讨论', en: `DAY ${d} · TALK` };
+      return { cn: '自由讨论', en: `DAY ${d} · TALK` };
     case 'vote':
       return { cn: '投票', en: `DAY ${d} · VOTE` };
     case 'exit':
@@ -69,9 +73,9 @@ export function describe(e: LogEntry, name: (id: string) => string): { text: str
     case 'start':
       return { text: '游戏开始' };
     case 'night':
-      return { text: `天亮了：从 ${name(e.start)} 开始，${DIR[e.dir]}发言` };
+      return { text: `天亮了：从 ${name(e.start)} 开始，${DIR[e.dir]}给身份提示` };
     case 'clue':
-      return { text: e.text === null ? `${name(e.player)} 没有发言` : `${name(e.player)}：「${e.text}」` };
+      return { text: e.text === null ? `${name(e.player)} 没有给提示` : `${name(e.player)}：「${e.text}」` };
     case 'votes': {
       const byTarget = new Map<string, string[]>();
       for (const [voter, target] of Object.entries(e.ballots)) byTarget.set(target, [...(byTarget.get(target) ?? []), voter]);
@@ -127,7 +131,50 @@ export function resultLine(r: { first: Faction | null; second: Faction[]; third:
 /** 规则速览（首页「怎么玩」）。 */
 export const HOW_TO = [
   ['三个阵营', '大国、小国各拿一个词，两个词之间有一个微妙的联系（例：股票 / 鱿鱼，都能「炒」）。白板没有词。你只知道自己的词，不知道自己是大国还是小国。'],
-  ['第一阶段', '每天每人说一个词当线索，然后讨论、投票。目标是把白板全部投出去。说得太模糊会被当成白板，说得太准会在第二阶段被对方猜中。'],
+  ['第一阶段', '每天每人说一个词当身份提示，然后自由讨论、投票。目标是把白板全部投出去。说得太模糊会被当成白板，说得太准会在第二阶段被对方猜中。'],
   ['第二阶段', '白板清空后，存活的国家玩家轮流猜对方国家的词（也可以改为向裁判提问），先猜中的阵营第一。'],
   ['白板', '目标是猜中大国词。出局时可以猜一次或问裁判一个问题；也可以什么都不做，装成被误投的国家玩家。'],
 ] as const;
+
+/** 规则设置旁边 ⓘ 里的说明（每条一行）。 */
+export const RULE_INFO = {
+  composition: ['大国人数要多于小国，小国至少 2 人，白板至少 1 人。', '不自定义时按人数用预设。'],
+  recognition: [
+    '白板阵营有两种子身份：起点白板每晚定谁先给身份提示，方向白板每晚定顺时针还是逆时针。只有 1 个白板时他两样都定（独行白板）。',
+    '分组互认：同一种子身份的人互相认识。',
+    '单向认人：方向白板认得起点白板，反过来不认得。',
+    '全员互认：所有白板互相认识。',
+    '自动：2 个白板时单向认人，3 个及以上分组互认。',
+  ],
+  wipeout: [
+    '每次投票有人出局后检查：某国存活人数降到 N 人（含）以下，白板立刻获胜，这个国家排第三、另一国第二。',
+    'N = 0 就是某国全部出局。',
+    '打开「少于白板」后，某国存活人数比白板存活人数少时也算。',
+    '两国同时达到条件时并列第二。',
+  ],
+  phase2Questions: [
+    '白板全部出局后进入第二阶段，存活的国家玩家轮流猜对方国家的词。',
+    '打开后，轮到你时可以不猜，改为向裁判问一个 Yes / No 问题。',
+    '公开提问：所有人都会看到问题和答案。',
+    '提问前要选问的是大国的词还是小国的词——问错对象等于帮了对手。',
+    '裁判认为不是有效的是非问题时，可以重问一次。',
+  ],
+  tableMode: [
+    '大家面对面、各用各的手机时打开。',
+    '夜晚所有存活玩家都低头看手机：白板阵营做选择，国家玩家点「确认」，从动作上看不出谁是白板。',
+    '关掉后夜晚只有白板阵营操作，适合不在一起、各自连线玩。',
+  ],
+  pace: [
+    '不限时：每一步都等当事人操作完再往下走；有人走开了，房主或主持人可以点「跳过等待」，这一步按时间到处理。',
+    '紧凑 / 标准 / 宽松：按倒计时自动推进。时间到了没操作：没给提示记为「没有给提示」，没投票视为投自己。',
+    '抢答阶段的提示间隔一直按时计。',
+  ],
+  wordSource: [
+    '题库：从勾选的题库里，随机抽一组这个房间里还没人玩过的词对。',
+    '自带词：主持人开局前自己出题（两个词 + 联系），用过一次就作废。',
+  ],
+  judge: [
+    'AI 裁判：回答是非问题、判定猜词；写法完全一致的猜词直接判对。',
+    '主持人判定：主持人在手机上手动判；超过 3 分钟没判按兜底处理（问题答「无法判断」，猜词判错）。',
+  ],
+} as const;

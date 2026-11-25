@@ -10,6 +10,7 @@ import '@fontsource/space-mono/latin-700.css';
 import '@fontsource/doto/latin-900.css';
 import '@fontsource-variable/noto-sans-sc';
 import './style.css';
+import './style-layers.css';
 import './preview.css';
 
 import { render } from 'preact';
@@ -17,7 +18,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Home, RoomScreen } from './app.tsx';
 import type { RoomConnection } from './net.ts';
 import { SCENES, type SceneData } from './preview-data.ts';
-import { CropMarks, Mark, previewFlags } from './ui.tsx';
+import { CropMarks, MapBackdrop, Mark, previewFlags } from './ui.tsx';
 
 const params = new URLSearchParams(location.search);
 const sceneId = params.get('scene');
@@ -53,12 +54,20 @@ function SceneView({ id }: { id: string }) {
       </p>
     );
   }
-  previewFlags.holdOpen = data.kind === 'room' && !!data.hold;
+  const room = data.kind === 'room' ? data : null;
+  previewFlags.holdOpen = !!room?.hold;
+  previewFlags.dossier = room?.dossier ?? null;
+  previewFlags.revealed = !!room?.revealed;
+  previewFlags.drawing = !!room?.drawing;
+  previewFlags.noPhaseCard = !!room?.dossier || !!room?.hold;
   return (
     <>
+      <MapBackdrop />
       <CropMarks />
       {data.kind === 'home' ? (
         <Home />
+      ) : data.kind === 'logos' ? (
+        <LogoBoard />
       ) : (
         <RoomScreen
           code="3572"
@@ -71,6 +80,93 @@ function SceneView({ id }: { id: string }) {
         />
       )}
     </>
+  );
+}
+
+/** Logo 方案对比（只在预览器里）。 */
+function LogoBoard() {
+  const options: { id: string; title: string; note: string; art: preact.JSX.Element }[] = [
+    {
+      id: 'A',
+      title: 'A · 叠印（现在用的）',
+      note: '大圆是大国的词，小圆是小国的词，叠出来的那一块就是联系。像两种油墨叠印出第三种颜色。',
+      art: (
+        <svg viewBox="0 0 160 100" aria-hidden="true">
+          <defs>
+            <clipPath id="lgA">
+              <circle cx="62" cy="50" r="42" />
+            </clipPath>
+          </defs>
+          <circle cx="62" cy="50" r="42" class="mark-big" />
+          <circle cx="114" cy="50" r="27" class="mark-small" />
+          <circle cx="114" cy="50" r="27" class="mark-lap" clip-path="url(#lgA)" />
+        </svg>
+      ),
+    },
+    {
+      id: 'B',
+      title: 'B · 国界',
+      note: '一大一小两块领土共用一条国界（点划线），国界上的一点是联系。更像地图，和背景呼应。',
+      art: (
+        <svg viewBox="0 0 160 100" aria-hidden="true">
+          <path d="M14 22 L58 8 L88 26 L92 58 L70 90 L24 84 L8 52 Z" class="mark-big" />
+          <path d="M92 58 L88 26 L118 18 L146 40 L138 72 L104 80 Z" class="mark-small" />
+          <path d="M88 26 L92 58" class="logo-border" />
+          <circle cx="90" cy="42" r="5" class="logo-node" />
+        </svg>
+      ),
+    },
+    {
+      id: 'C',
+      title: 'C · 套框',
+      note: '「国」字的口：大框里套着一个小框，小框偏在一角、颜色不同。最像一个字，也最简单。',
+      art: (
+        <svg viewBox="0 0 160 100" aria-hidden="true">
+          <rect x="40" y="8" width="84" height="84" class="logo-frame-big" />
+          <rect x="88" y="52" width="26" height="26" class="mark-small" />
+          <rect x="54" y="22" width="22" height="22" class="mark-big" />
+        </svg>
+      ),
+    },
+    {
+      id: 'D',
+      title: 'D · 印章',
+      note: '方印，「大国小国」四个字排成 2×2，「大」「小」两个字用不同的颜色。最有中文味道。',
+      art: (
+        <svg viewBox="0 0 160 100" aria-hidden="true">
+          <rect x="34" y="4" width="92" height="92" rx="6" class="logo-seal" />
+          <text x="58" y="44" class="logo-seal-t logo-seal-t--big">
+            大
+          </text>
+          <text x="102" y="44" class="logo-seal-t">
+            国
+          </text>
+          <text x="58" y="86" class="logo-seal-t logo-seal-t--small">
+            小
+          </text>
+          <text x="102" y="86" class="logo-seal-t">
+            国
+          </text>
+        </svg>
+      ),
+    },
+  ];
+  return (
+    <div class="home logos">
+      <h1 class="brand-title reg">Logo 方案</h1>
+      <p class="brand-sub">四个方向，同一套颜色</p>
+      {options.map((o) => (
+        <section class="card logo-card" key={o.id}>
+          <h3 class="section-title">
+            <span>{o.title}</span>
+            <small>LOGO {o.id}</small>
+          </h3>
+          <div class="logo-art">{o.art}</div>
+          <p class="logo-word">大国小国</p>
+          <p class="note">{o.note}</p>
+        </section>
+      ))}
+    </div>
   );
 }
 

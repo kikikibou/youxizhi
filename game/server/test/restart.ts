@@ -21,7 +21,7 @@ async function setup() {
   for (const p of phones) await p.join();
   const [host] = phones;
   // 讨论时间放长，保证重启时对局还没结束
-  host.send({ t: 'settings', settings: { timers: { ...host.room!.settings.timers, ...FAST, discussion: 120_000 } } });
+  host.send({ t: 'settings', settings: { untimed: false, timers: { ...host.room!.settings.timers, ...FAST, discussion: 120_000 } } });
   await host.next((m) => m.t === 'state' && m.room.settings.timers.discussion === 120_000);
   host.send({ t: 'start' });
   await Promise.all(phones.map((p) => p.next((m) => m.t === 'state' && !!m.game)));

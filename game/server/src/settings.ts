@@ -2,20 +2,26 @@
 
 import { DEFAULT_RULES, compositionError, normalizeWord, type Rules, type Timers } from '../../engine/index.ts';
 import type { CustomPair, RoomSettings } from '../../shared/protocol.ts';
+import { BANK_NAMES } from './bank.ts';
 
+/** 新房间的设置。默认不限时；题目不分难度；出局不公布身份。 */
 export const DEFAULT_SETTINGS: RoomSettings = {
   composition: DEFAULT_RULES.composition,
   judge: DEFAULT_RULES.judge,
   wordSource: 'bank',
-  difficulty: 'random',
+  banks: null,
   recognition: DEFAULT_RULES.recognition,
   wipeoutThreshold: DEFAULT_RULES.wipeoutThreshold,
+  wipeoutVsBlanks: DEFAULT_RULES.wipeoutVsBlanks,
   phase2Questions: DEFAULT_RULES.phase2Questions,
-  revealOnExit: DEFAULT_RULES.revealOnExit,
   tableMode: DEFAULT_RULES.tableMode,
   clueMaxLength: DEFAULT_RULES.clueMaxLength,
+  untimed: true,
   timers: { ...DEFAULT_RULES.timers },
 };
+
+/** 提前获胜阈值的上限（再大就没意义了：开局时某国就已经不超过它）。 */
+export const WIPEOUT_MAX = 5;
 
 /** 每个计时允许的范围（毫秒）。下限给测试留了余地，界面上可以只给常用档位。 */
 const TIMER_RANGE: Record<keyof Timers, [number, number]> = {
@@ -50,12 +56,22 @@ export function mergeSettings(cur: RoomSettings, input: unknown): RoomSettings {
   }
   next.judge = oneOf(p.judge, ['llm', 'human'] as const, cur.judge);
   next.wordSource = oneOf(p.wordSource, ['bank', 'custom'] as const, cur.wordSource);
-  next.difficulty = oneOf(p.difficulty, [1, 2, 3, 'random'] as const, cur.difficulty);
+  if ('banks' in p) {
+    if (p.banks === null) next.banks = null;
+    else if (Array.isArray(p.banks)) {
+      const picked = BANK_NAMES.filter((n) => (p.banks as unknown[]).includes(n));
+      // 至少留一个；全勾上等于「全部」（以后新加的题库也自动算进来）
+      if (picked.length) next.banks = picked.length === BANK_NAMES.length ? null : picked;
+    }
+  }
   next.recognition = oneOf(p.recognition, ['auto', 'group', 'oneWay', 'all'] as const, cur.recognition);
-  next.wipeoutThreshold = oneOf(p.wipeoutThreshold, [0, 1] as const, cur.wipeoutThreshold);
+  if (Number.isInteger(p.wipeoutThreshold) && (p.wipeoutThreshold as number) >= 0 && (p.wipeoutThreshold as number) <= WIPEOUT_MAX) {
+    next.wipeoutThreshold = p.wipeoutThreshold as number;
+  }
+  next.wipeoutVsBlanks = bool(p.wipeoutVsBlanks, cur.wipeoutVsBlanks);
   next.phase2Questions = bool(p.phase2Questions, cur.phase2Questions);
-  next.revealOnExit = bool(p.revealOnExit, cur.revealOnExit);
   next.tableMode = bool(p.tableMode, cur.tableMode);
+  next.untimed = bool(p.untimed, cur.untimed);
   if (Number.isInteger(p.clueMaxLength) && (p.clueMaxLength as number) >= 2 && (p.clueMaxLength as number) <= 30) {
     next.clueMaxLength = p.clueMaxLength as number;
   }
@@ -78,10 +94,12 @@ export function toRules(s: RoomSettings): Rules {
     judge: s.judge,
     recognition: s.recognition,
     wipeoutThreshold: s.wipeoutThreshold,
+    wipeoutVsBlanks: s.wipeoutVsBlanks,
     phase2Questions: s.phase2Questions,
-    revealOnExit: s.revealOnExit,
+    revealOnExit: false,
     tableMode: s.tableMode,
     clueMaxLength: s.clueMaxLength,
+    untimed: s.untimed,
     timers: { ...s.timers },
   };
 }

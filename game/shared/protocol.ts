@@ -15,13 +15,18 @@ export interface RoomSettings {
   judge: 'llm' | 'human';
   /** 'custom'：主持人开局前自己填词对（自带词，§8.4）。 */
   wordSource: 'bank' | 'custom';
-  difficulty: 1 | 2 | 3 | 'random';
+  /** 用哪几个题库（名字）；null = 全部。 */
+  banks: string[] | null;
   recognition: 'auto' | Recognition;
-  wipeoutThreshold: 0 | 1;
+  /** 某国存活人数降到这个数（含）以下，白板提前获胜；0 = 某国全部出局。 */
+  wipeoutThreshold: number;
+  /** 另一个提前获胜条件：某国存活人数少于白板存活人数。 */
+  wipeoutVsBlanks: boolean;
   phase2Questions: boolean;
-  revealOnExit: boolean;
   tableMode: boolean;
   clueMaxLength: number;
+  /** 不限时：需要玩家操作的环节都不倒计时（房主可以跳过卡住的人）。 */
+  untimed: boolean;
   timers: Timers;
 }
 
@@ -48,6 +53,10 @@ export type ClientMsg =
   | { t: 'settings'; settings: Partial<RoomSettings> }
   | { t: 'password'; password: string | null }
   | { t: 'kick'; id: string }
+  /** 自己的头像（大厅里改）：手绘或者默认图案，见 AVATAR_RE；null 恢复默认。 */
+  | { t: 'avatar'; avatar: string | null }
+  /** 房主「跳过等待」：把当前这一步当作时间到（不限时的房间里有人走开时用）。 */
+  | { t: 'skip' }
   | { t: 'transfer'; id: string }
   | { t: 'start' }
   /** 房主指定（或取消）主持人：不参与游戏的出题人 / 裁判。 */
@@ -90,8 +99,11 @@ export interface RoomView {
   /** 主持人填的自带词：只发给主持人本人；其他人只知道填没填好。 */
   customPair: CustomPair | null;
   customPairReady: boolean;
-  /** 题库：当前难度下共几组、这个房间还没玩过几组；sample 表示还没导入题库、用的是 5 组示例。 */
-  bank: { total: number; left: number; sample: boolean };
+  /**
+   * 题库：每个题库几组、这个房间还没玩过几组；total / left 是勾选的题库加起来的。
+   * sample 表示还没导入题库、用的是 5 组示例。
+   */
+  bank: { total: number; left: number; sample: boolean; banks: { name: string; total: number; left: number }[] };
 }
 
 export type ServerMsg =
@@ -99,6 +111,8 @@ export type ServerMsg =
   /** game：玩家看到的对局；judge：主持人看到的对局（两者至多一个）。 */
   | { t: 'state'; room: RoomView; game: PlayerView | null; judge: JudgeView | null }
   | { t: 'error'; message: string }
+  /** 所有成员的头像（加入时发一次，有人改头像时再发）。没有的人用默认图案。 */
+  | { t: 'avatars'; avatars: Record<string, string> }
   /** 被踢出或房间关闭：客户端回到首页，并删掉本地 token。 */
   | { t: 'bye'; reason: string }
   | { t: 'pong' };
@@ -106,3 +120,11 @@ export type ServerMsg =
 /** 房间号：4 位数字，手机上好输。 */
 export const ROOM_CODE = /^\d{4}$/;
 export const NAME_MAX = 10;
+
+/**
+ * 头像：'p:<编号>' 是默认图案（0–23）；'d:<笔画>' 是手绘，64×64 的格子，
+ * 每一笔是一串点，每个点用两个字符（0-9A-Za-z-_ 表示 0–63）记 x、y，笔画之间用逗号隔开。
+ */
+export const AVATAR_RE = /^(p:(?:[0-9]|1[0-9]|2[0-3])|d:[0-9A-Za-z_-]+(?:,[0-9A-Za-z_-]+)*)$/;
+export const AVATAR_MAX = 3000;
+export const AVATAR_PRESETS = 24;

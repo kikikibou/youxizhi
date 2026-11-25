@@ -30,16 +30,16 @@ export type StepView =
   | {
       k: 'night';
       day: number;
-      deadline: number;
+      deadline: number | null;
       /** 我这一晚提交过的选择。 */
       myPick: { player: PlayerId | null; dir: Dir | null } | null;
       /** 我的选择决定哪一项。国家玩家为空（同桌模式下他们的选择不生效）。 */
       decides: ('start' | 'dir')[];
       canPick: boolean;
     }
-  | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number }
-  | { k: 'discussion'; day: number; deadline: number; ready: PlayerId[] }
-  | { k: 'vote'; day: number; deadline: number; myVote: PlayerId | null; votedCount: number }
+  | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number | null }
+  | { k: 'discussion'; day: number; deadline: number | null; ready: PlayerId[] }
+  | { k: 'vote'; day: number; deadline: number | null; myVote: PlayerId | null; votedCount: number }
   | {
       k: 'exit';
       day: number;
@@ -96,7 +96,7 @@ export interface PlayerView {
   /** 已公开的词。 */
   revealed: Partial<Record<WordSide, string>>;
   difficulty: number | null;
-  rules: { phase2Questions: boolean; revealOnExit: boolean; tableMode: boolean; wipeoutThreshold: number; clueMaxLength: number };
+  rules: { phase2Questions: boolean; revealOnExit: boolean; tableMode: boolean; wipeoutThreshold: number; wipeoutVsBlanks: boolean; clueMaxLength: number; untimed: boolean };
   /** 第一名已产生时才有；second / third 在结束前可能还是空的。 */
   result: Result | null;
   /** 结算时公布：两个词、联系、所有人的阵营和子身份（§7.3）。 */
@@ -329,7 +329,9 @@ export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerVi
       revealOnExit: g.rules.revealOnExit,
       tableMode: g.rules.tableMode,
       wipeoutThreshold: g.rules.wipeoutThreshold,
+      wipeoutVsBlanks: g.rules.wipeoutVsBlanks,
       clueMaxLength: g.rules.clueMaxLength,
+      untimed: g.rules.untimed,
     },
     result: g.result ? { ...g.result, second: [...g.result.second], third: [...g.result.third] } : null,
     reveal: over

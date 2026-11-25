@@ -1,16 +1,19 @@
 /** 房间大厅：房间号和二维码、成员、规则设置、开局。 */
 
-import { useMemo, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
+import { useId, useMemo, useState } from 'preact/hooks';
 import { renderSVG } from 'uqr';
 import { DEFAULT_TIMERS, MAX_PLAYERS, MIN_PLAYERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
 import type { RoomSettings, RoomView } from '../shared/protocol.ts';
 import type { RoomConnection, Snapshot } from './net.ts';
-import { resultLine } from './text.ts';
-import { Card, RoundTable, Ticks, pad2 } from './ui.tsx';
+import { Avatar, DrawPad, defaultAvatar, randomPreset } from './avatar.tsx';
+import { RULE_INFO, resultLine } from './text.ts';
+import { Card, RoundTable, Ticks, pad2, previewFlags } from './ui.tsx';
 
 /** 计时档位：在默认时长上整体乘一个系数（出局最短展示、冷却、裁判等待不变）。 */
 const SCALED: (keyof Timers)[] = ['night', 'clue', 'discussion', 'vote', 'exitChoice', 'turn', 'reliefAsk', 'reliefGuess', 'hintInterval', 'bigChance'];
 const PACES = [
+  { id: 'untimed', label: '不限时' },
   { id: 'fast', label: '紧凑', k: 2 / 3 },
   { id: 'normal', label: '标准', k: 1 },
   { id: 'slow', label: '宽松', k: 1.5 },
@@ -20,8 +23,9 @@ function paceTimers(k: number): Timers {
   for (const key of SCALED) t[key] = Math.round((DEFAULT_TIMERS[key] * k) / 1000) * 1000;
   return t;
 }
-function currentPace(t: Timers): string | null {
-  return PACES.find((p) => SCALED.every((key) => paceTimers(p.k)[key] === t[key]))?.id ?? null;
+function currentPace(s: RoomSettings): string | null {
+  if (s.untimed) return 'untimed';
+  return PACES.find((p) => 'k' in p && SCALED.every((key) => paceTimers(p.k)[key] === s.timers[key]))?.id ?? null;
 }
 
 export function shareLink(code: string): string {
@@ -76,6 +80,8 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
         {moderator ? ` · 主持人 ${moderator.name} 不入座` : ''}
       </p>
 
+      {isModerator ? null : <FlagCard conn={conn} me={room.me} current={snap.avatars[room.me] ?? null} />}
+
       <Legend settings={room.settings} n={n} hasPassword={room.hasPassword} />
 
       <Invite code={room.code} link={link} />
@@ -97,6 +103,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
           {room.members.map((m, i) => (
             <li key={m.id} class={m.id === room.me ? 'is-me' : ''}>
               <b class="m-no">{pad2(i + 1)}</b>
+              <Avatar id={m.id} size={26} />
               <i class={`dot ${m.online ? 'is-on' : ''}`} title={m.online ? '在线' : '离线'} />
               <span class="m-name">
                 {m.name}
@@ -177,7 +184,7 @@ function Padlock() {
 /** 图例：这一局几个大国、几个小国、几个白板，裁判、节奏、口令。 */
 function Legend({ settings: s, n, hasPassword }: { settings: RoomSettings; n: number; hasPassword: boolean }) {
   const comp = s.composition ?? PRESETS[n] ?? null;
-  const pace = currentPace(s.timers);
+  const pace = currentPace(s);
   const rows = [
     { k: 'big', label: '大国', count: comp?.big ?? 0 },
     { k: 'small', label: '小国', count: comp?.small ?? 0 },
@@ -288,23 +295,32 @@ function Settings({
   const preset = PRESETS[n];
   const comp = s.composition ?? preset;
   const set = (patch: Partial<RoomSettings>) => editable && conn.settings(patch);
-  const pace = currentPace(s.timers);
+  const pace = currentPace(s);
+  const smallest = comp ? Math.min(comp.big, comp.small) : null;
+  const picked = (name: string) => s.banks === null || s.banks.includes(name);
+  const toggleBank = (name: string) => {
+    const all = bank.banks.map((b) => b.name);
+    const cur = s.banks ?? all;
+    const next = cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name];
+    if (!next.length) return; // 至少留一个
+    set({ banks: next.length === all.length ? null : next });
+  };
   return (
-    <Card>
+    <Card class="rules-card">
       <h3 class="section-title">
         <span>规则</span>
         <small>RULES · {editable ? '房主可改' : '房主设置'}</small>
       </h3>
-      <dl class="settings">
-        <dt>阵营</dt>
-        <dd>
-          {comp ? `${comp.big} 大国 · ${comp.small} 小国 · ${comp.blank} 白板` : '—'}
-          {s.composition ? '（自定义）' : '（按人数预设）'}
+      <div class="rules">
+        <Rule label="阵营" en="FACTIONS" info={RULE_INFO.composition}>
+          <span class="rule-value">
+            {comp ? `${comp.big} 大国 · ${comp.small} 小国 · ${comp.blank} 白板` : '—'}
+            <small>{s.composition ? '自定义' : '按人数预设'}</small>
+          </span>
           {editable ? <CompositionEditor conn={conn} current={s.composition} n={n} /> : null}
-        </dd>
+        </Rule>
 
-        <dt>白板互认</dt>
-        <dd>
+        <Rule label="白板互认" en="RECOGNITION" info={RULE_INFO.recognition}>
           <Choice
             value={s.recognition}
             disabled={!editable}
@@ -316,70 +332,54 @@ function Settings({
             ]}
             onChange={(v) => set({ recognition: v as RoomSettings['recognition'] })}
           />
-          <small>自动：2 个白板时单向认人（白板看得到黑板），3 个及以上分组互认</small>
-        </dd>
+        </Rule>
 
-        <dt>白板提前获胜</dt>
-        <dd>
-          <Choice
-            value={String(s.wipeoutThreshold)}
-            disabled={!editable}
-            options={[
-              ['0', '某国全部出局'],
-              ['1', '某国只剩 1 人'],
-            ]}
-            onChange={(v) => set({ wipeoutThreshold: Number(v) as 0 | 1 })}
-          />
-        </dd>
+        <Rule label="白板提前获胜" en="EARLY WIN" info={RULE_INFO.wipeout}>
+          <span class="threshold">
+            <span>某国存活</span>
+            <span class="stepper stepper--inline">
+              <button type="button" disabled={!editable || s.wipeoutThreshold <= 0} onClick={() => set({ wipeoutThreshold: s.wipeoutThreshold - 1 })} aria-label="减一">
+                −
+              </button>
+              <b>{s.wipeoutThreshold}</b>
+              <button type="button" disabled={!editable || s.wipeoutThreshold >= 5} onClick={() => set({ wipeoutThreshold: s.wipeoutThreshold + 1 })} aria-label="加一">
+                +
+              </button>
+            </span>
+            <span>人（含）以下</span>
+          </span>
+          <small>{s.wipeoutThreshold === 0 ? '0 = 某国全部出局时白板获胜' : `某国只剩 ${s.wipeoutThreshold} 人或更少时白板获胜`}</small>
+          {smallest !== null && s.wipeoutThreshold >= smallest ? <small class="hint-bad">现在的阵营里有一国只有 {smallest} 人：第一次投票后白板就会直接获胜</small> : null}
+          <Toggle on={s.wipeoutVsBlanks} disabled={!editable} onChange={(on) => set({ wipeoutVsBlanks: on })} label="某国存活人数少于白板存活人数时，白板也获胜" />
+        </Rule>
 
-        <dt>第二阶段提问</dt>
-        <dd>
-          <Toggle on={s.phase2Questions} disabled={!editable} onChange={(on) => set({ phase2Questions: on })} label="回合内可以改为向裁判提问" />
-        </dd>
+        <Rule label="第二阶段提问" en="PHASE II" info={RULE_INFO.phase2Questions}>
+          <Toggle on={s.phase2Questions} disabled={!editable} onChange={(on) => set({ phase2Questions: on })} label="回合内可以改为向裁判提问 Yes / No 问题" />
+        </Rule>
 
-        <dt>出局公布身份</dt>
-        <dd>
-          <Toggle on={s.revealOnExit} disabled={!editable} onChange={(on) => set({ revealOnExit: on })} label="出局时公布「是白板 / 不是白板」" />
-        </dd>
-
-        <dt>同桌模式</dt>
-        <dd>
+        <Rule label="同桌模式" en="SAME TABLE" info={RULE_INFO.tableMode}>
           <Toggle on={s.tableMode} disabled={!editable} onChange={(on) => set({ tableMode: on })} label="夜晚所有人都操作手机，免得暴露白板" />
-        </dd>
+        </Rule>
 
-        <dt>题目难度</dt>
-        <dd>
-          <Choice
-            value={String(s.difficulty)}
-            disabled={!editable}
-            options={[
-              ['random', '随机'],
-              ['1', '简单'],
-              ['2', '中等'],
-              ['3', '困难'],
-            ]}
-            onChange={(v) => set({ difficulty: v === 'random' ? 'random' : (Number(v) as 1 | 2 | 3) })}
-          />
-        </dd>
-
-        <dt>节奏</dt>
-        <dd>
+        <Rule label="节奏" en="PACE" info={RULE_INFO.pace}>
           <Choice
             value={pace ?? 'custom'}
             disabled={!editable}
             options={[...PACES.map((p) => [p.id, p.label] as [string, string]), ...(pace ? [] : [['custom', '自定义'] as [string, string]])]}
             onChange={(v) => {
+              if (v === 'untimed') return set({ untimed: true });
               const p = PACES.find((x) => x.id === v);
-              if (p) set({ timers: paceTimers(p.k) });
+              if (p && 'k' in p) set({ untimed: false, timers: paceTimers(p.k) });
             }}
           />
           <small>
-            发言 {s.timers.clue / 1000} 秒 / 人 · 讨论 {s.timers.discussion / 1000} 秒 · 投票 {s.timers.vote / 1000} 秒
+            {s.untimed
+              ? '每一步都等大家操作完；有人走开时，房主可以「跳过等待」。'
+              : `身份提示 ${s.timers.clue / 1000} 秒 / 人 · 自由讨论 ${s.timers.discussion / 1000} 秒 · 投票 ${s.timers.vote / 1000} 秒`}
           </small>
-        </dd>
+        </Rule>
 
-        <dt>词对来源</dt>
-        <dd>
+        <Rule label="词对来源" en="WORDS" info={RULE_INFO.wordSource}>
           <Choice
             value={s.wordSource}
             disabled={!editable}
@@ -389,15 +389,32 @@ function Settings({
             ]}
             onChange={(v) => set({ wordSource: v as RoomSettings['wordSource'] })}
           />
-          <small>
-            {s.wordSource === 'custom'
-              ? '自带词：由主持人在开局前填两个词和联系。'
-              : `题库${bank.sample ? '（还没导入正式题库，现在是 5 组示例）' : ''}：${s.difficulty === 'random' ? '' : '这个难度'}共 ${bank.total} 组，这个房间里还没人玩过的 ${bank.left} 组。`}
-          </small>
-        </dd>
+          {s.wordSource === 'custom' ? (
+            <small>自带词：由主持人在开局前填两个词和联系。</small>
+          ) : (
+            <>
+              <ul class="banks">
+                {bank.banks.map((b) => (
+                  <li key={b.name}>
+                    <label class={`bank ${picked(b.name) ? 'is-on' : ''}`}>
+                      <input type="checkbox" checked={picked(b.name)} disabled={!editable} onChange={() => toggleBank(b.name)} />
+                      <i aria-hidden="true" />
+                      <span class="bank-name">{b.name}</span>
+                      <span class="bank-n">
+                        {b.left}/{b.total}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <small>
+                {bank.sample ? '还没导入正式题库，现在是 5 组示例。' : ''}勾选的题库共 {bank.total} 组，这个房间里还没人玩过的 {bank.left} 组。题目不分难度。
+              </small>
+            </>
+          )}
+        </Rule>
 
-        <dt>裁判方式</dt>
-        <dd>
+        <Rule label="裁判方式" en="JUDGE" info={RULE_INFO.judge}>
           <Choice
             value={s.judge}
             disabled={!editable}
@@ -407,18 +424,81 @@ function Settings({
             ]}
             onChange={(v) => set({ judge: v as RoomSettings['judge'] })}
           />
-          {s.judge === 'human' ? <small>主持人在手机上手动判定提问和猜词；超过 3 分钟没判，自动按兜底处理。</small> : null}
-        </dd>
+          <small>
+            {s.judge === 'human'
+              ? '主持人在手机上手动判定提问和猜词。'
+              : judge.ai
+                ? `AI 裁判（${modelName(judge.model)}）回答是非问题、判定猜词。`
+                : 'AI 裁判还没配置好：猜词只认完全一致的写法（含别名），提问一律答「无法判断」。'}
+          </small>
+        </Rule>
+      </div>
+    </Card>
+  );
+}
 
-        <dt>AI 裁判</dt>
-        <dd>
-          {judge.ai ? (
-            <small>AI 裁判（{modelName(judge.model)}）：回答是非问题、判定猜词。写法完全一致的猜词直接判对。</small>
-          ) : (
-            <small>AI 裁判还没配置好：现在猜词只认完全一致的写法（含别名），提问一律答「无法判断」。</small>
-          )}
-        </dd>
-      </dl>
+/** 一条规则：标题行（带 ⓘ 说明按钮）+ 下面的选项。 */
+function Rule({ label, en, info, children }: { label: string; en: string; info?: readonly string[]; children: ComponentChildren }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div class="rule">
+      <div class="rule-head">
+        <span class="rule-label">{label}</span>
+        <small>{en}</small>
+        {info ? (
+          <button type="button" class={`info ${open ? 'is-on' : ''}`} aria-expanded={open} aria-controls={id} aria-label={`${label}：规则说明`} onClick={() => setOpen(!open)}>
+            i
+          </button>
+        ) : null}
+      </div>
+      {open && info ? (
+        <ul class="info-box" id={id}>
+          {info.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div class="rule-body">{children}</div>
+    </div>
+  );
+}
+
+/** 我的国旗：大厅里换头像。 */
+function FlagCard({ conn, me, current }: { conn: RoomConnection; me: string; current: string | null }) {
+  const [drawing, setDrawing] = useState(previewFlags.drawing);
+  return (
+    <Card class="flag-card">
+      <h3 class="section-title">
+        <span>我的国旗</span>
+        <small>FLAG · 头像</small>
+      </h3>
+      {drawing ? (
+        <DrawPad
+          initial={current}
+          onSave={(v) => {
+            conn.send({ t: 'avatar', avatar: v });
+            setDrawing(false);
+          }}
+          onCancel={() => setDrawing(false)}
+        />
+      ) : (
+        <div class="flag-row">
+          <Avatar id={me} value={current ?? defaultAvatar(me)} size={92} class="flag-big" />
+          <div class="flag-side">
+            <p class="lead">每个人都是一个国家</p>
+            <p class="note">画一面你的国旗，会出现在圆桌、护照和档案里。不想画就点「随机」。</p>
+            <div class="flag-actions">
+              <button type="button" class="btn" onClick={() => setDrawing(true)}>
+                ✎ 画一面
+              </button>
+              <button type="button" class="btn" onClick={() => conn.send({ t: 'avatar', avatar: randomPreset(current) })}>
+                ⟳ 随机
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

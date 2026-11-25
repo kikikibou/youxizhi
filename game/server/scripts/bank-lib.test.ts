@@ -20,7 +20,7 @@ describe('题库导入', () => {
   it('缺少必填的列时直接报错', () => {
     const r = parseRows([['词A', '词B']], 'x.xlsx');
     expect(r.issues[0]).toMatchObject({ level: 'error', row: 1 });
-    expect(r.issues[0].message).toMatch(/难度、联系/);
+    expect(r.issues[0].message).toMatch(/联系/);
   });
 
   it('一行完整的词对：拆分别名和提示，跳过空行', () => {
@@ -39,6 +39,7 @@ describe('题库导入', () => {
         wordA: '鱿鱼',
         wordB: '股票',
         link: '都能炒',
+        bank: 'x',
         difficulty: 1,
         hints: ['动词', '厨房'],
         aliasesA: ['柔鱼', '枪乌贼'],

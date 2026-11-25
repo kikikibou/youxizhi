@@ -26,7 +26,7 @@ async function main() {
   console.log('设置主持人和自带词');
   host.send({ t: 'moderator', id: mod.id });
   await host.next((m) => m.t === 'state' && m.room.moderatorId === mod.id);
-  host.send({ t: 'settings', settings: { wordSource: 'custom', judge: 'human', timers: { ...host.room!.settings.timers, ...FAST } } });
+  host.send({ t: 'settings', settings: { wordSource: 'custom', judge: 'human', untimed: false, timers: { ...host.room!.settings.timers, ...FAST } } });
   await host.next((m) => m.t === 'state' && m.room.settings.wordSource === 'custom' && m.room.settings.judge === 'human');
   check(/主持人填好词对/.test(host.room!.startBlocker ?? ''), `没填词时不能开局：${host.room!.startBlocker}`);
   phones[1].send({ t: 'customPair', pair: PAIR });

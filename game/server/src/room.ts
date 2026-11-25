@@ -13,6 +13,7 @@ import {
   advance,
   createGame,
   factionScore,
+  forceTimeout,
   judge as applyJudge,
   judgeView,
   nextWake,
@@ -24,8 +25,8 @@ import {
   type GameState,
   type JudgeRequest,
 } from '../../engine/index.ts';
-import { NAME_MAX, type ClientMsg, type CustomPair, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
-import { BANK_IS_SAMPLE, bankCounts, pickPair } from './bank.ts';
+import { AVATAR_MAX, AVATAR_RE, NAME_MAX, type ClientMsg, type CustomPair, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
+import { BANK_IS_SAMPLE, bankInfo, pickPair } from './bank.ts';
 import { decide, fallbackVerdict, judgeConfigured } from './judge.ts';
 import { DEFAULT_SETTINGS, cleanCustomPair, mergeSettings, toRules } from './settings.ts';
 
@@ -37,6 +38,8 @@ interface Member {
   joinedAt: number;
   /** 这台手机玩过的词对（加入时带来）。 */
   seen: string[];
+  /** 头像（格式见 AVATAR_RE）；没有时客户端按 id 用默认图案。 */
+  avatar?: string | null;
 }
 
 interface RoomData {
@@ -114,6 +117,9 @@ export class Room extends DurableObject<Env> {
       if (this.room) {
         // 旧版本存下的房间：补上后来新增的字段
         this.room.settings = { ...DEFAULT_SETTINGS, ...this.room.settings, timers: { ...DEFAULT_SETTINGS.timers, ...this.room.settings.timers } };
+        // 去掉已经取消的设置项（难度、出局公布身份）
+        delete (this.room.settings as unknown as Record<string, unknown>).difficulty;
+        delete (this.room.settings as unknown as Record<string, unknown>).revealOnExit;
         this.room.moderatorId ??= null;
         this.room.customPair ??= null;
       }
@@ -259,6 +265,7 @@ export class Room extends DurableObject<Env> {
         ws.serializeAttachment({ memberId: mem.id } satisfies Attachment);
         mem.seen = [...new Set([...mem.seen, ...cleanSeen(m.seen)])].slice(-MAX_SEEN);
         this.send(ws, { t: 'welcome', id: mem.id, token: mem.token });
+        this.send(ws, this.avatarsMsg());
         await this.commit();
         return;
       }
@@ -287,6 +294,7 @@ export class Room extends DurableObject<Env> {
     room.hostId ??= mem.id; // 第一个进来的（建房的人）当房主
     ws.serializeAttachment({ memberId: mem.id } satisfies Attachment);
     this.send(ws, { t: 'welcome', id: mem.id, token: mem.token });
+    this.send(ws, this.avatarsMsg());
     await this.commit();
   }
 
@@ -307,6 +315,23 @@ export class Room extends DurableObject<Env> {
           if (!name) throw new UserError(`名字需要 1–${NAME_MAX} 个字`);
           if (room.members.some((x) => x.name === name && x.id !== me.id)) throw new UserError('这个名字已经有人用了');
           me.name = name;
+          break;
+        }
+        case 'avatar': {
+          lobbyOnly('换头像');
+          const a = m.avatar;
+          if (a !== null && (typeof a !== 'string' || a.length > AVATAR_MAX || !AVATAR_RE.test(a))) throw new UserError('头像格式不对，或者画得太复杂了');
+          me.avatar = a;
+          await this.commit();
+          for (const s of this.onlineSockets()) this.send(s, this.avatarsMsg());
+          return;
+        }
+        case 'skip': {
+          if (!isHost && room.moderatorId !== me.id) throw new UserError('只有房主或主持人可以跳过等待');
+          if (!this.game || !this.inGame()) throw new UserError('现在没有对局');
+          const r = forceTimeout(this.game, Date.now());
+          if (r.error) throw new UserError(r.error);
+          this.game = r.state;
           break;
         }
         case 'leave':
@@ -437,7 +462,7 @@ export class Room extends DurableObject<Env> {
   }
 
   private choosePair(random: () => number) {
-    return pickPair(this.room!.settings.difficulty, this.seenPairs(), random);
+    return pickPair(this.room!.settings.banks, this.seenPairs(), random);
   }
 
   private startGame() {
@@ -590,7 +615,7 @@ export class Room extends DurableObject<Env> {
       moderatorId: room.moderatorId,
       customPair: id === room.moderatorId ? room.customPair : null,
       customPairReady: !!room.customPair,
-      bank: { ...bankCounts(room.settings.difficulty, this.seenPairs()), sample: BANK_IS_SAMPLE },
+      bank: { ...bankInfo(room.settings.banks, this.seenPairs()), sample: BANK_IS_SAMPLE },
     };
     const inThisGame = this.game?.players.some((p) => p.id === id);
     // 主持人不在对局里，拿主持人视图（看得到全部）；其他人只拿自己的视图
@@ -601,6 +626,13 @@ export class Room extends DurableObject<Env> {
       game: inThisGame ? viewFor(this.game!, id, now) : null,
       judge: isModerator ? judgeView(this.game!, now) : null,
     };
+  }
+
+  /** 所有成员的头像（只带设置过的）。 */
+  private avatarsMsg(): ServerMsg {
+    const avatars: Record<string, string> = {};
+    for (const m of this.room?.members ?? []) if (m.avatar) avatars[m.id] = m.avatar;
+    return { t: 'avatars', avatars };
   }
 
   /* ============================================================ 成员 */

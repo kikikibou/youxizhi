@@ -3,15 +3,22 @@
  * 视觉是「图纸」风格：白底细线 + 珊瑚红 / 电光蓝两种油墨；夜晚换成靛蓝底，蓝色当主角。
  */
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useId, useRef, useState } from 'preact/hooks';
+import { Avatar } from './avatar.tsx';
 import type { ComponentChildren } from 'preact';
 import type { Channel } from '../engine/types.ts';
 import type { PlayerView, PublicPlayer } from '../engine/view.ts';
 import type { RoomConnection } from './net.ts';
 import { ANSWER, ROLE, ROLE_DUTY, describe } from './text.ts';
 
-/** 预览器用：强制「按住看身份」处于打开状态。 */
-export const previewFlags = { holdOpen: false };
+/** 预览器用：强制某些界面处于打开状态。 */
+export const previewFlags = {
+  holdOpen: false,
+  dossier: null as null | 'clues' | 'votes' | 'secret' | 'all',
+  revealed: false,
+  drawing: false,
+  noPhaseCard: false,
+};
 
 export const pad2 = (n: number) => String(n).padStart(2, '0');
 
@@ -24,14 +31,42 @@ export function useTick(ms = 250) {
   }, [ms]);
 }
 
-/** 标志：大块珊瑚红是「大」，小块蓝是「小」，一根线是两个词之间的联系。 */
-export function Mark({ size = 20 }: { size?: number }) {
+/**
+ * 标志：一大一小两个圆叠印——大圆是大国的词，小圆是小国的词，叠在一起的那一块就是两个词之间的「联系」。
+ * 像双色印刷两种油墨叠出第三种颜色（这里用墨色）。
+ */
+export function Mark({ size = 26 }: { size?: number }) {
+  const id = useId();
   return (
-    <svg class="mark" aria-hidden="true" width={size} height={(size * 18) / 21} viewBox="0 0 21 18">
-      <rect x="0" y="5" width="13" height="13" class="mark-big" />
-      <rect x="15" y="0" width="6" height="6" class="mark-small" />
-      <path d="M12.5 5.5 L15.5 2.5" class="mark-link" />
+    <svg class="mark" aria-hidden="true" width={size} height={(size * 21) / 30} viewBox="0 0 30 21">
+      <defs>
+        <clipPath id={`mk${id}`}>
+          <circle cx="10.5" cy="10.5" r="10" />
+        </clipPath>
+      </defs>
+      <circle cx="10.5" cy="10.5" r="10" class="mark-big" />
+      <circle cx="23" cy="10.5" r="6.5" class="mark-small" />
+      <circle cx="23" cy="10.5" r="6.5" class="mark-lap" clip-path={`url(#mk${id})`} />
     </svg>
+  );
+}
+
+/** 标志放在一个 SVG 坐标系里（圆桌中心等处用）。cx, cy 是大圆圆心，r 是大圆半径。 */
+export function MarkAt({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  const id = useId();
+  const sx = cx + r * 1.25;
+  const sr = r * 0.65;
+  return (
+    <g aria-hidden="true">
+      <defs>
+        <clipPath id={`ma${id}`}>
+          <circle cx={cx} cy={cy} r={r} />
+        </clipPath>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} class="mark-big" />
+      <circle cx={sx} cy={cy} r={sr} class="mark-small" />
+      <circle cx={sx} cy={cy} r={sr} class="mark-lap" clip-path={`url(#ma${id})`} />
+    </g>
   );
 }
 
@@ -121,8 +156,7 @@ export function RoundTable({
           <circle cx="153" cy="153" r="98" class="rt-reg-b" />
           <circle cx="147" cy="154" r="98" class="rt-reg-a" />
           <circle cx="150" cy="150" r="40" class="rt-inner" />
-          <rect x="138" y="141" width="18" height="18" class="mark-big" />
-          <rect x="158" y="133" width="7" height="7" class="mark-small" />
+          <MarkAt cx={143} cy={150} r={11} />
         </svg>
         {ripple ? <i class="rt-ripple" aria-hidden="true" /> : null}
         {seats.map((s, i) => {
@@ -131,6 +165,7 @@ export function RoundTable({
           const inner = (
             <>
               {s.num !== undefined ? <b>{pad2(s.num)}</b> : null}
+              <Avatar id={s.id} size={tilt ? 26 : 22} class="rt-avatar" />
               <span class="rt-name">{s.name}</span>
               {s.tag ? <em>{s.tag}</em> : null}
             </>
@@ -202,8 +237,7 @@ export function MiniTable({ v, active, start, dir }: { v: PlayerView; active?: s
       <circle cx="73" cy="77.5" r="33" class="rt-reg-a" />
       <circle cx="75" cy="75" r="33" class="mini-table" />
       <circle cx="75" cy="75" r="29" class="mini-hatch" />
-      <rect x="68" y="69" width="11" height="11" class="mark-big" />
-      <rect x="80" y="64" width="5" height="5" class="mark-small" />
+      <MarkAt cx={71} cy={75} r={6} />
       {arc ? (
         <>
           <path d={arc.d} class="mini-arc" />
@@ -341,10 +375,8 @@ export function Passport({ v }: { v: PlayerView }) {
       </div>
       <div class="pp-top">
         <div class="pp-photo" aria-hidden="true">
-          <svg viewBox="0 0 93 117">
-            <circle cx="46.5" cy="44" r="18" />
-            <path d="M12 117 C12 86 28 72 46.5 72 C65 72 81 86 81 117" />
-          </svg>
+          <Avatar id={v.me.id} size={78} />
+          <small>国旗 / FLAG</small>
         </div>
         <dl class="pp-fields">
           <div>
@@ -555,4 +587,141 @@ export function TextAction({
       {over ? <p class="hint-bad">最多 {max} 个字</p> : null}
     </form>
   );
+}
+
+/* ================================================================ 计时轨道、插图、转场、背景 */
+
+/** 倒计时轨道：一条刻度尺，剩余的部分涂满，随时间缩短。total 是这一步的总时长（毫秒）。 */
+export function Track({ deadline, offset, total }: { deadline: number | null; offset: number; total: number | null }) {
+  useTick(250);
+  if (deadline === null || !total) return null;
+  const left = Math.max(0, deadline - (Date.now() + offset));
+  const frac = Math.min(1, left / total);
+  return (
+    <div class={`track ${left <= 5000 ? 'is-low' : ''}`} role="progressbar" aria-label="剩余时间" aria-valuemin={0} aria-valuemax={Math.round(total / 1000)} aria-valuenow={Math.ceil(left / 1000)}>
+      <i class="track-fill" style={{ transform: `scaleX(${frac})` }} />
+      <i class="track-head" style={{ left: `${frac * 100}%` }} />
+    </div>
+  );
+}
+
+export type ArtKind = 'night' | 'clue' | 'discussion' | 'vote' | 'exit' | 'turn' | 'relief' | 'race' | 'bigChance' | 'over' | 'lobby' | 'archive';
+
+/** 每一步的小插图（线描 + 两种油墨）。 */
+export function StepArt({ k, size = 64 }: { k: ArtKind; size?: number }) {
+  return (
+    <svg class="art" viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
+      {k === 'night' ? (
+        <>
+          <circle cx="32" cy="32" r="27" class="art-dash" />
+          <path d="M40 14 A18 18 0 1 0 50 44 A14 14 0 1 1 40 14 Z" class="art-hl" />
+          <path d="M14 16 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z M50 50 l1.4 3.6 3.6 1.4 -3.6 1.4 -1.4 3.6 -1.4 -3.6 -3.6 -1.4 3.6 -1.4z" class="art-acc" />
+        </>
+      ) : k === 'clue' ? (
+        <>
+          <path d="M8 12 H56 V42 H30 L18 54 V42 H8 Z" class="art-paper" />
+          <rect x="16" y="20" width="32" height="14" class="art-hl" />
+          <path d="M20 27 H44" class="art-line-on" />
+        </>
+      ) : k === 'discussion' ? (
+        <>
+          <path d="M6 10 H38 V32 H20 L12 40 V32 H6 Z" class="art-hl" />
+          <path d="M26 24 H58 V46 H52 V54 L44 46 H26 Z" class="art-paper" />
+          <path d="M33 33 H51 M33 39 H45" class="art-line" />
+        </>
+      ) : k === 'vote' ? (
+        <>
+          <rect x="22" y="6" width="20" height="24" class="art-acc" transform="rotate(-8 32 18)" />
+          <path d="M27 18 l4 4 8 -9" class="art-line-on" transform="rotate(-8 32 18)" />
+          <path d="M8 30 H56 V58 H8 Z" class="art-paper" />
+          <path d="M20 30 H44" class="art-slot" />
+          <rect x="8" y="44" width="48" height="6" class="art-hl" />
+        </>
+      ) : k === 'exit' ? (
+        <>
+          <rect x="10" y="12" width="44" height="40" rx="3" class="art-stamp" transform="rotate(-10 32 32)" />
+          <text x="32" y="38" class="art-text" transform="rotate(-10 32 32)">
+            OUT
+          </text>
+        </>
+      ) : k === 'turn' ? (
+        <>
+          <circle cx="32" cy="32" r="24" class="art-line" />
+          <circle cx="32" cy="32" r="14" class="art-line" />
+          <circle cx="32" cy="32" r="5" class="art-hl" />
+          <path d="M32 2 V14 M32 50 V62 M2 32 H14 M50 32 H62" class="art-line" />
+        </>
+      ) : k === 'relief' ? (
+        <>
+          <circle cx="32" cy="32" r="24" class="art-paper" />
+          <path d="M32 8 A24 24 0 0 1 56 32 H44 A12 12 0 0 0 32 20 Z M32 56 A24 24 0 0 1 8 32 H20 A12 12 0 0 0 32 44 Z" class="art-hl" />
+          <circle cx="32" cy="32" r="12" class="art-line" />
+        </>
+      ) : k === 'race' ? (
+        <>
+          <circle cx="30" cy="36" r="22" class="art-paper" />
+          <path d="M26 6 H34 M30 6 V14 M30 36 L30 22" class="art-line" />
+          <path d="M40 24 L50 24 L42 38 L54 38 L34 62 L38 44 L28 44 Z" class="art-acc" />
+        </>
+      ) : k === 'bigChance' ? (
+        <>
+          <path d="M14 6 V60" class="art-line" />
+          <path d="M14 8 H52 L44 20 L52 32 H14 Z" class="art-hl" />
+          <circle cx="14" cy="60" r="3" class="art-ink" />
+        </>
+      ) : k === 'over' ? (
+        <>
+          <rect x="22" y="22" width="20" height="36" class="art-hl" />
+          <rect x="4" y="34" width="18" height="24" class="art-paper" />
+          <rect x="42" y="42" width="18" height="16" class="art-acc" />
+          <path d="M32 4 l3 7 7 1 -5 5 1.5 7 -6.5 -3.5 -6.5 3.5 1.5 -7 -5 -5 7 -1z" class="art-ink" />
+        </>
+      ) : k === 'lobby' ? (
+        <>
+          <circle cx="32" cy="32" r="16" class="art-hl" />
+          {[0, 1, 2, 3, 4, 5].map((i) => {
+            const a = (i * Math.PI) / 3;
+            return <rect key={i} x={32 + 25 * Math.cos(a) - 4} y={32 + 25 * Math.sin(a) - 4} width="8" height="8" class="art-ink" />;
+          })}
+        </>
+      ) : (
+        <>
+          <path d="M6 18 H24 L28 12 H58 V54 H6 Z" class="art-paper" />
+          <rect x="14" y="24" width="36" height="22" class="art-hl" />
+          <path d="M18 30 H46 M18 36 H38 M18 42 H42" class="art-line-on" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** 换步骤时的标题卡：一条色带从左边扫进来，大标题砸下来，再扫出去。 */
+export function PhaseCard({ kicker, title, art }: { kicker: string; title: string; art: ArtKind }) {
+  const [show, setShow] = useState(!previewFlags.noPhaseCard);
+  if (!show) return null;
+  return (
+    <div class="phasecard" aria-hidden="true" onAnimationEnd={(e) => e.target === e.currentTarget && setShow(false)}>
+      <div class="pc-band">
+        <span class="pc-kicker">{kicker}</span>
+        <b class="pc-title">{title}</b>
+        <span class="pc-art">
+          <StepArt k={art} size={88} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** 背景：一张慢慢平移的领土图（颜色跟着昼夜变）。 */
+export function MapBackdrop() {
+  return (
+    <div class="mapbg" aria-hidden="true">
+      <i />
+    </div>
+  );
+}
+
+/** 等待中：转圈的虚线环 + 文字。 */
+export function Loader({ children }: { children: ComponentChildren }) {
+  return <p class="waiting">{children}</p>;
 }

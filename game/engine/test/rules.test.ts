@@ -1,7 +1,7 @@
 /** 逐条核对规则文档里的规则。章节号指《大国小国》线上版规则与开发说明。 */
 
 import { describe, expect, it } from 'vitest';
-import { judgeView, nightDeciders, releaseHint, viewFor, PRESETS, type GameState } from '../index.ts';
+import { forceTimeout, judgeView, nightDeciders, releaseHint, viewFor, PRESETS, type GameState } from '../index.ts';
 import { Sim } from './sim.ts';
 
 const T = (s: Sim) => s.g.rules.timers;
@@ -600,5 +600,54 @@ describe('主持人（§8.4）', () => {
     expect(s.g.judge.length).toBe(1); // 人类裁判等得更久
     s.wait(T(s).humanJudge - T(s).llmJudge);
     expect(s.lastEvent('turn')).toMatchObject({ action: 'ask', verdict: 'unknown' });
+  });
+});
+
+describe('房间自选：不限时、跳过等待、提前获胜的另一个条件、夜晚只需确认', () => {
+  it('不限时：需要玩家操作的环节没有截止时间，等多久都不会自动往下走', () => {
+    const s = new Sim({ n: 7, seed: 31, rules: { untimed: true } });
+    expect((s.step as Extract<GameState['step'], { k: 'night' }>).deadline).toBeNull();
+    s.wait(3_600_000);
+    expect(s.step.k).toBe('night');
+    s.night();
+    expect(s.step.k).toBe('clue');
+    s.wait(3_600_000);
+    expect(s.step).toMatchObject({ k: 'clue', idx: 0, deadline: null });
+  });
+
+  it('跳过等待：当前发言的人按超时处理，记为未发言', () => {
+    const s = new Sim({ n: 7, seed: 32, rules: { untimed: true } });
+    s.night();
+    const st = s.step as Extract<GameState['step'], { k: 'clue' }>;
+    const first = st.order[0];
+    const r = forceTimeout(s.g, s.t);
+    expect(r.error).toBeUndefined();
+    s.g = r.state;
+    expect(s.lastEvent('clue')).toMatchObject({ player: first, text: null });
+    expect(s.step).toMatchObject({ k: 'clue', idx: 1 });
+  });
+
+  it('白板存活人数多于某国时，白板立刻获胜（开启时）', () => {
+    const s = new Sim({ n: 7, seed: 33, rules: { wipeoutVsBlanks: true } });
+    const sm = s.of('small')[0];
+    // 小国 2 人、白板 2 人：投出一个小国后，小国 1 < 白板 2
+    s.dayVoting(sm.id);
+    expect(s.g.result).toMatchObject({ first: 'blank', how: 'wipeout', third: ['small'] });
+  });
+
+  it('阈值可以填任意数字：9 人局设为 2 时，小国（3 人）剩 2 人就触发', () => {
+    const s = new Sim({ n: 9, seed: 34, rules: { wipeoutThreshold: 2 } });
+    expect(s.of('small').length).toBe(3);
+    const sm = s.of('small')[0];
+    s.dayVoting(sm.id);
+    expect(s.g.result).toMatchObject({ first: 'blank', how: 'wipeout', second: ['big'], third: ['small'] });
+  });
+
+  it('同桌模式下国家玩家夜晚只点确认（空着提交）；白板阵营必须选', () => {
+    const s = new Sim({ n: 7, seed: 35 });
+    const nation = s.of('big')[0];
+    s.do(nation.id, { a: 'night' });
+    const blank = s.of('blank')[0];
+    expect(s.refused(blank.id, { a: 'night' })).toBe('请选择起始玩家或方向');
   });
 });

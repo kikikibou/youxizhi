@@ -104,8 +104,10 @@ export interface Rules {
   composition: Composition | null;
   judge: 'llm' | 'human';
   recognition: 'auto' | Recognition;
-  /** 白板胜利条件 2 的阈值：某国存活人数降到它（含）以下，白板立刻获胜（§5.6）。 */
-  wipeoutThreshold: 0 | 1;
+  /** 白板胜利条件 2 的阈值：某国存活人数降到它（含）以下，白板立刻获胜（§5.6）。0 = 某国全部出局。 */
+  wipeoutThreshold: number;
+  /** 另一个提前获胜条件（房间自选，默认关）：某国存活人数少于白板存活人数，白板立刻获胜。 */
+  wipeoutVsBlanks: boolean;
   /** 第二阶段回合内能否改为提问（§6.2，默认开，§13-10）。 */
   phase2Questions: boolean;
   /** 出局时公布「是白板 / 不是白板」（§10.3，默认关，§13-10）。 */
@@ -118,6 +120,12 @@ export interface Rules {
   tableMode: boolean;
   /** 线索长度上限，按字符计（§5.2，§13-18）。 */
   clueMaxLength: number;
+  /**
+   * 不限时：夜晚、发言、讨论、投票、出局选择、第二阶段回合、白板救济、大国的一次机会都不设截止时间，
+   * 等当事人操作完才往下走（房主可以「跳过等待」，见 forceTimeout）。抢答的提示间隔、出局最短展示、
+   * 抢答冷却和裁判等待照常计时。
+   */
+  untimed: boolean;
   timers: Timers;
 }
 
@@ -126,10 +134,12 @@ export const DEFAULT_RULES: Readonly<Rules> = {
   judge: 'llm',
   recognition: 'auto',
   wipeoutThreshold: 0,
+  wipeoutVsBlanks: false,
   phase2Questions: true,
   revealOnExit: false,
   tableMode: true,
   clueMaxLength: 12,
+  untimed: false,
   timers: DEFAULT_TIMERS,
 };
 

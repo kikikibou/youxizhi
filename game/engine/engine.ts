@@ -58,6 +58,11 @@ function reject(msg: string): never {
   throw new Reject(msg);
 }
 
+/** 截止时间：不限时的房间里，需要玩家操作的环节不设截止时间（null）。 */
+function until(g: GameState, now: number, ms: number): number | null {
+  return g.rules.untimed ? null : now + ms;
+}
+
 function clone<T>(x: T): T {
   return JSON.parse(JSON.stringify(x)) as T;
 }
@@ -282,6 +287,44 @@ export function nextWake(g: GameState): number | null {
   return valid.length ? Math.min(...valid) : null;
 }
 
+/**
+ * 「跳过等待」：把当前这一步当作时间已到，按超时的规矩处理（没发言记为未发言、没投票视为投自己……）。
+ * 给不限时的房间用：有人走开或掉线时，房主可以让游戏继续。裁判判定中、出局结果展示中不能跳。
+ */
+export function forceTimeout(state: GameState, now: number): ActResult {
+  const g = clone(state);
+  try {
+    settle(g, now);
+    const s = g.step;
+    switch (s.k) {
+      case 'night':
+      case 'clue':
+      case 'discussion':
+      case 'vote':
+        s.deadline = now;
+        break;
+      case 'turn':
+      case 'relief':
+      case 'bigChance':
+        if (s.pending) reject('裁判正在判定，稍等一下');
+        s.deadline = now;
+        break;
+      case 'exit':
+        if (s.cur.pending) reject('裁判正在判定，稍等一下');
+        if (s.cur.done) reject('出局结果马上公布');
+        s.cur.deadline = now;
+        break;
+      default:
+        reject('现在没有需要跳过的等待');
+    }
+    settle(g, now);
+    return { state: g };
+  } catch (e) {
+    if (e instanceof Reject) return { state, error: e.message };
+    throw e;
+  }
+}
+
 /** 人类裁判手动提前公布下一条提示（§8.4）；只在抢答中、还有提示没公布时可以。 */
 export function releaseHint(state: GameState, now: number): ActResult {
   const g = clone(state);
@@ -398,7 +441,7 @@ function settleOnce(g: GameState, now: number): boolean {
       return false;
     case 'discussion':
       if (due(s.deadline) || alivePlayers(g).every((p) => s.ready.includes(p.id))) {
-        g.step = { k: 'vote', day: s.day, deadline: now + g.rules.timers.vote, ballots: {} };
+        g.step = { k: 'vote', day: s.day, deadline: until(g, now, g.rules.timers.vote), ballots: {} };
         return true;
       }
       return false;
@@ -468,7 +511,7 @@ function chat(g: GameState, me: PlayerState, channel: Channel, text: unknown, no
 function startNight(g: GameState, now: number) {
   g.day += 1;
   deliverAnswers(g, now);
-  g.step = { k: 'night', day: g.day, deadline: now + g.rules.timers.night, picks: {} };
+  g.step = { k: 'night', day: g.day, deadline: until(g, now, g.rules.timers.night), picks: {} };
 }
 
 /** 出局提问的回答，私下发给白板阵营的所有玩家，包括已出局的（§5.1）。 */
@@ -495,8 +538,10 @@ function nightDecidersAll(g: GameState): PlayerState[] {
 
 function nightPick(g: GameState, me: PlayerState, target: PlayerId | undefined, dir: Dir | undefined, now: number) {
   if (!me.alive) reject('出局玩家夜晚没有操作');
-  if (!g.rules.tableMode && !nightDecidersAll(g).some((p) => p.id === me.id)) reject('夜晚没有你的操作');
-  if (target === undefined && dir === undefined) reject('请选择起始玩家或方向');
+  const decider = nightDecidersAll(g).some((p) => p.id === me.id);
+  if (!g.rules.tableMode && !decider) reject('夜晚没有你的操作');
+  // 同桌模式下国家玩家只需要点「确认」（选择不生效，空着提交也行）；白板阵营至少要选一项。
+  if (decider && target === undefined && dir === undefined) reject('请选择起始玩家或方向');
   if (target !== undefined && !player(g, target)?.alive) reject('只能选择存活的玩家');
   if (dir !== undefined && dir !== 'cw' && dir !== 'ccw') reject('方向只能是顺时针或逆时针');
   const s = g.step as Extract<Step, { k: 'night' }>;
@@ -533,7 +578,7 @@ function resolveNight(g: GameState, now: number) {
   // 起始玩家和方向对所有人公开，但不显示是谁选的。
   emit(g, { t: 'night', day: s.day, start, dir }, now);
   const order = seatOrder(g, start, dir, alivePlayers(g).map((p) => p.id));
-  g.step = { k: 'clue', day: s.day, start, dir, order, idx: 0, deadline: now + g.rules.timers.clue };
+  g.step = { k: 'clue', day: s.day, start, dir, order, idx: 0, deadline: until(g, now, g.rules.timers.clue) };
 }
 
 /* ================================================================ 线索、讨论、投票 */
@@ -550,8 +595,8 @@ function clue(g: GameState, me: PlayerState, text: unknown, now: number) {
 function nextClue(g: GameState, now: number) {
   const s = g.step as Extract<Step, { k: 'clue' }>;
   s.idx += 1;
-  if (s.idx < s.order.length) s.deadline = now + g.rules.timers.clue;
-  else g.step = { k: 'discussion', day: s.day, deadline: now + g.rules.timers.discussion, ready: [] };
+  if (s.idx < s.order.length) s.deadline = until(g, now, g.rules.timers.clue);
+  else g.step = { k: 'discussion', day: s.day, deadline: until(g, now, g.rules.timers.discussion), ready: [] };
 }
 
 function ready(g: GameState, me: PlayerState) {
@@ -584,9 +629,15 @@ function resolveVote(g: GameState, now: number) {
   for (const id of out) player(g, id)!.alive = false;
 
   // 结算检查第 1 条（§5.6）：某国存活人数降到阈值，白板立刻获胜；优先于「白板清空」。
+  // 房间自选的另一个条件：某国存活人数少于白板存活人数。
   const th = g.rules.wipeoutThreshold;
-  const bigDown = aliveOf(g, 'big').length <= th;
-  const smallDown = aliveOf(g, 'small').length <= th;
+  const blanksAlive = aliveOf(g, 'blank').length;
+  const down = (f: 'big' | 'small') => {
+    const n = aliveOf(g, f).length;
+    return n <= th || (g.rules.wipeoutVsBlanks && n < blanksAlive);
+  };
+  const bigDown = down('big');
+  const smallDown = down('small');
   if (bigDown || smallDown) {
     const standing: Faction[] = [];
     const fallen: Faction[] = [];
@@ -608,7 +659,7 @@ function newExitCur(g: GameState, id: PlayerId, now: number): ExitCur {
     player: id,
     startedAt: now,
     showUntil: now + g.rules.timers.exitMinShow,
-    deadline: now + g.rules.timers.exitChoice,
+    deadline: until(g, now, g.rules.timers.exitChoice),
     choice: null,
     guess: null,
     questions: [],
@@ -668,7 +719,7 @@ function exitVerdict(g: GameState, req: JudgeRequest, verdict: GuessVerdict | Qu
   q.verdict = verdict as QuestionVerdict;
   g.qa.push({ id: req.id, context: 'exit', target: null, text: q.text, verdict: q.verdict });
   if (verdict === 'invalid') {
-    if (c.questions.length <= REASKS_ALLOWED) c.deadline = now + g.rules.timers.exitChoice; // 允许重问一次
+    if (c.questions.length <= REASKS_ALLOWED) c.deadline = until(g, now, g.rules.timers.exitChoice); // 允许重问一次
     else c.done = true; // 再次无效，本次提问作废
     return;
   }
@@ -726,7 +777,7 @@ function startPhase2(g: GameState, now: number) {
 function startTurns(g: GameState, round: 1 | 2, now: number) {
   // 第二轮「接着轮转」：一轮是每人一次，所以顺序和第一轮相同。
   const order = [...g.turnOrder];
-  g.step = { k: 'turn', round, order, idx: 0, deadline: now + g.rules.timers.turn, pending: null, reasks: 0 };
+  g.step = { k: 'turn', round, order, idx: 0, deadline: until(g, now, g.rules.timers.turn), pending: null, reasks: 0 };
 }
 
 function turnAction(g: GameState, me: PlayerState, action: Action, now: number) {
@@ -762,7 +813,7 @@ function turnVerdict(g: GameState, req: JudgeRequest, verdict: GuessVerdict | Qu
   emit(g, { t: 'turn', round: s.round, player: who, action: 'ask', target: req.target!, text: req.text, verdict: v }, now);
   if (v === 'invalid' && s.reasks < REASKS_ALLOWED) {
     s.reasks += 1;
-    s.deadline = now + g.rules.timers.turn; // 允许重问一次（也可以改为猜词）
+    s.deadline = until(g, now, g.rules.timers.turn); // 允许重问一次（也可以改为猜词）
     return;
   }
   nextTurn(g, now);
@@ -787,7 +838,7 @@ function nextTurn(g: GameState, now: number) {
   s.reasks = 0;
   s.pending = null;
   if (s.idx < s.order.length) {
-    s.deadline = now + g.rules.timers.turn;
+    s.deadline = until(g, now, g.rules.timers.turn);
     return;
   }
   if (s.round === 1) startRelief(g, now);
@@ -797,11 +848,11 @@ function nextTurn(g: GameState, now: number) {
 /* ================================================================ 白板救济 */
 
 function startRelief(g: GameState, now: number) {
-  g.step = { k: 'relief', stage: 'ask', deadline: now + g.rules.timers.reliefAsk, pending: null, reasks: 0 };
+  g.step = { k: 'relief', stage: 'ask', deadline: until(g, now, g.rules.timers.reliefAsk), pending: null, reasks: 0 };
 }
 
 function toReliefGuess(g: GameState, now: number) {
-  g.step = { k: 'relief', stage: 'guess', deadline: now + g.rules.timers.reliefGuess, pending: null, reasks: 0 };
+  g.step = { k: 'relief', stage: 'guess', deadline: until(g, now, g.rules.timers.reliefGuess), pending: null, reasks: 0 };
 }
 
 function reliefAction(g: GameState, me: PlayerState, action: Action, now: number) {
@@ -846,7 +897,7 @@ function reliefVerdict(g: GameState, req: JudgeRequest, verdict: GuessVerdict | 
   emit(g, { t: 'relief', action: 'ask', text: req.text, verdict: v }, now);
   if (v === 'invalid' && s.reasks < REASKS_ALLOWED) {
     s.reasks += 1;
-    s.deadline = now + g.rules.timers.reliefAsk;
+    s.deadline = until(g, now, g.rules.timers.reliefAsk);
     return;
   }
   toReliefGuess(g, now);
@@ -1006,7 +1057,7 @@ function blankWins(g: GameState, how: Result['how'], now: number) {
     finish(g, { first: 'blank', second: ['small'], third: ['big'], how }, now);
     return;
   }
-  g.step = { k: 'bigChance', deadline: now + g.rules.timers.bigChance, pending: null, by: null, text: null };
+  g.step = { k: 'bigChance', deadline: until(g, now, g.rules.timers.bigChance), pending: null, by: null, text: null };
 }
 
 function bigChanceGuess(g: GameState, me: PlayerState, text: unknown, now: number) {

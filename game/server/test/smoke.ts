@@ -43,7 +43,7 @@ async function main() {
   others[0].send({ t: 'start' });
   await others[0].next((m) => m.t === 'error');
   check(/只有房主/.test(others[0].errors.at(-1) ?? ''), '非房主不能开局');
-  host.send({ t: 'settings', settings: { timers: { ...host.room!.settings.timers, ...FAST } } });
+  host.send({ t: 'settings', settings: { untimed: false, timers: { ...host.room!.settings.timers, ...FAST } } });
   await host.next((m) => m.t === 'state' && m.room.settings.timers.night === FAST.night);
   check(true, '房主改了计时');
 

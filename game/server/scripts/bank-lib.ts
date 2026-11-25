@@ -19,6 +19,7 @@ export interface Issue {
 /** 列名 → 字段。列名里的 ★、空格、括号里的说明都会被忽略。 */
 const HEADERS: Record<string, string> = {
   编号: 'id',
+  题库: 'bank',
   启用: 'enabled',
   难度: 'difficulty',
   词A: 'wordA',
@@ -36,7 +37,8 @@ const HEADERS: Record<string, string> = {
   联系类型: 'linkType',
   备注: 'notes',
 };
-const REQUIRED = ['difficulty', 'wordA', 'wordB', 'link'];
+/** 难度现在可以不填（房间里已经不按难度抽题了），填了就检查。 */
+const REQUIRED = ['wordA', 'wordB', 'link'];
 
 export function headerKey(h: Cell): string | null {
   if (h === null || h === undefined) return null;
@@ -80,6 +82,11 @@ export interface ParseResult {
   issues: Issue[];
   /** 「启用」填了「否」的行数。 */
   disabled: number;
+}
+
+/** 文件名去掉扩展名，作为这个文件里没填「题库」列的行所属的题库名。 */
+export function bankNameOf(file: string): string {
+  return file.replace(/\.[^.]+$/, '').trim() || '题库';
 }
 
 /** 解析一个工作表（或 CSV）的所有行。 */
@@ -131,8 +138,9 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
 
     const dRaw = get('difficulty');
     const d = Number(dRaw);
-    if (!dRaw) err(line, '难度必填（1、2 或 3）');
-    else if (![1, 2, 3].includes(d)) err(line, `难度只能是 1、2、3（现在是「${dRaw}」）`);
+    if (dRaw && ![1, 2, 3].includes(d)) err(line, `难度只能是 1、2、3（现在是「${dRaw}」）`);
+    const bank = get('bank') || bankNameOf(file);
+    if (len(bank) > 20) err(line, `题库名最多 20 字（现在 ${len(bank)} 字）`);
 
     const hints: string[] = [];
     for (const k of ['hint2', 'hint3', 'hint4', 'hint5']) {
@@ -174,7 +182,8 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
       disabled += 1;
       continue;
     }
-    const pair: ParseResult['pairs'][number] = { id, wordA, wordB, link, difficulty: d as 1 | 2 | 3, _row: line, _file: file };
+    const pair: ParseResult['pairs'][number] = { id, wordA, wordB, link, bank, _row: line, _file: file };
+    if (dRaw) pair.difficulty = d as 1 | 2 | 3;
     if (hints.length) pair.hints = hints;
     if (senseA) pair.senseA = senseA;
     if (senseB) pair.senseB = senseB;

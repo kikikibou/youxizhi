@@ -130,10 +130,10 @@ export interface RaceGuess {
 }
 
 export type Step =
-  | { k: 'night'; day: number; deadline: number; picks: Record<PlayerId, NightPick> }
-  | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number }
-  | { k: 'discussion'; day: number; deadline: number; ready: PlayerId[] }
-  | { k: 'vote'; day: number; deadline: number; ballots: Record<PlayerId, PlayerId> }
+  | { k: 'night'; day: number; deadline: number | null; picks: Record<PlayerId, NightPick> }
+  | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number | null }
+  | { k: 'discussion'; day: number; deadline: number | null; ready: PlayerId[] }
+  | { k: 'vote'; day: number; deadline: number | null; ballots: Record<PlayerId, PlayerId> }
   | { k: 'exit'; day: number; queue: PlayerId[]; idx: number; cur: ExitCur }
   | { k: 'turn'; round: 1 | 2; order: PlayerId[]; idx: number; deadline: number | null; pending: string | null; reasks: number }
   | { k: 'relief'; stage: 'ask' | 'guess'; deadline: number | null; pending: string | null; reasks: number }

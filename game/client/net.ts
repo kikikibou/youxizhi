@@ -85,11 +85,13 @@ export interface Snapshot {
   error: { message: string; at: number } | null;
   /** 被请出或房间关闭。 */
   bye: string | null;
+  /** 成员头像（id → 头像字符串）；没有的人用默认图案。 */
+  avatars: Record<string, string>;
 }
 
 export class RoomConnection {
   readonly code: string;
-  snap: Snapshot = { status: 'connecting', joined: false, room: null, game: null, judge: null, offset: 0, error: null, bye: null };
+  snap: Snapshot = { status: 'connecting', joined: false, room: null, game: null, judge: null, offset: 0, error: null, bye: null, avatars: {} };
   private ws: WebSocket | null = null;
   private listeners = new Set<() => void>();
   private retry = 0;
@@ -209,6 +211,9 @@ export class RoomConnection {
           break;
         }
         this.update({ error: { message: m.message, at: Date.now() } });
+        break;
+      case 'avatars':
+        this.update({ avatars: m.avatars });
         break;
       case 'bye':
         store.set(`token:${this.code}`, null);

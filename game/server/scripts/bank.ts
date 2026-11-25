@@ -77,11 +77,11 @@ async function main() {
   for (const i of errors) console.log(`✗ ${where(i)}：${i.message}`);
   for (const i of warns) console.log(`! ${where(i)}：${i.message}`);
 
-  const byLevel = [1, 2, 3].map((d) => all.filter((p) => p.difficulty === d).length);
+  const banks = [...new Set(all.map((p) => p.bank ?? '题库'))].map((b) => `${b} ${all.filter((p) => (p.bank ?? '题库') === b).length} 组`);
   const noSense = all.filter((p) => !p.senseA || !p.senseB).length;
   const noHints = all.filter((p) => !p.hints?.length).length;
   console.log(
-    `\n题库：${files.join('、')}\n  可用 ${all.length} 组（简单 ${byLevel[0]} / 中等 ${byLevel[1]} / 困难 ${byLevel[2]}）${disabled ? `，停用 ${disabled} 组` : ''}`,
+    `\n题库文件：${files.join('、')}\n  可用 ${all.length} 组（${banks.join('，')}）${disabled ? `，停用 ${disabled} 组` : ''}`,
   );
   if (noSense) console.log(`  其中 ${noSense} 组没填全义项：裁判只能按最常见的意思理解，建议补上`);
   if (noHints) console.log(`  其中 ${noHints} 组只有联系、没有后续提示：抢答阶段公布完联系后，再过一个间隔就平局`);

@@ -18,6 +18,7 @@ import {
   type WordPair,
 } from '../engine/index.ts';
 import type { CustomPair, MemberView, RoomSettings, RoomView } from '../shared/protocol.ts';
+import { encodeDrawing, type Stroke } from './avatar.tsx';
 import type { RoomInfo, Snapshot } from './net.ts';
 
 const PAIR: WordPair = {
@@ -42,6 +43,26 @@ const NAMES: [string, string][] = [
 ];
 const CLUES = ['海边', '下锅', '涨停', '红色', '翻身', '潮汐', '牛市'];
 const CODE = '3572';
+
+/** 预览用的一面手绘国旗：一只简笔鱿鱼。 */
+function squid(): string {
+  const strokes: Stroke[] = [];
+  const body: Stroke = [];
+  for (let t = 0; t <= 24; t++) {
+    const a = Math.PI + (t / 24) * Math.PI;
+    body.push([32 + 14 * Math.cos(a), 30 + 20 * Math.sin(a)]);
+  }
+  body.push([46, 30], [18, 30]);
+  strokes.push(body);
+  for (const x of [20, 26, 32, 38, 44]) {
+    const leg: Stroke = [];
+    for (let t = 0; t <= 6; t++) leg.push([x + Math.sin(t * 0.9 + x) * 3, 31 + t * 4.5]);
+    strokes.push(leg);
+  }
+  strokes.push([[27, 22]], [[37, 22]]);
+  return encodeDrawing(strokes);
+}
+const AVATARS: Record<string, string> = { a: squid(), c: 'p:3', e: 'p:15', g: 'p:20' };
 
 class Sim {
   g: GameState;
@@ -116,13 +137,14 @@ function settings(patch: Partial<RoomSettings> = {}): RoomSettings {
     composition: DEFAULT_RULES.composition,
     judge: DEFAULT_RULES.judge,
     wordSource: 'bank',
-    difficulty: 'random',
+    banks: ['日常', '谐音'],
     recognition: DEFAULT_RULES.recognition,
     wipeoutThreshold: DEFAULT_RULES.wipeoutThreshold,
+    wipeoutVsBlanks: false,
     phase2Questions: DEFAULT_RULES.phase2Questions,
-    revealOnExit: DEFAULT_RULES.revealOnExit,
     tableMode: DEFAULT_RULES.tableMode,
     clueMaxLength: DEFAULT_RULES.clueMaxLength,
+    untimed: false,
     timers: { ...DEFAULT_RULES.timers },
     ...patch,
   };
@@ -159,19 +181,34 @@ function room(opts: {
     moderatorId: opts.moderatorId ?? null,
     customPair: opts.customPair ?? null,
     customPairReady: !!opts.customPair,
-    bank: { total: 120, left: 117, sample: false },
+    bank: {
+      total: 96,
+      left: 93,
+      sample: false,
+      banks: [
+        { name: '日常', total: 60, left: 58 },
+        { name: '谐音', total: 36, left: 35 },
+        { name: '网络梗', total: 24, left: 24 },
+      ],
+    },
   };
 }
 
 function snapOf(r: RoomView, extra: Partial<Snapshot> = {}): Snapshot {
-  return { status: 'open', joined: true, room: r, game: null, judge: null, offset: 0, error: null, bye: null, ...extra };
+  return { status: 'open', joined: true, room: r, game: null, judge: null, offset: 0, error: null, bye: null, avatars: AVATARS, ...extra };
 }
 
 /** 对局中的画面：某个玩家的视角。 */
-function gameSnap(s: Sim, me: string, gameNo = 1): Snapshot {
+function gameSnap(s: Sim, me: string, opts: { gameNo?: number; host?: string; settings?: Partial<RoomSettings> } = {}): Snapshot {
   const v = viewFor(s.g, me, s.t);
-  return snapOf(room({ me, inGame: v.phase !== 'over', gameNo }), { game: v, offset: s.t - Date.now() });
+  return snapOf(room({ me, inGame: v.phase !== 'over', gameNo: opts.gameNo ?? 1, host: opts.host, settings: opts.settings }), { game: v, offset: s.t - Date.now() });
 }
+
+const roleOf = (s: Sim, role: 'black' | 'white') => {
+  const p = s.g.players.find((x) => x.faction === 'blank' && x.role === role);
+  if (!p) throw new Error(`没有${role}`);
+  return p.id;
+};
 
 const idOf = (s: Sim, f: Faction, aliveOnly = true, n = 0) => {
   const p = s.of(f, aliveOnly)[n];
@@ -181,7 +218,13 @@ const idOf = (s: Sim, f: Faction, aliveOnly = true, n = 0) => {
 
 /* ------------------------------------------------------------------ 场景 */
 
-export type SceneData = { kind: 'home' } | { kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null; hold?: boolean };
+export interface SceneFlags {
+  hold?: boolean;
+  dossier?: 'clues' | 'votes' | 'secret' | 'all';
+  revealed?: boolean;
+  drawing?: boolean;
+}
+export type SceneData = { kind: 'home' } | { kind: 'logos' } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
 
 export interface Scene {
   id: string;
@@ -229,7 +272,7 @@ export const SCENES: Scene[] = [
       kind: 'room',
       token: null,
       info: { exists: true, hasPassword: true, inGame: false, members: 6 },
-      snap: { status: 'open', joined: false, room: null, game: null, judge: null, offset: 0, error: null, bye: null },
+      snap: { status: 'open', joined: false, room: null, game: null, judge: null, offset: 0, error: null, bye: null, avatars: {} },
     }),
   },
   {
@@ -271,10 +314,37 @@ export const SCENES: Scene[] = [
     },
   },
   {
+    id: 'flag-draw',
+    group: '大厅',
+    title: '画国旗',
+    note: '大厅里画自己的头像，会同步到圆桌、护照和档案',
+    build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })), drawing: true }),
+  },
+  {
+    id: 'night-start',
+    group: '第一阶段',
+    title: '夜晚 · 起点白板',
+    note: '起点白板在圆桌上选明天从谁开始',
+    build: () => {
+      const s = new Sim();
+      return { kind: 'room', snap: gameSnap(s, roleOf(s, 'black')) };
+    },
+  },
+  {
+    id: 'night-dir',
+    group: '第一阶段',
+    title: '夜晚 · 方向白板',
+    note: '方向白板只选顺时针或逆时针',
+    build: () => {
+      const s = new Sim();
+      return { kind: 'room', snap: gameSnap(s, roleOf(s, 'white')) };
+    },
+  },
+  {
     id: 'night-nation',
     group: '第一阶段',
     title: '夜晚 · 国家玩家',
-    note: '同桌模式：大家一起选人、选方向',
+    note: '国家玩家不用选，点确认就行',
     build: () => {
       const s = new Sim();
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'big')) };
@@ -288,6 +358,18 @@ export const SCENES: Scene[] = [
     build: () => {
       const s = new Sim();
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'blank')), hold: true };
+    },
+  },
+  {
+    id: 'untimed-host',
+    group: '第一阶段',
+    title: '不限时 · 房主',
+    note: '没有倒计时；房主可以「跳过等待」',
+    build: () => {
+      const s = new Sim({ untimed: true });
+      s.night('c', 'cw');
+      s.clues(2);
+      return { kind: 'room', snap: gameSnap(s, 'a', { host: 'a', settings: { untimed: true } }) };
     },
   },
   {
@@ -445,8 +527,8 @@ export const SCENES: Scene[] = [
   {
     id: 'over',
     group: '结算',
-    title: '结算',
-    note: '谜底、名次、每人得分',
+    title: '结算 · 揭晓前',
+    note: '谜底盖着，长按按钮揭晓',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -457,6 +539,45 @@ export const SCENES: Scene[] = [
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')) };
     },
   },
+  {
+    id: 'over-revealed',
+    group: '结算',
+    title: '结算 · 揭晓后',
+    note: '长按揭晓：两个词叠在一起，叠出来的就是联系',
+    build: () => {
+      const { s, b } = blankOut();
+      s.do(b, { a: 'guess', text: s.g.secret.big.word });
+      s.wait(s.g.rules.timers.exitMinShow);
+      s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
+      if (s.g.judge.length) s.verdict('wrong');
+      return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')), revealed: true };
+    },
+  },
+  ...(['clues', 'votes', 'secret', 'all'] as const).map(
+    (tab): Scene => ({
+      id: `dossier-${tab}`,
+      group: '档案',
+      title: `档案 · ${{ clues: '线索', votes: '投票', secret: '秘密（白板）', all: '全部记录' }[tab]}`,
+      note: { clues: '每人每天的身份提示排成一张表', votes: '选一天，看谁投了谁', secret: '只有白板阵营有：队友、裁判私下的回答', all: '按时间的完整记录' }[tab],
+      build: () => {
+        const s = new Sim();
+        s.night('c', 'cw');
+        s.clues();
+        s.discuss();
+        const b = idOf(s, 'blank', true, 0);
+        const others = s.alive().filter((p) => p.id !== b);
+        for (const p of s.alive()) s.do(p.id, { a: 'vote', target: p.id === b ? others[0].id : b });
+        s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });
+        s.verdict('yes');
+        s.wait(s.g.rules.timers.exitMinShow);
+        s.night(s.alive()[2].id, 'ccw');
+        s.clues();
+        const me = tab === 'secret' ? idOf(s, 'blank') : idOf(s, 'big');
+        return { kind: 'room', snap: gameSnap(s, me), dossier: tab };
+      },
+    }),
+  ),
+  { id: 'logos', group: '标志', title: 'Logo 方案', note: '四个方向对比；现在用的是 A', build: () => ({ kind: 'logos' }) },
   {
     id: 'moderator',
     group: '主持人',

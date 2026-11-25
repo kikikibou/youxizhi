@@ -1,13 +1,14 @@
 /** 页面外壳：首页（建房 / 加入）、进房间、在大厅和对局之间切换、断线提示、错误提示、屏幕常亮。 */
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useId, useState } from 'preact/hooks';
 import { NAME_MAX, ROOM_CODE } from '../shared/protocol.ts';
 import { GameScreen } from './game.tsx';
 import { JudgeScreen } from './judge.tsx';
 import { Lobby } from './lobby.tsx';
 import { RoomConnection, createRoom, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { HOW_TO } from './text.ts';
-import { Card, CropMarks, Mark } from './ui.tsx';
+import { AvatarContext } from './avatar.tsx';
+import { Card, CropMarks, MapBackdrop, Mark } from './ui.tsx';
 
 function useHash(): string {
   const [hash, setHash] = useState(location.hash);
@@ -24,6 +25,7 @@ export function App() {
   const code = hash.match(/^#\/(\d{4})$/)?.[1] ?? null;
   return (
     <>
+      <MapBackdrop />
       <CropMarks />
       {code ? <Room code={code} key={code} /> : <Home />}
     </>
@@ -32,57 +34,50 @@ export function App() {
 
 /* ================================================================ 首页 */
 
-/** 首页的标志动画：大块「大」和小块「小」先后落位，套准，再连上一根「联系」线。 */
+/** 首页的标志动画：一大一小两个圆从两边滑进来，叠在一起——叠出来的那一块就是「联系」。 */
 export function Hero() {
+  const id = useId();
   return (
-    <svg class="hero" viewBox="0 0 360 272" role="img" aria-label="大国小国的标志：一大一小两个方块，中间一根联系线">
+    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：一大一小两个圆叠在一起">
+      <defs>
+        <clipPath id={`hb${id}`}>
+          <circle cx="146" cy="125" r="92" />
+        </clipPath>
+      </defs>
       <g class="hero-reg">
         {[
           [22, 18],
           [338, 18],
-          [22, 254],
-          [338, 254],
+          [22, 232],
+          [338, 232],
         ].map(([x, y], i) => (
           <g key={i} style={{ '--d': `${i * 60}ms` }} class="hero-regmark">
             <circle cx={x} cy={y} r="6" />
             <path d={`M${x} ${y - 12} V${y + 12} M${x - 12} ${y} H${x + 12}`} />
           </g>
         ))}
-        <path class="hero-dash" d="M40 18 H320 M40 254 H320" />
+        <path class="hero-dash" d="M40 18 H320 M40 232 H320" />
       </g>
-      <rect class="hero-ghost hero-ghost--a" x="48" y="82" width="152" height="152" />
-      <rect class="hero-ghost hero-ghost--b" x="48" y="82" width="152" height="152" />
+      <g class="hero-orbits">
+        <circle cx="146" cy="125" r="104" />
+        <circle cx="251" cy="125" r="68" />
+      </g>
+      <circle class="hero-ghost hero-ghost--b" cx="146" cy="125" r="92" />
+      <circle class="hero-ghost hero-ghost--a" cx="251" cy="125" r="56" />
       <g class="hero-big">
-        <rect x="48" y="82" width="152" height="152" class="mark-big" />
-        <text x="124" y="160" class="hero-char hero-char--big">
-          大
-        </text>
+        <circle cx="146" cy="125" r="92" class="mark-big" />
       </g>
-      <path class="hero-link" d="M200 82 L248 62" />
-      <circle class="hero-node" cx="224" cy="72" r="4.5" />
       <g class="hero-small">
-        <rect x="248" y="8" width="54" height="54" class="mark-small" />
-        <text x="275" y="36" class="hero-char hero-char--small">
-          小
-        </text>
+        <circle cx="251" cy="125" r="56" class="mark-small" />
       </g>
-      <g class="hero-label">
-        <text x="232" y="100">
-          联系 / LINK
-        </text>
-        <text x="232" y="115" class="hero-label-soft">
-          一个词 ↔ 另一个词
-        </text>
+      <g clip-path={`url(#hb${id})`}>
+        <g class="hero-small">
+          <circle cx="251" cy="125" r="56" class="mark-lap hero-lap" />
+        </g>
       </g>
-      <g class="hero-dim">
-        <path d="M48 244 V252 M48 248 H200 M200 244 V252" />
-        <text x="124" y="266">
-          大国 · 人多
-        </text>
-        <path d="M312 8 H320 M316 8 V62 M312 62 H320" />
-        <text x="306" y="80" class="hero-dim-r">
-          小国 · 人少
-        </text>
+      <circle class="hero-pulse" cx="217" cy="125" r="24" />
+      <g class="hero-cross">
+        <path d="M217 60 V82 M217 168 V190 M180 125 H192 M242 125 H254" />
       </g>
     </svg>
   );
@@ -317,6 +312,7 @@ export function RoomScreen({
   }
 
   return (
+    <AvatarContext.Provider value={snap.avatars}>
     <div class="room">
       <nav class="topline">
         <a href="#/" class="topline-brand">
@@ -332,6 +328,7 @@ export function RoomScreen({
       {body}
       <Toast snap={snap} />
     </div>
+    </AvatarContext.Provider>
   );
 }
 

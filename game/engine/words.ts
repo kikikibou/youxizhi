@@ -16,6 +16,8 @@ export interface WordPair {
   hints?: string[];
   /** 难度 1–3，是唯一可以展示给玩家的标注。 */
   difficulty?: 1 | 2 | 3;
+  /** 属于哪个题库（房主可以勾选用哪几个）。 */
+  bank?: string;
   /** 联系类型的内部标签，不展示给玩家。 */
   linkType?: string;
   /** 给裁判（AI 或主持人）的补充说明，处理边界情况。不展示给玩家。 */
