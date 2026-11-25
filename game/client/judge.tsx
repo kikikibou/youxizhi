@@ -46,8 +46,8 @@ export function JudgeScreen({ conn, snap, onLeave }: { conn: RoomConnection; sna
     <div class={`game judge ${s.k === 'night' ? 'is-night' : ''}`}>
       <header class="phase">
         <div>
-          <p class="phase-en">MODERATOR · {title.en}</p>
-          <h1 class="phase-cn">{title.cn}</h1>
+          <p class="kicker">MODERATOR · {title.en}</p>
+          <h1 class="phase-cn reg">{title.cn}</h1>
         </div>
         <Countdown deadline={rawDeadline(s)} offset={snap.offset} />
       </header>
@@ -140,7 +140,7 @@ export function JudgeScreen({ conn, snap, onLeave }: { conn: RoomConnection; sna
         </table>
       </Card>
 
-      <section class="log">
+      <section class="card log">
         <h3 class="section-title">
           <span>整局记录</span>
           <small>含私下内容</small>

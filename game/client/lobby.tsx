@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'preact/hooks';
 import { renderSVG } from 'uqr';
-import { DEFAULT_TIMERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
+import { DEFAULT_TIMERS, MAX_PLAYERS, MIN_PLAYERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
 import type { RoomSettings, RoomView } from '../shared/protocol.ts';
 import type { RoomConnection, Snapshot } from './net.ts';
 import { resultLine } from './text.ts';
-import { Card } from './ui.tsx';
+import { Card, RoundTable, Ticks, pad2 } from './ui.tsx';
 
 /** 计时档位：在默认时长上整体乘一个系数（出局最短展示、冷却、裁判等待不变）。 */
 const SCALED: (keyof Timers)[] = ['night', 'clue', 'discussion', 'vote', 'exitChoice', 'turn', 'reliefAsk', 'reliefGuess', 'hintInterval', 'bigChance'];
@@ -33,44 +33,52 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   const me = room.members.find((m) => m.id === room.me);
   const isHost = room.hostId === room.me;
   const link = shareLink(room.code);
-  const qr = useMemo(() => renderSVG(link, { border: 1 }), [link]);
-  const [copied, setCopied] = useState(false);
   const moderator = room.members.find((m) => m.id === room.moderatorId) ?? null;
   const isModerator = room.moderatorId === room.me;
+  const players = room.members.filter((m) => m.id !== room.moderatorId);
   /** 玩家人数：主持人不算。 */
-  const n = room.members.length - (moderator ? 1 : 0);
+  const n = players.length;
 
   return (
     <div class="lobby">
       <header class="room-head">
-        <p class="phase-en">ROOM</p>
-        <h1 class="room-code">{room.code}</h1>
-        <p class="note">{room.hasPassword ? '有密码' : '没有密码'} · 让大家扫码或打开链接加入</p>
+        <div class="room-code-block">
+          <span class="kicker">房间号 / ROOM NO.</span>
+          <b class="room-code reg">{room.code}</b>
+        </div>
+        <div class="room-side">
+          {room.hasPassword ? (
+            <em class="chip chip--lock">
+              <Padlock />
+              有口令
+            </em>
+          ) : (
+            <em class="chip">无口令</em>
+          )}
+          <span class="seatcount">
+            <b>
+              {pad2(n)}/{MAX_PLAYERS}
+            </b>
+            <Ticks n={MAX_PLAYERS} done={Math.min(n, MAX_PLAYERS)} label={`${n} 人入座，最多 ${MAX_PLAYERS} 人`} />
+            <small>SEATS / 席位</small>
+          </span>
+        </div>
       </header>
 
-      <Card>
-        <div class="share">
-          <div class="qr" dangerouslySetInnerHTML={{ __html: qr }} aria-label="房间二维码" />
-          <div>
-            <p class="link">{link}</p>
-            <button
-              type="button"
-              class="btn"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(link);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                } catch {
-                  prompt('复制这个链接', link);
-                }
-              }}
-            >
-              {copied ? '已复制' : '复制链接'}
-            </button>
-          </div>
-        </div>
-      </Card>
+      <RoundTable
+        tilt={58}
+        ripple
+        label={`桌边 ${n} 人`}
+        seats={players.map((m) => ({ id: m.id, name: m.name, me: m.id === room.me, offline: !m.online, tag: m.host ? '房主' : undefined }))}
+      />
+      <p class="table-note">
+        {n < MIN_PLAYERS ? `至少 ${MIN_PLAYERS} 人，还差 ${MIN_PLAYERS - n} 人` : n > MAX_PLAYERS ? `最多 ${MAX_PLAYERS} 人` : '开局时随机排座位号，大家照号坐成一圈'}
+        {moderator ? ` · 主持人 ${moderator.name} 不入座` : ''}
+      </p>
+
+      <Legend settings={room.settings} n={n} hasPassword={room.hasPassword} />
+
+      <Invite code={room.code} link={link} />
 
       {lastGame && room.gameNo > 0 ? (
         <button type="button" class="btn btn--ghost btn--wide" onClick={onShowLast}>
@@ -80,17 +88,19 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
 
       <Card>
         <h3 class="section-title">
-          <span>
-            玩家 {n} 人{moderator ? ' · 主持人 1 人' : ''}
-          </span>
-          <small>{n < 6 ? `至少 6 人，还差 ${6 - n} 人` : n > 12 ? '最多 12 人' : 'PLAYERS'}</small>
+          <span>成员</span>
+          <small>
+            {n} PLAYERS{moderator ? ' + 1 MOD' : ''}
+          </small>
         </h3>
         <ul class="members">
-          {room.members.map((m) => (
+          {room.members.map((m, i) => (
             <li key={m.id} class={m.id === room.me ? 'is-me' : ''}>
+              <b class="m-no">{pad2(i + 1)}</b>
               <i class={`dot ${m.online ? 'is-on' : ''}`} title={m.online ? '在线' : '离线'} />
               <span class="m-name">
                 {m.name}
+                {m.id === room.me ? <em class="em-me">你</em> : null}
                 {m.host ? <em>房主</em> : null}
                 {m.id === room.moderatorId ? <em class="em-mod">主持人</em> : null}
               </span>
@@ -133,12 +143,12 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
       <div class="start">
         {isHost ? (
           <button type="button" class="btn btn--accent btn--wide btn--big" disabled={!!room.startBlocker} onClick={() => conn.send({ t: 'start' })}>
-            {room.gameNo ? '开始下一局' : '开始游戏'}
+            {room.gameNo ? '开始下一局' : '开局'}
           </button>
         ) : (
-          <p class="waiting">等房主开始{me ? `（你是 ${me.name}）` : ''}</p>
+          <p class="waiting">等房主开局{me ? `（你是 ${me.name}）` : ''}</p>
         )}
-        {room.startBlocker ? <p class="note">{room.startBlocker}</p> : null}
+        {room.startBlocker ? <p class="note note--warn">{room.startBlocker}</p> : null}
       </div>
 
       <MyName conn={conn} name={me?.name ?? ''} />
@@ -152,6 +162,111 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
         离开房间
       </button>
     </div>
+  );
+}
+
+function Padlock() {
+  return (
+    <svg aria-hidden="true" width="11" height="13" viewBox="0 0 12 14" class="padlock">
+      <path d="M3 6.5V4.5a3 3 0 0 1 6 0v2" />
+      <rect x="1" y="6.5" width="10" height="7.5" />
+    </svg>
+  );
+}
+
+/** 图例：这一局几个大国、几个小国、几个白板，裁判、节奏、口令。 */
+function Legend({ settings: s, n, hasPassword }: { settings: RoomSettings; n: number; hasPassword: boolean }) {
+  const comp = s.composition ?? PRESETS[n] ?? null;
+  const pace = currentPace(s.timers);
+  const rows = [
+    { k: 'big', label: '大国', count: comp?.big ?? 0 },
+    { k: 'small', label: '小国', count: comp?.small ?? 0 },
+    { k: 'blank', label: '白板', count: comp?.blank ?? 0 },
+  ] as const;
+  return (
+    <section class="card legend">
+      <h3 class="section-title">
+        <span>图例</span>
+        <small>LEGEND</small>
+      </h3>
+      <div class="legend-main">
+        {rows.map((r) => (
+          <div class="legend-row" key={r.k}>
+            <i class={`swatch swatch--${r.k}`} aria-hidden="true" />
+            <span class="legend-name">{r.label}</span>
+            <span class="leader" aria-hidden="true" />
+            <span class="legend-pics" aria-hidden="true">
+              {Array.from({ length: Math.min(r.count, 6) }, (_, i) => (
+                <i class={`pic pic--${r.k}`} key={i} />
+              ))}
+            </span>
+            <b class="legend-n">{comp ? r.count : '–'}</b>
+          </div>
+        ))}
+        <div class="legend-sum">
+          <span>{comp ? `${comp.big} + ${comp.small} + ${comp.blank} = ${pad2(comp.big + comp.small + comp.blank)}` : `${pad2(n)} 人`}</span>
+          <small>{comp ? (s.composition ? '自定义' : '按人数预设') : `${MIN_PLAYERS}–${MAX_PLAYERS} 人才能开`}</small>
+        </div>
+      </div>
+      <dl class="legend-side">
+        <div>
+          <dt>裁判 JUDGE</dt>
+          <dd>
+            {s.judge === 'llm' ? (
+              <>
+                <em class="ai">AI</em>自动判
+              </>
+            ) : (
+              '主持人判'
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>节奏 PACE</dt>
+          <dd>{PACES.find((p) => p.id === pace)?.label ?? '自定义'}</dd>
+        </div>
+        <div>
+          <dt>口令 LOCK</dt>
+          <dd class={hasPassword ? 'acc-text' : ''}>{hasPassword ? '已开启' : '未设'}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+/** 邀请：一张入境许可票根，二维码在存根上，点票面复制链接。 */
+function Invite({ code, link }: { code: string; link: string }) {
+  const qr = useMemo(() => renderSVG(link, { border: 1 }), [link]);
+  const [copied, setCopied] = useState(false);
+  return (
+    <section class="card ticket">
+      <h3 class="section-title">
+        <span>邀请</span>
+        <small>INVITE</small>
+      </h3>
+      <button
+        type="button"
+        class="ticket-main"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            prompt('复制这个链接', link);
+          }
+        }}
+      >
+        <span class="kicker">
+          <span>入境许可 ENTRY PERMIT</span>
+          <span>№ {code}</span>
+        </span>
+        <b>{copied ? '已复制，发给大家吧' : '扫码进房 / 点这里复制链接'}</b>
+        <span class="ticket-link">{link.replace(/^https?:\/\//, '')}</span>
+      </button>
+      <span class="perf" aria-hidden="true" />
+      <div class="ticket-stub" role="img" aria-label="房间二维码" dangerouslySetInnerHTML={{ __html: qr }} />
+    </section>
   );
 }
 
@@ -178,7 +293,7 @@ function Settings({
     <Card>
       <h3 class="section-title">
         <span>规则</span>
-        <small>{editable ? '房主可以修改' : '由房主设置'}</small>
+        <small>RULES · {editable ? '房主可改' : '房主设置'}</small>
       </h3>
       <dl class="settings">
         <dt>阵营</dt>
@@ -368,8 +483,8 @@ function PasswordCard({ conn, has }: { conn: RoomConnection; has: boolean }) {
   return (
     <Card>
       <h3 class="section-title">
-        <span>房间密码</span>
-        <small>{has ? '已设置' : '未设置'}</small>
+        <span>口令</span>
+        <small>PASSWORD · {has ? '已设置' : '未设置'}</small>
       </h3>
       <form
         class="row"

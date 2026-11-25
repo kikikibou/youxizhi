@@ -7,7 +7,7 @@ import { JudgeScreen } from './judge.tsx';
 import { Lobby } from './lobby.tsx';
 import { RoomConnection, createRoom, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { HOW_TO } from './text.ts';
-import { Card } from './ui.tsx';
+import { Card, CropMarks, Mark } from './ui.tsx';
 
 function useHash(): string {
   const [hash, setHash] = useState(location.hash);
@@ -22,25 +22,87 @@ function useHash(): string {
 export function App() {
   const hash = useHash();
   const code = hash.match(/^#\/(\d{4})$/)?.[1] ?? null;
-  return code ? <Room code={code} key={code} /> : <Home />;
+  return (
+    <>
+      <CropMarks />
+      {code ? <Room code={code} key={code} /> : <Home />}
+    </>
+  );
 }
 
 /* ================================================================ 首页 */
 
-function Brand() {
+/** 首页的标志动画：大块「大」和小块「小」先后落位，套准，再连上一根「联系」线。 */
+export function Hero() {
   return (
-    <header class="brand">
-      <a href="../#/games" class="brand-back">
+    <svg class="hero" viewBox="0 0 360 272" role="img" aria-label="大国小国的标志：一大一小两个方块，中间一根联系线">
+      <g class="hero-reg">
+        {[
+          [22, 18],
+          [338, 18],
+          [22, 254],
+          [338, 254],
+        ].map(([x, y], i) => (
+          <g key={i} style={{ '--d': `${i * 60}ms` }} class="hero-regmark">
+            <circle cx={x} cy={y} r="6" />
+            <path d={`M${x} ${y - 12} V${y + 12} M${x - 12} ${y} H${x + 12}`} />
+          </g>
+        ))}
+        <path class="hero-dash" d="M40 18 H320 M40 254 H320" />
+      </g>
+      <rect class="hero-ghost hero-ghost--a" x="48" y="82" width="152" height="152" />
+      <rect class="hero-ghost hero-ghost--b" x="48" y="82" width="152" height="152" />
+      <g class="hero-big">
+        <rect x="48" y="82" width="152" height="152" class="mark-big" />
+        <text x="124" y="160" class="hero-char hero-char--big">
+          大
+        </text>
+      </g>
+      <path class="hero-link" d="M200 82 L248 62" />
+      <circle class="hero-node" cx="224" cy="72" r="4.5" />
+      <g class="hero-small">
+        <rect x="248" y="8" width="54" height="54" class="mark-small" />
+        <text x="275" y="36" class="hero-char hero-char--small">
+          小
+        </text>
+      </g>
+      <g class="hero-label">
+        <text x="232" y="100">
+          联系 / LINK
+        </text>
+        <text x="232" y="115" class="hero-label-soft">
+          一个词 ↔ 另一个词
+        </text>
+      </g>
+      <g class="hero-dim">
+        <path d="M48 244 V252 M48 248 H200 M200 244 V252" />
+        <text x="124" y="266">
+          大国 · 人多
+        </text>
+        <path d="M312 8 H320 M316 8 V62 M312 62 H320" />
+        <text x="306" y="80" class="hero-dim-r">
+          小国 · 人少
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+function Brand({ small }: { small?: boolean }) {
+  return (
+    <header class={`brand ${small ? 'brand--small' : ''}`}>
+      <a href="../#/games" class="back">
         ← 游戏之致西柚 · 消遣
       </a>
-      <p class="phase-en">DA GUO · XIAO GUO</p>
-      <h1 class="brand-title">大国小国</h1>
+      {small ? null : <Hero />}
+      <h1 class="brand-title reg">大国小国</h1>
+      <p class="brand-en">DAGUO · XIAOGUO</p>
       <p class="brand-sub">一个词，一句联系，一场面对面的推理</p>
     </header>
   );
 }
 
-function Home() {
+export function Home() {
   const [name, setName] = useState(store.get('name') ?? '');
   const [pw, setPw] = useState('');
   const [code, setCode] = useState('');
@@ -69,20 +131,24 @@ function Home() {
     <div class="home">
       <Brand />
       <Card>
-        <label class="field">
+        <h3 class="section-title">
           <span>你的名字</span>
-          <input value={name} maxLength={NAME_MAX} placeholder={`最多 ${NAME_MAX} 个字`} onInput={(e) => setName(e.currentTarget.value)} />
+          <small>NAME</small>
+        </h3>
+        <label class="field">
+          <span>大家在桌上看到的名字 · 最多 {NAME_MAX} 字</span>
+          <input value={name} maxLength={NAME_MAX} placeholder="例：阿乐" onInput={(e) => setName(e.currentTarget.value)} />
         </label>
       </Card>
 
-      <Card tone="accent">
+      <Card>
         <h3 class="section-title">
-          <span>建一个房间</span>
+          <span>建房间</span>
           <small>NEW ROOM</small>
         </h3>
         <label class="field">
-          <span>房间密码（可选）</span>
-          <input value={pw} maxLength={32} placeholder="不填就不设密码" onInput={(e) => setPw(e.currentTarget.value)} />
+          <span>房间口令（可选，不填就不设）</span>
+          <input value={pw} maxLength={32} placeholder="例：鱿鱼" onInput={(e) => setPw(e.currentTarget.value)} />
         </label>
         <button type="button" class="btn btn--accent btn--wide btn--big" disabled={busy} onClick={create}>
           {busy ? '正在建房…' : '建房间'}
@@ -103,7 +169,15 @@ function Home() {
             location.hash = `#/${code}`;
           }}
         >
-          <input value={code} inputMode="numeric" maxLength={4} placeholder="4 位房间号" onInput={(e) => setCode(e.currentTarget.value.replace(/\D/g, ''))} />
+          <input
+            class="code-input"
+            value={code}
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="0000"
+            aria-label="4 位房间号"
+            onInput={(e) => setCode(e.currentTarget.value.replace(/\D/g, ''))}
+          />
           <button type="submit" class="btn" disabled={code.length !== 4}>
             进入
           </button>
@@ -112,16 +186,22 @@ function Home() {
 
       {err ? <p class="toast">{err}</p> : null}
 
-      <details class="howto">
-        <summary>怎么玩</summary>
-        {HOW_TO.map(([t, d]) => (
-          <p key={t}>
-            <b>{t}</b>
-            {d}
-          </p>
-        ))}
-        <p class="note">6–12 人，面对面坐成一圈，各用各的手机。裁判由系统担任。</p>
-      </details>
+      <Card class="howto-card">
+        <h3 class="section-title">
+          <span>怎么玩</span>
+          <small>HOW TO</small>
+        </h3>
+        <details class="howto">
+          <summary>展开规则速览</summary>
+          {HOW_TO.map(([t, d]) => (
+            <p key={t}>
+              <b>{t}</b>
+              {d}
+            </p>
+          ))}
+          <p class="note">6–12 人，面对面坐成一圈，各用各的手机。裁判由系统担任。</p>
+        </details>
+      </Card>
     </div>
   );
 }
@@ -186,11 +266,36 @@ function Room({ code }: { code: string }) {
     return () => conn.stop();
   }, [conn, code]);
 
+  return <RoomScreen code={code} conn={conn} snap={snap} info={info} infoErr={infoErr} dismissed={dismissed} setDismissed={setDismissed} />;
+}
+
+/** 房间里的画面（只看 snap 画图，预览器也直接用它）。 */
+export function RoomScreen({
+  code,
+  conn,
+  snap,
+  info,
+  infoErr,
+  dismissed,
+  setDismissed,
+}: {
+  code: string;
+  conn: RoomConnection;
+  snap: Snapshot;
+  info: RoomInfo | null;
+  infoErr: string | null;
+  dismissed: number;
+  setDismissed: (n: number) => void;
+}) {
   if (snap.bye) {
     return (
       <div class="home">
-        <Brand />
+        <Brand small />
         <Card>
+          <h3 class="section-title">
+            <span>已离开房间</span>
+            <small>BYE</small>
+          </h3>
           <p class="lead">{snap.bye}</p>
           <a class="btn btn--accent btn--wide" href="#/">
             回到首页
@@ -214,8 +319,14 @@ function Room({ code }: { code: string }) {
   return (
     <div class="room">
       <nav class="topline">
-        <a href="#/">大国小国</a>
-        <span>房间 {code}</span>
+        <a href="#/" class="topline-brand">
+          <Mark />
+          大国小国
+        </a>
+        <span class="topline-room">
+          <i class={`live ${snap.status === 'open' ? 'is-on' : ''}`} aria-hidden="true" />
+          ROOM {code}
+        </span>
       </nav>
       {snap.joined && snap.status !== 'open' ? <p class="offline">连接断开，正在重连…</p> : null}
       {body}
@@ -247,8 +358,12 @@ function JoinForm({ conn, code, info, infoErr, snap }: { conn: RoomConnection; c
   if (!info.exists) {
     return (
       <div class="home">
-        <Brand />
+        <Brand small />
         <Card>
+          <h3 class="section-title">
+            <span>找不到房间</span>
+            <small>404</small>
+          </h3>
           <p class="lead">房间 {code} 不存在，或者已经关闭了</p>
           <a class="btn btn--accent btn--wide" href="#/">
             回到首页
@@ -259,11 +374,19 @@ function JoinForm({ conn, code, info, infoErr, snap }: { conn: RoomConnection; c
   }
   return (
     <div class="home">
-      <Brand />
-      <Card tone="accent">
+      <Brand small />
+      <div class="join-code">
+        <span class="kicker">房间号 / ROOM NO.</span>
+        <b class="reg">{code}</b>
+        <span class="join-meta">
+          {info.hasPassword ? <em class="chip chip--lock">有口令</em> : <em class="chip">无口令</em>}
+          <em class="chip">{info.members} 人在里面</em>
+        </span>
+      </div>
+      <Card>
         <h3 class="section-title">
-          <span>加入房间 {code}</span>
-          <small>{info.members} 人在里面</small>
+          <span>加入房间</span>
+          <small>ENTRY PERMIT</small>
         </h3>
         {info.inGame ? <p class="note">这个房间正在对局，这一局结束后才能加入。</p> : null}
         <form
@@ -274,12 +397,12 @@ function JoinForm({ conn, code, info, infoErr, snap }: { conn: RoomConnection; c
           }}
         >
           <label class="field">
-            <span>你的名字</span>
+            <span>你的名字 / NAME</span>
             <input value={name} maxLength={NAME_MAX} onInput={(e) => setName(e.currentTarget.value)} autoFocus />
           </label>
           {info.hasPassword ? (
             <label class="field">
-              <span>房间密码</span>
+              <span>房间口令 / PASSWORD</span>
               <input value={pw} maxLength={32} onInput={(e) => setPw(e.currentTarget.value)} />
             </label>
           ) : null}

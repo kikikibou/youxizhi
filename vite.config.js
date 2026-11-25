@@ -15,6 +15,8 @@ export default defineConfig({
         main: 'index.html',
         // 《大国小国》: a standalone phone page at /dgxg/ (no three.js, no passphrase gate)
         dgxg: 'dgxg/index.html',
+        // 页面预览器：每个画面并排看（数据来自规则引擎，不连服务器）
+        dgxgPreview: 'dgxg/preview.html',
       },
     },
   },

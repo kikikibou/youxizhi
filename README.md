@@ -71,6 +71,8 @@ npm run dev
 - **裁判**：默认 AI 裁判，通过 OpenRouter 调用 Claude Opus 5.5（`game/server/src/judge.ts`，模型名在 `wrangler.jsonc` 的 `JUDGE_MODEL`）。key 是 Worker 密钥，在 `game/server` 里运行 `npm run secret:judge` 设置；没设置时猜词只认完全一致的写法，提问答「无法判断」。
 - **主持人**：房主可以把一名成员设为主持人（不参与游戏）。主持人能自己出题（词对来源选「自带词」），或者手动判定（裁判方式选「主持人判定」），开局后在主持人台上看到两个词、所有人的身份和整局记录。
 - **题库**：格式见 `game/题库模板.xlsx`（「说明」工作表写了每一列的意思）。真正的题库放在 `game/server/bank/`（.xlsx 或 UTF-8 的 .csv，可以多个文件），**这个文件夹不提交**——仓库是公开的，提交了答案就公开了。在 `game/server` 里运行 `npm run bank` 检查并生成 `src/bank.generated.ts`（同样不提交）；`npm run dev` / `npm run deploy` 前会自动运行，有错误就停下。没有题库文件时用规则文档里的 5 组示例词对。
+- **页面预览**：https://yxzzxy.com/dgxg/preview.html 把每个画面（首页、大厅、各个游戏步骤、按住看身份、结算、主持人台）放进手机大小的框里并排看。数据是用真的规则引擎走一局 7 人游戏得到的（`game/client/preview-data.ts`），不连服务器；加场景就在 `SCENES` 里加一项。
+- **视觉**：「图纸」风格，样式全在 `game/client/style.css` 开头的变量里——白天珊瑚红为主、电光蓝为辅，夜晚（`html:has(.is-night)`）换成靛蓝底、蓝色为主。
 - **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`（会先检查题库）。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
 
 | 文件 | 作用 |
@@ -81,6 +83,7 @@ npm run dev
 | `game/engine/words.ts` | 词对数据结构和猜词的精确匹配；`SAMPLE_PAIRS` 是规则文档里的 5 组测试词对 |
 | `game/engine/test/` | 逐条规则的测试，和 252 局随机机器人对局（每一步检查有没有泄密） |
 
+| `game/client/` | 手机页面（Preact）：`app.tsx` 首页和房间外壳，`lobby.tsx` 大厅，`game.tsx` 对局，`judge.tsx` 主持人台，`ui.tsx` 圆桌、护照等共用部件 |
 | `game/shared/protocol.ts` | 手机和服务器之间的消息格式 |
 | `game/server/` | 房间服务器：Cloudflare Worker + Durable Object（一个房间一个），有自己的 `package.json` |
 | `game/server/src/room.ts` | 房间：成员、密码、房主、设置、累计得分；跑引擎，按人推送视图，用一个 alarm 驱动所有计时 |

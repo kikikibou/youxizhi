@@ -1,0 +1,165 @@
+/* 预览器外框（只在 /dgxg/preview.html 的总览页用；单个画面用的是正式样式）。 */
+
+.pv-body #app {
+  max-width: none;
+  padding: 0;
+}
+.pv-body .crops {
+  display: none;
+}
+.pv-error {
+  margin: 40px 18px;
+  padding: 14px;
+  border: 1.5px dashed var(--acc);
+  color: var(--acc-text);
+  font-weight: 700;
+}
+.pv {
+  min-height: 100vh;
+}
+.pv-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 14px 24px;
+  background: var(--paper);
+  border-bottom: 1.5px solid var(--ink);
+  box-shadow: 0 5px 0 0 var(--paper), 0 6px 0 0 var(--hl);
+}
+.pv-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pv-brand span {
+  display: flex;
+  flex-direction: column;
+}
+.pv-brand b {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.pv-brand small {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.pv-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.pv-seg {
+  display: flex;
+  padding-left: 1.5px;
+}
+.pv-seg button,
+.pv-replay {
+  min-height: 34px;
+  margin-left: -1.5px;
+  padding: 0 11px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.pv-seg button.is-on {
+  position: relative;
+  z-index: 1;
+  background: var(--hl);
+  color: var(--on-hl);
+}
+.pv-replay {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+}
+.pv-scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+.pv-scale input {
+  width: 120px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--hl);
+}
+.pv-live {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+.pv-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px 32px;
+  padding: 32px 24px 64px;
+}
+.pv-item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pv-item figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 300px;
+}
+.pv-item figcaption b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 900;
+}
+.pv-item figcaption i {
+  padding: 1px 5px;
+  background: var(--ink);
+  color: var(--paper);
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.pv-item figcaption small {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.pv-item figcaption a {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+.pv-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  box-shadow:
+    5px 5px 0 0 var(--paper),
+    5px 5px 0 1px var(--hl);
+}
+.pv-frame iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 0;
+  transform-origin: 0 0;
+}

@@ -1,6 +1,8 @@
-import '@fontsource/anton';
-import '@fontsource/oswald/500.css';
-import '@fontsource/oswald/600.css';
+import '@fontsource/unbounded/latin-700.css';
+import '@fontsource/unbounded/latin-900.css';
+import '@fontsource/space-mono/latin-400.css';
+import '@fontsource/space-mono/latin-700.css';
+import '@fontsource/doto/latin-900.css';
 import '@fontsource-variable/noto-sans-sc';
 import './style.css';
 
