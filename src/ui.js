@@ -14,9 +14,9 @@ export function renderNav(pages, el) {
 const emph = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
 function cardHtml(c, i) {
-  const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : '';
+  const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : c.href ? `data-href="${esc(c.href)}"` : '';
   const ready = c.go || c.ready;
-  const tag = c.go ? 'ENTER →' : ready ? 'OPEN' : 'SOON';
+  const tag = c.go ? 'ENTER →' : c.href && ready ? 'PLAY →' : ready ? 'OPEN' : 'SOON';
   return `
     <li class="reveal" style="--d:${6 + i}">
       <button class="card" type="button" ${action} ${ready ? '' : 'disabled'}>

@@ -15,6 +15,6 @@
     "types": []
   },
   "include": ["**/*.ts"],
-  // 服务器有自己的设置（Workers 运行时类型），见 server/tsconfig.json。
-  "exclude": ["server/**"]
+  // 服务器和手机页面有各自的设置（运行时类型不同），见 server/、client/ 下的 tsconfig.json。
+  "exclude": ["server/**", "client/**"]
 }

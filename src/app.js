@@ -326,6 +326,7 @@ stage.addEventListener('click', (e) => {
   if (!card || card.disabled) return;
   if (card.dataset.go) location.hash = `#/${card.dataset.go}`;
   else if (card.dataset.tool && TOOLS[card.dataset.tool]) drawer.open(TOOLS[card.dataset.tool]);
+  else if (card.dataset.href) location.href = card.dataset.href;
 });
 
 /* ------------------------------------------------------------------- loop */

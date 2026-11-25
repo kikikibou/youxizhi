@@ -1,0 +1,18 @@
+{
+  // 手机页面的类型检查（Preact + 浏览器）。打包由 Vite 完成，见根目录 vite.config.js。
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "types": ["vite/client"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../engine/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["../engine/test/**"]
+}

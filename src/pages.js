@@ -263,9 +263,10 @@ export const PAGES = [
     },
     intro: '打开即玩、不用安装的智力小游戏。这一栋还在施工，先把门牌挂上。',
     cards: [
-      { no: '01', title: '24 点', en: 'Make 24', desc: '四个数，加减乘除', ready: false },
-      { no: '02', title: '数独', en: 'Sudoku', desc: '每日一盘，难度可选', ready: false },
-      { no: '03', title: '记忆迷宫', en: 'Memory Maze', desc: '看一眼，然后走出去', ready: false },
+      // (href: a page of its own, opened in place of the drawer)
+      { no: '01', title: '大国小国', en: 'Big & Small', desc: '面对面的语言推理，6–12 人各用手机', href: 'dgxg/', ready: true },
+      { no: '02', title: '24 点', en: 'Make 24', desc: '四个数，加减乘除', ready: false },
+      { no: '03', title: '数独', en: 'Sudoku', desc: '每日一盘，难度可选', ready: false },
       { no: '04', title: '更多', en: 'More', desc: '欢迎来提建议', ready: false },
     ],
     footer: {
