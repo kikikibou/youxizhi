@@ -230,6 +230,61 @@ function stepView(g: GameState, me: PlayerState, now: number): StepView {
   }
 }
 
+/**
+ * 主持人（出题人 / 人类裁判）的视图：不参与游戏的人，看得到全部（§8.4）——两个词、联系、提示、
+ * 所有人的身份、待判定的请求、本局问答和整局记录（含只给白板的回答和私密频道）。
+ * 只能发给主持人本人。
+ */
+export interface JudgeView {
+  now: number;
+  day: number;
+  phase: PlayerView['phase'];
+  players: (PublicPlayer & { faction: Faction; role: BlankRole | null })[];
+  secret: { big: string; small: string; bigSense: string; smallSense: string; bigAliases: string[]; smallAliases: string[]; link: string; hints: string[] };
+  hintsShown: number;
+  /** 当前步骤的完整内部状态（主持人可以看到谁选了什么、谁投了谁）。 */
+  step: GameState['step'];
+  /** 等待判定的请求；人类裁判模式下由主持人判定，超过 judgeDeadlineMs 自动兜底。 */
+  pending: (GameState['judge'][number] & { deadline: number })[];
+  judgeMode: 'llm' | 'human';
+  qa: GameState['qa'];
+  /** 整局记录（全部可见），to 标出原本给谁看。 */
+  log: (LogEntry & { to: 'all' | 'blanks' | 'some' })[];
+  result: Result | null;
+  revealed: Partial<Record<WordSide, string>>;
+}
+
+export function judgeView(g: GameState, now: number): JudgeView {
+  const timeout = g.rules.judge === 'human' ? g.rules.timers.humanJudge : g.rules.timers.llmJudge;
+  const revealed: JudgeView['revealed'] = {};
+  if (g.revealed.big) revealed.big = g.secret.big.word;
+  if (g.revealed.small) revealed.small = g.secret.small.word;
+  return {
+    now,
+    day: g.day,
+    phase: phaseOf(g),
+    players: g.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, faction: p.faction, role: p.role })),
+    secret: {
+      big: g.secret.big.word,
+      small: g.secret.small.word,
+      bigSense: g.secret.big.sense,
+      smallSense: g.secret.small.sense,
+      bigAliases: [...g.secret.big.aliases],
+      smallAliases: [...g.secret.small.aliases],
+      link: g.secret.link,
+      hints: [...g.secret.hints],
+    },
+    hintsShown: g.hintsShown,
+    step: JSON.parse(JSON.stringify(g.step)),
+    pending: g.judge.map((r) => ({ ...r, deadline: r.at + timeout })),
+    judgeMode: g.rules.judge,
+    qa: g.qa.map((q) => ({ ...q })),
+    log: g.events.map(({ aud, ...rest }) => ({ ...(rest as LogEntry), to: aud.to === 'all' ? 'all' : aud.to === 'blanks' ? 'blanks' : 'some' })),
+    result: g.result ? { ...g.result, second: [...g.result.second], third: [...g.result.third] } : null,
+    revealed,
+  };
+}
+
 export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerView {
   const me = g.players.find((p) => p.id === playerId);
   if (!me) throw new Error('不是这一局的玩家');

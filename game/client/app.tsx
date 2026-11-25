@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { NAME_MAX, ROOM_CODE } from '../shared/protocol.ts';
 import { GameScreen } from './game.tsx';
+import { JudgeScreen } from './judge.tsx';
 import { Lobby } from './lobby.tsx';
 import { RoomConnection, createRoom, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { HOW_TO } from './text.ts';
@@ -204,8 +205,10 @@ function Room({ code }: { code: string }) {
     body = conn.token ? <p class="waiting center">正在连接房间 {code}…</p> : <JoinForm conn={conn} code={code} info={info} infoErr={infoErr} snap={snap} />;
   } else if (snap.game && (snap.game.phase !== 'over' || dismissed !== snap.room.gameNo)) {
     body = <GameScreen conn={conn} snap={snap} onLeave={() => setDismissed(snap.room!.gameNo)} />;
+  } else if (snap.judge && (snap.judge.phase !== 'over' || dismissed !== snap.room.gameNo)) {
+    body = <JudgeScreen conn={conn} snap={snap} onLeave={() => setDismissed(snap.room!.gameNo)} />;
   } else {
-    body = <Lobby conn={conn} snap={snap} lastGame={!!snap.game} onShowLast={() => setDismissed(0)} />;
+    body = <Lobby conn={conn} snap={snap} lastGame={!!snap.game || !!snap.judge} onShowLast={() => setDismissed(0)} />;
   }
 
   return (

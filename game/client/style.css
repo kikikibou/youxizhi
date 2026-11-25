@@ -902,3 +902,59 @@ input:focus {
 .howto b {
   display: block;
 }
+
+/* ------------------------------------------------------------------ 主持人 */
+
+.m-name em.em-mod {
+  background: var(--ink);
+  color: var(--bg);
+}
+.pair-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+}
+textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+}
+.pending {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pending .note {
+  margin: 4px 0;
+}
+.pending-text {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.reveal dd small {
+  margin-left: 6px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.reveal dd.is-pending {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.roster tr.is-out td {
+  opacity: 0.5;
+}
+.log-all {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.log-all li {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}

@@ -66,7 +66,11 @@ npm run dev
 
 ## 《大国小国》（`game/`）
 
-「消遣」页的第一个多人游戏，规则以《大国小国》线上版规则与开发说明为准。已完成规则引擎（`game/engine/`）和房间服务器（`game/server/`，本机可跑，还没部署）；手机页面和 LLM 裁判还没做。
+「消遣」页的第一个多人游戏，规则以《大国小国》线上版规则与开发说明为准。手机页面在 https://yxzzxy.com/dgxg/ ，房间服务器在 https://api.yxzzxy.com （Cloudflare Worker + Durable Object，部署在拥有 yxzzxy.com 的账号下）。
+
+- **裁判**：默认 AI 裁判，通过 OpenRouter 调用 Claude Opus 5.5（`game/server/src/judge.ts`，模型名在 `wrangler.jsonc` 的 `JUDGE_MODEL`）。key 是 Worker 密钥，在 `game/server` 里运行 `npm run secret:judge` 设置；没设置时猜词只认完全一致的写法，提问答「无法判断」。
+- **主持人**：房主可以把一名成员设为主持人（不参与游戏）。主持人能自己出题（词对来源选「自带词」），或者手动判定（裁判方式选「主持人判定」），开局后在主持人台上看到两个词、所有人的身份和整局记录。
+- **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
 
 | 文件 | 作用 |
 | --- | --- |
@@ -89,6 +93,10 @@ npm run typecheck   # 类型检查（先在 game/server 里 npm install 和 npm 
 cd game/server && npm install && npm run dev -- --ip 127.0.0.1 --port 8788
 # 另开一个终端，用 7 台模拟手机打几局
 node game/server/test/smoke.ts http://127.0.0.1:8788 3
+# 主持人 / 自带词 / 人工裁判 / AI 裁判的端到端测试
+node game/server/test/moderator.ts http://127.0.0.1:8788 human
+# AI 裁判的小测验（真实调用 OpenRouter，约 0.15 美元）
+node --dns-result-order=ipv4first game/server/test/judge-eval.ts
 ```
 
 房间号是 4 位数字，密码可选；第一个进房间的人是房主，房主掉线一分钟后自动交给最早加入的在线成员。手机凭 token 重连，回到原来的位置。房间闲置 24 小时后清除。

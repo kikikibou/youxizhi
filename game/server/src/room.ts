@@ -14,7 +14,9 @@ import {
   createGame,
   factionScore,
   judge as applyJudge,
+  judgeView,
   nextWake,
+  releaseHint,
   viewFor,
   MAX_PLAYERS,
   MIN_PLAYERS,
@@ -22,10 +24,10 @@ import {
   type GameState,
   type JudgeRequest,
 } from '../../engine/index.ts';
-import { NAME_MAX, type ClientMsg, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
+import { NAME_MAX, type ClientMsg, type CustomPair, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
 import { pickPair } from './bank.ts';
 import { decide, fallbackVerdict, judgeConfigured } from './judge.ts';
-import { DEFAULT_SETTINGS, mergeSettings, toRules } from './settings.ts';
+import { DEFAULT_SETTINGS, cleanCustomPair, mergeSettings, toRules } from './settings.ts';
 
 interface Member {
   id: string;
@@ -54,6 +56,10 @@ interface RoomData {
   lastActive: number;
   hostOfflineSince: number | null;
   failedJoins: { count: number; since: number };
+  /** 主持人：不参与游戏的出题人 / 人类裁判（§8.4）。 */
+  moderatorId: string | null;
+  /** 主持人填的自带词，开局时用掉（玩过就公开了，不能再用）。 */
+  customPair: CustomPair | null;
 }
 
 interface Attachment {
@@ -64,7 +70,8 @@ interface Attachment {
 const IDLE_TTL = 24 * 60 * 60 * 1000;
 /** 房主掉线超过这么久，房主自动交给最早加入的在线成员。 */
 const HOST_GRACE = 60 * 1000;
-const MAX_MEMBERS = MAX_PLAYERS;
+/** 12 名玩家 + 1 名主持人。 */
+const MAX_MEMBERS = MAX_PLAYERS + 1;
 const MAX_MESSAGE = 4096;
 const MAX_SEEN = 500;
 const PASSWORD_MAX = 32;
@@ -104,6 +111,12 @@ export class Room extends DurableObject<Env> {
     super(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = (await ctx.storage.get<RoomData>('room')) ?? null;
+      if (this.room) {
+        // 旧版本存下的房间：补上后来新增的字段
+        this.room.settings = { ...DEFAULT_SETTINGS, ...this.room.settings, timers: { ...DEFAULT_SETTINGS.timers, ...this.room.settings.timers } };
+        this.room.moderatorId ??= null;
+        this.room.customPair ??= null;
+      }
       this.game = (await ctx.storage.get<GameState>('game')) ?? null;
       // 重启后，之前没判完的请求重新交给裁判。
       this.dispatchJudging();
@@ -139,6 +152,8 @@ export class Room extends DurableObject<Env> {
       lastActive: now,
       hostOfflineSince: null,
       failedJoins: { count: 0, since: now },
+      moderatorId: null,
+      customPair: null,
     };
     this.game = null;
     await this.commit();
@@ -250,7 +265,7 @@ export class Room extends DurableObject<Env> {
     }
 
     if (this.inGame()) return this.fail(ws, '对局进行中，这一局结束后才能加入');
-    if (room.members.length >= MAX_MEMBERS) return this.fail(ws, `房间已满（最多 ${MAX_MEMBERS} 人）`);
+    if (room.members.length >= MAX_MEMBERS) return this.fail(ws, `房间已满（最多 ${MAX_PLAYERS} 名玩家加 1 名主持人）`);
     if (room.passwordHash) {
       const f = room.failedJoins;
       if (now - f.since > 60_000) Object.assign(f, { count: 0, since: now });
@@ -326,6 +341,42 @@ export class Room extends DurableObject<Env> {
           hostOnly();
           this.startGame();
           break;
+        case 'moderator':
+          hostOnly();
+          lobbyOnly('更换主持人');
+          if (m.id !== null && !this.member(m.id)) throw new UserError('没有这个人');
+          room.moderatorId = m.id;
+          room.customPair = null; // 换了主持人，之前的人填的词作废
+          break;
+        case 'customPair': {
+          if (room.moderatorId !== me.id) throw new UserError('只有主持人可以出题');
+          lobbyOnly('修改词对');
+          if (m.pair === null) {
+            room.customPair = null;
+            break;
+          }
+          const pair = cleanCustomPair(m.pair);
+          if (typeof pair === 'string') throw new UserError(pair);
+          room.customPair = pair;
+          break;
+        }
+        case 'verdict': {
+          if (room.moderatorId !== me.id) throw new UserError('只有主持人可以判定');
+          if (!this.game || !this.inGame()) throw new UserError('现在没有对局');
+          if (this.game.rules.judge !== 'human') throw new UserError('这一局由 AI 裁判判定');
+          const r = applyJudge(this.game, m.id, m.verdict as Parameters<typeof applyJudge>[2], Date.now());
+          if (r.error) throw new UserError(r.error);
+          this.game = r.state;
+          break;
+        }
+        case 'hint': {
+          if (room.moderatorId !== me.id) throw new UserError('只有主持人可以公布提示');
+          if (!this.game) throw new UserError('现在没有对局');
+          const r = releaseHint(this.game, Date.now());
+          if (r.error) throw new UserError(r.error);
+          this.game = r.state;
+          break;
+        }
         case 'act': {
           if (!this.game || !this.game.players.some((p) => p.id === me.id)) throw new UserError('你不在这一局里');
           const r = act(this.game, me.id, m.action, Date.now());
@@ -354,16 +405,28 @@ export class Room extends DurableObject<Env> {
     return !!this.game && this.game.step.k !== 'over';
   }
 
+  /** 参与游戏的人：主持人之外的所有成员。 */
+  private players(): Member[] {
+    const room = this.room!;
+    return room.members.filter((m) => m.id !== room.moderatorId);
+  }
+
   /** 开局的障碍；能开局时返回 null。 */
   private startBlocker(): string | null {
     const room = this.room!;
-    const n = room.members.length;
+    const n = this.players().length;
     if (this.inGame()) return '对局进行中';
+    const s = room.settings;
+    if ((s.judge === 'human' || s.wordSource === 'custom') && !room.moderatorId) {
+      return `${s.judge === 'human' ? '人工裁判' : '自带词'}需要先指定一名主持人（不参与游戏）`;
+    }
     if (n < MIN_PLAYERS) return `至少 ${MIN_PLAYERS} 人才能开局，还差 ${MIN_PLAYERS - n} 人`;
     if (n > MAX_PLAYERS) return `最多 ${MAX_PLAYERS} 人`;
     const comp = room.settings.composition ?? PRESETS[n];
     if (!comp || comp.big + comp.small + comp.blank !== n) return `自定义的阵营人数加起来要等于 ${n} 人`;
-    if (!this.choosePair(() => 0)) return '题库里已经没有大家都没玩过的词对了';
+    if (s.wordSource === 'custom') {
+      if (!room.customPair) return '等主持人填好词对';
+    } else if (!this.choosePair(() => 0)) return '题库里已经没有大家都没玩过的词对了';
     return null;
   }
 
@@ -378,15 +441,29 @@ export class Room extends DurableObject<Env> {
     const blocker = this.startBlocker();
     if (blocker) throw new UserError(blocker);
     const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
-    const pair = this.choosePair(random)!;
+    const custom = room.settings.wordSource === 'custom' ? room.customPair : null;
+    const pair = custom
+      ? {
+          id: `custom:${room.gameNo + 1}`,
+          wordA: custom.wordA,
+          wordB: custom.wordB,
+          senseA: custom.senseA,
+          senseB: custom.senseB,
+          aliasesA: custom.aliasesA,
+          aliasesB: custom.aliasesB,
+          link: custom.link,
+          hints: custom.hints,
+        }
+      : this.choosePair(random)!;
     this.game = createGame({
-      players: room.members.map((m) => ({ id: m.id, name: m.name })),
+      players: this.players().map((m) => ({ id: m.id, name: m.name })),
       pair,
       rules: toRules(room.settings),
       seed: crypto.getRandomValues(new Int32Array(1))[0],
       now: Date.now(),
     });
     room.gameNo += 1;
+    if (custom) room.customPair = null; // 自带词玩过一次就公开了
   }
 
   /** 一局结束时计分（§7.3），并记下用过的词对。 */
@@ -395,7 +472,8 @@ export class Room extends DurableObject<Env> {
     const g = this.game;
     if (!g || g.step.k !== 'over' || room.scoredGameNo >= room.gameNo) return;
     for (const p of g.players) room.scores[p.id] = (room.scores[p.id] ?? 0) + factionScore(g.result, p.faction);
-    if (!room.played.includes(g.secret.pairId)) room.played.push(g.secret.pairId);
+    // 题库里的词对记下来不再抽；自带词不用记
+    if (!g.secret.pairId.startsWith('custom:') && !room.played.includes(g.secret.pairId)) room.played.push(g.secret.pairId);
     room.scoredGameNo = room.gameNo;
   }
 
@@ -504,9 +582,19 @@ export class Room extends DurableObject<Env> {
       startBlocker: this.startBlocker(),
       played: [...room.played],
       judge: { ai: judgeConfigured(this.env), model: judgeConfigured(this.env) ? (this.env.JUDGE_MODEL ?? null) : null },
+      moderatorId: room.moderatorId,
+      customPair: id === room.moderatorId ? room.customPair : null,
+      customPairReady: !!room.customPair,
     };
     const inThisGame = this.game?.players.some((p) => p.id === id);
-    return { t: 'state', room: view, game: inThisGame ? viewFor(this.game!, id, now) : null };
+    // 主持人不在对局里，拿主持人视图（看得到全部）；其他人只拿自己的视图
+    const isModerator = !!this.game && id === room.moderatorId && !inThisGame;
+    return {
+      t: 'state',
+      room: view,
+      game: inThisGame ? viewFor(this.game!, id, now) : null,
+      judge: isModerator ? judgeView(this.game!, now) : null,
+    };
   }
 
   /* ============================================================ 成员 */
@@ -527,6 +615,10 @@ export class Room extends DurableObject<Env> {
     const room = this.room!;
     room.members = room.members.filter((m) => m.id !== id);
     delete room.scores[id];
+    if (room.moderatorId === id) {
+      room.moderatorId = null;
+      room.customPair = null;
+    }
     if (room.hostId === id) {
       room.hostId = room.members[0]?.id ?? null;
       room.hostOfflineSince = null;

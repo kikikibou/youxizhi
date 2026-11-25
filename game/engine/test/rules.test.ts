@@ -1,7 +1,7 @@
 /** 逐条核对规则文档里的规则。章节号指《大国小国》线上版规则与开发说明。 */
 
 import { describe, expect, it } from 'vitest';
-import { nightDeciders, viewFor, PRESETS, type GameState } from '../index.ts';
+import { judgeView, nightDeciders, releaseHint, viewFor, PRESETS, type GameState } from '../index.ts';
 import { Sim } from './sim.ts';
 
 const T = (s: Sim) => s.g.rules.timers;
@@ -543,5 +543,62 @@ describe('视图', () => {
     expect(v.phase).toBe('over');
     expect(v.reveal).toMatchObject({ big: s.g.secret.big.word, small: s.g.secret.small.word, link: s.g.secret.link });
     expect(v.reveal!.players.length).toBe(7);
+  });
+});
+
+describe('主持人（§8.4）', () => {
+  it('人类裁判可以在抢答时提前公布下一条提示；不在抢答或提示用完时不行', () => {
+    const s = new Sim({ n: 7, seed: 24, rules: { judge: 'human' } });
+    expect(releaseHint(s.g, s.t).error).toMatch(/只有抢答/);
+    s.toPhase2();
+    for (let i = 0; i < 5; i++) s.wait(T(s).turn);
+    s.wait(T(s).reliefAsk);
+    s.wait(T(s).reliefGuess);
+    for (let i = 0; i < 5; i++) s.wait(T(s).turn);
+    expect(s.step.k).toBe('race');
+    expect(s.g.hintsShown).toBe(1);
+    const total = 1 + s.g.secret.hints.length;
+    for (let i = 1; i < total; i++) {
+      const r = releaseHint(s.g, s.t);
+      expect(r.error).toBeUndefined();
+      s.g = r.state;
+    }
+    expect(s.g.hintsShown).toBe(total);
+    expect(releaseHint(s.g, s.t).error).toMatch(/全部公布/);
+    // 提示用完后照常再过一个间隔结束
+    s.wait(T(s).hintInterval);
+    expect(s.g.result?.how).toBe('draw');
+  });
+
+  it('主持人视图看得到两个词、所有人的身份、待判定的请求和只给白板的记录', () => {
+    const s = new Sim({ n: 7, seed: 15, rules: { judge: 'human' } });
+    const asker = s.of('blank')[0];
+    s.night();
+    s.clues();
+    s.discuss();
+    s.voteAll(asker.id);
+    s.do(asker.id, { a: 'ask', text: '大国的词是动物吗' });
+    const jv = judgeView(s.g, s.t);
+    expect(jv.secret.big).toBe(s.g.secret.big.word);
+    expect(jv.secret.small).toBe(s.g.secret.small.word);
+    expect(jv.players.every((p) => p.faction)).toBe(true);
+    expect(jv.judgeMode).toBe('human');
+    expect(jv.pending).toEqual([expect.objectContaining({ kind: 'question', text: '大国的词是动物吗', deadline: s.t + T(s).humanJudge })]);
+    s.verdict('yes');
+    s.wait(T(s).exitMinShow);
+    const after = judgeView(s.g, s.t);
+    expect(after.log.find((e) => e.t === 'answer')).toMatchObject({ answer: 'yes', to: 'blanks' });
+    expect(after.qa).toEqual([expect.objectContaining({ verdict: 'yes', context: 'exit' })]);
+  });
+
+  it('人类裁判超时没判，按兜底处理', () => {
+    const s = new Sim({ n: 7, seed: 27, rules: { judge: 'human' } });
+    s.toPhase2();
+    const a = (s.step as Extract<GameState['step'], { k: 'turn' }>).order[0];
+    s.do(a, { a: 'ask', target: 'big', text: '是动物吗' });
+    s.wait(T(s).llmJudge);
+    expect(s.g.judge.length).toBe(1); // 人类裁判等得更久
+    s.wait(T(s).humanJudge - T(s).llmJudge);
+    expect(s.lastEvent('turn')).toMatchObject({ action: 'ask', verdict: 'unknown' });
   });
 });

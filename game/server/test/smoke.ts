@@ -85,6 +85,17 @@ async function main() {
     const log = v.log.map((e) => e.t);
     if (log.includes('phase2')) reachedPhase2 += 1;
     console.log(`    结局：${JSON.stringify(v.result)}；第 ${v.day} 天；${log.includes('phase2') ? '进入过第二阶段' : '没进第二阶段'}`);
+    // 裁判：提问的回答分布（兜底判定只会答 unknown），猜词判定的结果
+    const asks: Record<string, number> = {};
+    for (const e of v.log) {
+      if ((e.t === 'turn' || e.t === 'relief') && 'verdict' in e && (e.action === 'ask')) asks[e.verdict] = (asks[e.verdict] ?? 0) + 1;
+      if (e.t === 'exit' && e.questions) for (const q of e.questions) if (q.invalid) asks.invalid = (asks.invalid ?? 0) + 1;
+    }
+    // 出局提问的回答只发给白板：从白板的手机上收
+    const priv = new Map<string, string>();
+    for (const p of phones) for (const e of p.game?.log ?? []) if (e.t === 'answer') priv.set(e.question, e.answer);
+    for (const a of priv.values()) asks[`私下:${a}`] = (asks[`私下:${a}`] ?? 0) + 1;
+    console.log(`    裁判：${host.room!.judge.ai ? `AI（${host.room!.judge.model}）` : '兜底'}；提问回答分布 ${JSON.stringify(asks)}`);
     check(!!v.reveal && v.reveal.players.length === 7, '结算公布了所有人的身份');
     await sleep(300);
     const scores = host.room!.members.map((m) => m.score);

@@ -1,7 +1,7 @@
 /** 和房间服务器的连接：建房、查房、WebSocket（自动重连、心跳、时钟校准）。 */
 
 import type { Action } from '../engine/types.ts';
-import type { PlayerView } from '../engine/view.ts';
+import type { JudgeView, PlayerView } from '../engine/view.ts';
 import type { ClientMsg, RoomSettings, RoomView, ServerMsg } from '../shared/protocol.ts';
 
 const params = new URLSearchParams(location.search);
@@ -77,6 +77,8 @@ export interface Snapshot {
   joined: boolean;
   room: RoomView | null;
   game: PlayerView | null;
+  /** 我是主持人时，看到的对局（全部可见）。 */
+  judge: JudgeView | null;
   /** 服务器时间 - 本机时间，用来算倒计时。 */
   offset: number;
   /** 最近一条错误（加入失败、动作被拒绝……）。 */
@@ -87,7 +89,7 @@ export interface Snapshot {
 
 export class RoomConnection {
   readonly code: string;
-  snap: Snapshot = { status: 'connecting', joined: false, room: null, game: null, offset: 0, error: null, bye: null };
+  snap: Snapshot = { status: 'connecting', joined: false, room: null, game: null, judge: null, offset: 0, error: null, bye: null };
   private ws: WebSocket | null = null;
   private listeners = new Set<() => void>();
   private retry = 0;
@@ -194,7 +196,8 @@ export class RoomConnection {
           joined: true,
           room: m.room,
           game: m.game,
-          offset: m.game ? m.game.now - Date.now() : this.snap.offset,
+          judge: m.judge,
+          offset: m.game ? m.game.now - Date.now() : m.judge ? m.judge.now - Date.now() : this.snap.offset,
         });
         break;
       case 'error':

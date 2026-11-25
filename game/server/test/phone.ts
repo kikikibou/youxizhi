@@ -28,6 +28,10 @@ export class Phone {
   errors: string[] = [];
   bye: string | null = null;
   bot = false;
+  /** 测试用：先问这个，返回 undefined 时才用默认的机器人逻辑。 */
+  decide?: (v: PlayerView) => import('../../engine/types.ts').Action | null | undefined;
+  /** 测试用：每收到一次 state 调一次。 */
+  onState?: (m: Extract<ServerMsg, { t: 'state' }>) => void;
   private acting = false;
   private waiters: ((m: ServerMsg) => boolean)[] = [];
 
@@ -85,6 +89,7 @@ export class Phone {
     if (m.t === 'error') this.errors.push(m.message);
     if (m.t === 'bye') this.bye = m.reason;
     this.waiters = this.waiters.filter((w) => !w(m));
+    if (m.t === 'state') this.onState?.(m);
     if (m.t === 'state' && this.bot) void this.play();
   }
 
@@ -96,7 +101,8 @@ export class Phone {
     this.acting = false;
     const v = this.game;
     if (!v || this.ws.readyState !== WebSocket.OPEN) return;
-    const a = botAction(v);
+    const custom = this.decide?.(v);
+    const a = custom !== undefined ? custom : botAction(v);
     if (a) this.send({ t: 'act', action: a });
   }
 }

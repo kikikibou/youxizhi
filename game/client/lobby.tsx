@@ -35,7 +35,10 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   const link = shareLink(room.code);
   const qr = useMemo(() => renderSVG(link, { border: 1 }), [link]);
   const [copied, setCopied] = useState(false);
-  const n = room.members.length;
+  const moderator = room.members.find((m) => m.id === room.moderatorId) ?? null;
+  const isModerator = room.moderatorId === room.me;
+  /** 玩家人数：主持人不算。 */
+  const n = room.members.length - (moderator ? 1 : 0);
 
   return (
     <div class="lobby">
@@ -77,7 +80,9 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
 
       <Card>
         <h3 class="section-title">
-          <span>玩家 {n} 人</span>
+          <span>
+            玩家 {n} 人{moderator ? ' · 主持人 1 人' : ''}
+          </span>
           <small>{n < 6 ? `至少 6 人，还差 ${6 - n} 人` : n > 12 ? '最多 12 人' : 'PLAYERS'}</small>
         </h3>
         <ul class="members">
@@ -87,22 +92,39 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
               <span class="m-name">
                 {m.name}
                 {m.host ? <em>房主</em> : null}
+                {m.id === room.moderatorId ? <em class="em-mod">主持人</em> : null}
               </span>
               <span class="m-score">{m.score} 分</span>
-              {isHost && m.id !== room.me ? (
+              {isHost ? (
                 <span class="m-actions">
-                  <button type="button" class="link-btn" onClick={() => conn.send({ t: 'transfer', id: m.id })}>
-                    设为房主
-                  </button>
-                  <button type="button" class="link-btn" onClick={() => confirm(`请 ${m.name} 离开房间？`) && conn.send({ t: 'kick', id: m.id })}>
-                    请离开
-                  </button>
+                  {m.id === room.moderatorId ? (
+                    <button type="button" class="link-btn" onClick={() => conn.send({ t: 'moderator', id: null })}>
+                      取消主持人
+                    </button>
+                  ) : (
+                    <button type="button" class="link-btn" onClick={() => conn.send({ t: 'moderator', id: m.id })}>
+                      设为主持人
+                    </button>
+                  )}
+                  {m.id !== room.me ? (
+                    <>
+                      <button type="button" class="link-btn" onClick={() => conn.send({ t: 'transfer', id: m.id })}>
+                        设为房主
+                      </button>
+                      <button type="button" class="link-btn" onClick={() => confirm(`请 ${m.name} 离开房间？`) && conn.send({ t: 'kick', id: m.id })}>
+                        请离开
+                      </button>
+                    </>
+                  ) : null}
                 </span>
               ) : null}
             </li>
           ))}
         </ul>
+        <p class="note">主持人不参与游戏：负责出题（自带词）或人工判定，也可以只旁观。</p>
       </Card>
+
+      {isModerator ? <ModeratorCard conn={conn} room={room} /> : null}
 
       <Settings conn={conn} settings={room.settings} n={n} editable={isHost} judge={room.judge} />
 
@@ -227,7 +249,35 @@ function Settings({ conn, settings: s, n, editable, judge }: { conn: RoomConnect
           </small>
         </dd>
 
-        <dt>裁判</dt>
+        <dt>词对来源</dt>
+        <dd>
+          <Choice
+            value={s.wordSource}
+            disabled={!editable}
+            options={[
+              ['bank', '题库'],
+              ['custom', '自带词'],
+            ]}
+            onChange={(v) => set({ wordSource: v as RoomSettings['wordSource'] })}
+          />
+          <small>自带词：由主持人在开局前填两个词和联系。</small>
+        </dd>
+
+        <dt>裁判方式</dt>
+        <dd>
+          <Choice
+            value={s.judge}
+            disabled={!editable}
+            options={[
+              ['llm', 'AI 裁判'],
+              ['human', '主持人判定'],
+            ]}
+            onChange={(v) => set({ judge: v as RoomSettings['judge'] })}
+          />
+          {s.judge === 'human' ? <small>主持人在手机上手动判定提问和猜词；超过 3 分钟没判，自动按兜底处理。</small> : null}
+        </dd>
+
+        <dt>AI 裁判</dt>
         <dd>
           {judge.ai ? (
             <small>AI 裁判（{modelName(judge.model)}）：回答是非问题、判定猜词。写法完全一致的猜词直接判对。</small>
@@ -388,4 +438,100 @@ function modelName(id: string | null): string {
 export function lastResultLine(snap: Snapshot): string | null {
   const r = snap.game?.result;
   return r && snap.game?.phase === 'over' ? resultLine(r) : null;
+}
+
+/** 主持人自己的面板：说明 + 自带词表单。 */
+function ModeratorCard({ conn, room }: { conn: RoomConnection; room: RoomView }) {
+  const custom = room.settings.wordSource === 'custom';
+  const p = room.customPair;
+  const [f, setF] = useState({
+    wordA: p?.wordA ?? '',
+    wordB: p?.wordB ?? '',
+    senseA: p?.senseA ?? '',
+    senseB: p?.senseB ?? '',
+    aliasesA: p?.aliasesA?.join('、') ?? '',
+    aliasesB: p?.aliasesB?.join('、') ?? '',
+    link: p?.link ?? '',
+    hints: p?.hints?.join('\n') ?? '',
+  });
+  const field = (k: keyof typeof f) => ({
+    value: f[k],
+    onInput: (e: { currentTarget: { value: string } }) => {
+      const value = e.currentTarget.value;
+      setF((prev) => ({ ...prev, [k]: value })); // 函数式更新：几个框同时变（粘贴、自动填充）也不会互相覆盖
+    },
+  });
+  return (
+    <Card tone="accent">
+      <h3 class="section-title">
+        <span>你是主持人</span>
+        <small>MODERATOR</small>
+      </h3>
+      <p class="note">
+        你不参与这一局。开局后你会看到两个词、所有人的身份和整局记录
+        {room.settings.judge === 'human' ? '，并负责判定提问和猜词' : '；判定交给 AI 裁判，你旁观'}。
+      </p>
+      {custom ? (
+        <form
+          class="pair-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const list = (v: string) => v.split(/[,，、\n]/).map((x) => x.trim()).filter(Boolean);
+            conn.send({ t: 'customPair', pair: { ...f, aliasesA: list(f.aliasesA), aliasesB: list(f.aliasesB), hints: list(f.hints) } });
+          }}
+        >
+          <p class="lead">出题：两个词和它们的联系</p>
+          <div class="pair-cols">
+            <label class="field">
+              <span>词 A</span>
+              <input maxLength={20} placeholder="例：鱿鱼" {...field('wordA')} />
+            </label>
+            <label class="field">
+              <span>词 B</span>
+              <input maxLength={20} placeholder="例：股票" {...field('wordB')} />
+            </label>
+          </div>
+          <label class="field">
+            <span>联系（两轮无人猜中后作为第一条提示公布）</span>
+            <input maxLength={80} placeholder="例：都是可以「炒」的东西" {...field('link')} />
+          </label>
+          <details class="howto">
+            <summary>可选：义项、别名、更多提示</summary>
+            <div class="pair-cols">
+              <label class="field">
+                <span>A 的义项（裁判按这个理解）</span>
+                <input maxLength={40} placeholder="例：海洋动物、食材" {...field('senseA')} />
+              </label>
+              <label class="field">
+                <span>B 的义项</span>
+                <input maxLength={40} placeholder="例：证券" {...field('senseB')} />
+              </label>
+              <label class="field">
+                <span>A 的别名（用顿号隔开，猜到也算对）</span>
+                <input placeholder="例：柔鱼、枪乌贼" {...field('aliasesA')} />
+              </label>
+              <label class="field">
+                <span>B 的别名</span>
+                <input {...field('aliasesB')} />
+              </label>
+            </div>
+            <label class="field">
+              <span>更多提示（每行一条，越往后越直白）</span>
+              <textarea rows={3} {...field('hints')} />
+            </label>
+          </details>
+          <button type="submit" class="btn btn--accent btn--wide">
+            {p ? '更新词对' : '保存词对'}
+          </button>
+          {p ? (
+            <p class="note">
+              已保存：{p.wordA} / {p.wordB}。哪个给大国开局时随机决定。这对词开局后就用掉了，下一局要重新出题。
+            </p>
+          ) : null}
+        </form>
+      ) : (
+        <p class="note">现在用题库出题。想自己出题，请房主把「词对来源」改成「自带词」。</p>
+      )}
+    </Card>
+  );
 }

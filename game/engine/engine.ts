@@ -280,6 +280,22 @@ export function nextWake(g: GameState): number | null {
   return valid.length ? Math.min(...valid) : null;
 }
 
+/** 人类裁判手动提前公布下一条提示（§8.4）；只在抢答中、还有提示没公布时可以。 */
+export function releaseHint(state: GameState, now: number): ActResult {
+  const g = clone(state);
+  try {
+    settle(g, now);
+    if (g.step.k !== 'race') reject('只有抢答时才能公布提示');
+    if (g.step.nextHintAt === null) reject('提示已经全部公布了');
+    revealHint(g, now);
+    settle(g, now);
+    return { state: g };
+  } catch (e) {
+    if (e instanceof Reject) return { state, error: e.message };
+    throw e;
+  }
+}
+
 /** 正在等裁判判定的请求（房间把它们交给 LLM 或人类裁判）。 */
 export function pendingJudgements(g: GameState): readonly JudgeRequest[] {
   return g.judge;

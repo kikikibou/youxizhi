@@ -14,9 +14,9 @@ export const DIR: Record<'cw' | 'ccw', string> = { cw: '顺时针', ccw: '逆时
 export const ANSWER: Record<string, string> = { yes: '是', no: '否', unknown: '无法判断', invalid: '无效问题' };
 export const VERDICT: Record<string, string> = { correct: '对', wrong: '错' };
 
-/** 阶段的大标题和英文小字。 */
-export function phaseTitle(v: PlayerView): { cn: string; en: string } {
-  const s = v.step;
+/** 阶段的大标题和英文小字。玩家视图和主持人视图都能用（只看 k、round、purpose）。 */
+export function phaseTitle(v: { day: number; step: { k: StepView['k'] } }): { cn: string; en: string } {
+  const s = v.step as { k: StepView['k']; round?: number; purpose?: string };
   const d = String(v.day).padStart(2, '0');
   switch (s.k) {
     case 'night':

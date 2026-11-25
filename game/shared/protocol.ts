@@ -6,12 +6,15 @@
  */
 
 import type { Action, Composition, Recognition, Timers } from '../engine/index.ts';
-import type { PlayerView } from '../engine/view.ts';
+import type { JudgeView, PlayerView } from '../engine/view.ts';
 
 /** 房主可以改的规则（§10.2）。计时以毫秒存，界面上按秒显示。 */
 export interface RoomSettings {
   composition: Composition | null;
+  /** 'human'：主持人手动判定（§8.4）。 */
   judge: 'llm' | 'human';
+  /** 'custom'：主持人开局前自己填词对（自带词，§8.4）。 */
+  wordSource: 'bank' | 'custom';
   difficulty: 1 | 2 | 3 | 'random';
   recognition: 'auto' | Recognition;
   wipeoutThreshold: 0 | 1;
@@ -20,6 +23,18 @@ export interface RoomSettings {
   tableMode: boolean;
   clueMaxLength: number;
   timers: Timers;
+}
+
+/** 主持人填的词对（自带词）。哪个给大国仍然每局随机。 */
+export interface CustomPair {
+  wordA: string;
+  wordB: string;
+  senseA?: string;
+  senseB?: string;
+  aliasesA?: string[];
+  aliasesB?: string[];
+  link: string;
+  hints?: string[];
 }
 
 export type ClientMsg =
@@ -33,6 +48,12 @@ export type ClientMsg =
   | { t: 'kick'; id: string }
   | { t: 'transfer'; id: string }
   | { t: 'start' }
+  /** 房主指定（或取消）主持人：不参与游戏的出题人 / 裁判。 */
+  | { t: 'moderator'; id: string | null }
+  /** 以下是主持人操作：填自带词（null 清空）；人工判定；提前公布下一条提示。 */
+  | { t: 'customPair'; pair: CustomPair | null }
+  | { t: 'verdict'; id: string; verdict: string }
+  | { t: 'hint' }
   /** 对局中的动作。 */
   | { t: 'act'; action: Action }
   | { t: 'ping' };
@@ -62,11 +83,17 @@ export interface RoomView {
   played: string[];
   /** AI 裁判是否可用（服务器配了 key），以及用的模型。不可用时用兜底判定。 */
   judge: { ai: boolean; model: string | null };
+  /** 主持人（不参与游戏）。 */
+  moderatorId: string | null;
+  /** 主持人填的自带词：只发给主持人本人；其他人只知道填没填好。 */
+  customPair: CustomPair | null;
+  customPairReady: boolean;
 }
 
 export type ServerMsg =
   | { t: 'welcome'; id: string; token: string }
-  | { t: 'state'; room: RoomView; game: PlayerView | null }
+  /** game：玩家看到的对局；judge：主持人看到的对局（两者至多一个）。 */
+  | { t: 'state'; room: RoomView; game: PlayerView | null; judge: JudgeView | null }
   | { t: 'error'; message: string }
   /** 被踢出或房间关闭：客户端回到首页，并删掉本地 token。 */
   | { t: 'bye'; reason: string }

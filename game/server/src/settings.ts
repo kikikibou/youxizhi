@@ -1,11 +1,12 @@
 /** 房间设置的默认值和校验。房主发来的设置一律经过这里，非法的项保留原值。 */
 
-import { DEFAULT_RULES, compositionError, type Rules, type Timers } from '../../engine/index.ts';
-import type { RoomSettings } from '../../shared/protocol.ts';
+import { DEFAULT_RULES, compositionError, normalizeWord, type Rules, type Timers } from '../../engine/index.ts';
+import type { CustomPair, RoomSettings } from '../../shared/protocol.ts';
 
 export const DEFAULT_SETTINGS: RoomSettings = {
   composition: DEFAULT_RULES.composition,
   judge: DEFAULT_RULES.judge,
+  wordSource: 'bank',
   difficulty: 'random',
   recognition: DEFAULT_RULES.recognition,
   wipeoutThreshold: DEFAULT_RULES.wipeoutThreshold,
@@ -48,6 +49,7 @@ export function mergeSettings(cur: RoomSettings, input: unknown): RoomSettings {
     else if (c && typeof c === 'object' && !compositionError(c)) next.composition = { big: c.big, small: c.small, blank: c.blank };
   }
   next.judge = oneOf(p.judge, ['llm', 'human'] as const, cur.judge);
+  next.wordSource = oneOf(p.wordSource, ['bank', 'custom'] as const, cur.wordSource);
   next.difficulty = oneOf(p.difficulty, [1, 2, 3, 'random'] as const, cur.difficulty);
   next.recognition = oneOf(p.recognition, ['auto', 'group', 'oneWay', 'all'] as const, cur.recognition);
   next.wipeoutThreshold = oneOf(p.wipeoutThreshold, [0, 1] as const, cur.wipeoutThreshold);
@@ -82,4 +84,37 @@ export function toRules(s: RoomSettings): Rules {
     clueMaxLength: s.clueMaxLength,
     timers: { ...s.timers },
   };
+}
+
+/** 主持人填的自带词：整理、校验。不合格时返回错误说明。 */
+export function cleanCustomPair(input: unknown): CustomPair | string {
+  if (!input || typeof input !== 'object') return '词对格式不对';
+  const p = input as Record<string, unknown>;
+  const text = (v: unknown, max: number): string | null => {
+    if (typeof v !== 'string') return null;
+    const t = v.replace(/\s+/g, ' ').trim();
+    return t && Array.from(t).length <= max ? t : null;
+  };
+  const list = (v: unknown, maxItems: number, maxLen: number): string[] => {
+    const raw = Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[,，、\n]/) : [];
+    return raw.map((x) => text(x, maxLen)).filter((x): x is string => !!x).slice(0, maxItems);
+  };
+  const wordA = text(p.wordA, 20);
+  const wordB = text(p.wordB, 20);
+  const link = text(p.link, 80);
+  if (!wordA || !wordB) return '两个词都要填（每个最多 20 字）';
+  if (normalizeWord(wordA) === normalizeWord(wordB)) return '两个词不能一样';
+  if (!link) return '要写两个词之间的联系（最多 80 字）';
+  const pair: CustomPair = { wordA, wordB, link };
+  const senseA = text(p.senseA, 40);
+  const senseB = text(p.senseB, 40);
+  if (senseA) pair.senseA = senseA;
+  if (senseB) pair.senseB = senseB;
+  const aliasesA = list(p.aliasesA, 6, 20);
+  const aliasesB = list(p.aliasesB, 6, 20);
+  if (aliasesA.length) pair.aliasesA = aliasesA;
+  if (aliasesB.length) pair.aliasesB = aliasesB;
+  const hints = list(p.hints, 6, 80);
+  if (hints.length) pair.hints = hints;
+  return pair;
 }
