@@ -839,111 +839,144 @@ html:has(.is-night) {
   color: var(--ink-2);
 }
 
-/* 结算：长按揭晓 → 两个圆叠在一起 → 联系一个字一个字打出来 */
-.reveal-stage {
-  position: relative;
-  margin: 4px 0 8px;
+/* 结算：两个词一开始就摆在劈开的两块地上（和标志一样，大在前、小在后），联系是长按之后盖在缝脚上的一枚章 */
+.rv-slab {
+  margin: 6px 0 14px;
 }
-.reveal-stage svg {
-  display: block;
+.rv-ground {
+  position: relative;
+  height: 200px;
+}
+.rv-land {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
   overflow: visible;
 }
-.rv-orbit {
-  fill: none;
-  stroke: var(--line);
-  stroke-dasharray: 3 5;
+.rv-land polygon {
+  transition: transform 0.45s cubic-bezier(0.6, 0, 0.2, 1);
 }
-.rv-disc--big {
+.rv-land-big {
   fill: var(--big);
 }
-.rv-disc--small {
+.rv-land-small {
   fill: var(--small);
 }
-.rv-label {
-  font-family: var(--mono);
-  font-size: 8.5px;
-  font-weight: 700;
-  fill: #0a0a0a;
-  text-anchor: middle;
-}
-.rv-label--small {
-  fill: #ffffff;
-}
-.rv-word {
-  font-family: var(--cn);
-  font-weight: 900;
-  fill: #0a0a0a;
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-.rv-word--small {
-  fill: #ffffff;
-}
-.rv-hatch-line {
-  fill: var(--ink);
-}
-.rv-cover-base {
-  fill: var(--paper);
-}
-.rv-cover-disc {
+.rv-blade {
+  fill: none;
   stroke: var(--ink);
-  stroke-width: 2;
+  stroke-width: 1.2px;
 }
-.rv-q {
-  font-family: var(--wide);
-  font-size: 56px;
-  font-weight: 900;
-  fill: var(--ink);
-  text-anchor: middle;
+/* 揭晓时两块再往两边裂开一点 */
+.is-open .rv-land-big {
+  transform: translateX(-0.8px);
 }
-.rv-q--small {
-  font-size: 34px;
+.is-open .rv-land-small {
+  transform: translateX(0.8px);
 }
-.rv-cover {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  transition: transform 0.45s cubic-bezier(0.6, 0, 0.4, 1);
-}
-.is-open .rv-cover {
-  transform: scaleY(0);
-}
-.is-open .rv-cover--small {
-  transition-delay: 0.15s;
-}
-.rv-small {
-  transition: transform 0.5s cubic-bezier(0.7, 0, 0.2, 1) 0.6s;
-}
-.is-open .rv-small {
-  transform: translateX(-40px);
-}
-.rv-lens {
-  fill: var(--ink);
-}
-.rv-link {
+.rv-w {
+  position: absolute;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
-  margin: 6px 0 0;
-  text-align: center;
+  pointer-events: none;
 }
-.rv-link small {
+.rv-w small {
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.rv-w b {
+  font-family: var(--serif);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.rv-w--big {
+  left: 14px;
+  top: calc(8% + 12px);
+  width: 50%;
+  color: #0a0a0a;
+}
+.rv-w--big b {
+  margin-top: 14px;
+}
+.rv-w--small {
+  right: 12px;
+  top: calc(34% + 10px);
+  width: 38%;
+  align-items: flex-end;
+  text-align: right;
+  color: #ffffff;
+}
+.rv-w--small small {
+  opacity: 0.8;
+}
+.rv-w--small b {
+  margin-top: 8px;
+}
+/* 联系：一枚章，压在缝脚（两国的地平线）上 */
+.rv-seal {
+  position: relative;
+  left: 42%;
+  z-index: 1;
+  width: fit-content;
+  min-width: 118px;
+  max-width: 80%;
+  margin: -30px 0 0;
+  padding: 7px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: translateX(-50%) rotate(-2deg);
+}
+.rv-seal small {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: var(--ink-2);
 }
-.rv-link span {
-  display: inline-block;
-  font-size: 20px;
+.rv-seal span {
+  font-family: var(--serif);
+  font-size: 21px;
   font-weight: 900;
+  line-height: 1.25;
   color: var(--ink-3);
+  overflow-wrap: anywhere;
 }
-.is-open .rv-link span {
+.rv-slab:not(.is-open) .rv-seal {
+  background: repeating-linear-gradient(-45deg, var(--hl-tint) 0 1.5px, var(--paper) 1.5px 6px);
+  border-style: dashed;
+  box-shadow: none;
+}
+.is-open .rv-seal {
+  animation: seal-in 0.5s 0.25s var(--ease) both;
+}
+.is-open .rv-seal span {
   color: var(--ink);
-  animation: type-in 1s 1.15s steps(var(--n, 8), end) both;
+}
+@keyframes seal-in {
+  0% {
+    transform: translateX(-50%) rotate(-9deg) scale(1.7);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-50%) rotate(-2deg) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) rotate(-2deg);
+  }
 }
 .longpress {
   position: relative;
@@ -1490,14 +1523,6 @@ html:has(.is-night) {
     transform: none;
   }
 }
-@keyframes type-in {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
 @keyframes rise {
   from {
     transform: scaleY(0);
@@ -1601,88 +1626,6 @@ html:has(.is-night) {
 .hero .hero-pulse {
   stroke-width: 0.8;
   animation-delay: 1.35s;
-}
-
-/* 结算揭晓：两块领土靠拢，国界画出来，联系点亮起 */
-.rv-grid {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 1;
-  stroke-dasharray: 2 6;
-}
-.rv-q {
-  font-size: 28px;
-}
-.rv-q--small {
-  font-size: 15px;
-}
-.rv-cover-disc {
-  stroke-width: 0.8;
-}
-.rv-small {
-  transform: translateX(22px);
-  transition: transform 0.5s cubic-bezier(0.7, 0, 0.2, 1) 0.6s;
-}
-.is-open .rv-small {
-  transform: none;
-}
-.rv-border {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0);
-  transition:
-    transform 0.35s cubic-bezier(0.6, 0, 0.2, 1) 1.05s,
-    opacity 0.1s 1.05s;
-}
-.is-open .rv-border {
-  opacity: 1;
-  transform: none;
-}
-.rv-node {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(0);
-  transition:
-    transform 0.3s var(--ease) 1.3s,
-    opacity 0.1s 1.3s;
-}
-.is-open .rv-node {
-  opacity: 1;
-  transform: none;
-}
-.rv-words {
-  opacity: 0;
-  transition: opacity 0.3s 1.15s;
-}
-.is-open .rv-words {
-  opacity: 1;
-}
-.rv-word {
-  font-family: var(--cn);
-  font-weight: 900;
-  fill: var(--ink);
-  text-anchor: middle;
-  dominant-baseline: central;
-  paint-order: stroke;
-  stroke: var(--paper);
-  stroke-width: 2.4px;
-  stroke-linejoin: round;
-}
-.rv-label {
-  font-family: var(--mono);
-  font-size: 4.5px;
-  font-weight: 700;
-  fill: var(--ink);
-  text-anchor: middle;
-  paint-order: stroke;
-  stroke: var(--paper);
-  stroke-width: 1.6px;
-  stroke-linejoin: round;
-}
-.is-open .rv-link span {
-  animation-delay: 1.45s;
 }
 
 @keyframes slide-l2 {

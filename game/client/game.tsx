@@ -7,7 +7,6 @@ import type { Faction, Timers } from '../engine/rules.ts';
 import type { LogEntry, PlayerView, StepView } from '../engine/view.ts';
 import { Avatar } from './avatar.tsx';
 import { Dossier, logGroups } from './dossier.tsx';
-import { BIG, BORDER, NODE, SMALL } from './logo.tsx';
 import type { RoomConnection, Snapshot } from './net.ts';
 import { DIR, FACTION, ROLE, deadlineOf, phaseTitle, resultLine } from './text.ts';
 import { Card, Chat, Countdown, HoldIdentity, MiniTable, PhaseCard, RoundTable, StepArt, TextAction, Ticks, Track, pad2, previewFlags, type ArtKind } from './ui.tsx';
@@ -805,8 +804,8 @@ function Over({ v, name, onLeave }: P<'over'> & { onLeave: () => void }) {
   const podium = [places.find((p) => p.place === 1), places.find((p) => p.place === 0), places.find((p) => p.place === 2)];
   const factionLabel = (p: { faction: Faction; role: string | null }) =>
     p.faction === 'blank' ? `白板阵营${p.role && p.role !== 'both' ? `·${ROLE[p.role as 'black' | 'white']}` : ''}` : FACTION[p.faction];
-  const bigFs = wordSize(rv.big, 40, 176);
-  const smallFs = wordSize(rv.small, 30, 110);
+  const bigFs = wordSize(rv.big, 46, 148);
+  const smallFs = wordSize(rv.small, 30, 108);
   return (
     <>
       <Card tone="accent" class="reveal-card">
@@ -814,60 +813,34 @@ function Over({ v, name, onLeave }: P<'over'> & { onLeave: () => void }) {
           <span>谜底</span>
           <small>REVEAL</small>
         </h3>
-        <StepHead art="over" title={open ? resultLine(r) : '游戏结束'} sub={open ? '两国共用的那段国界，就是两个词之间的联系。' : '两国的词和它们之间的联系还盖着。按住下面的按钮揭晓。'} />
-        <div class={`reveal-stage ${open ? 'is-open' : ''}`}>
-          <svg viewBox="0 0 340 214" role="img" aria-label={open ? `大国词：${rv.big}；小国词：${rv.small}；联系：${rv.link}` : '谜底还没揭晓'}>
-            <defs>
-              <pattern id="rv-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="1.4" height="5" class="rv-hatch-line" />
-              </pattern>
-            </defs>
-            <path class="rv-grid" d="M4 72 H336 M4 142 H336 M118 2 V212 M232 2 V212" />
-            <g transform="translate(10 7) scale(2)">
-              <g class="rv-big">
-                <polygon points={BIG} class="mark-big" />
-                <g class="rv-cover rv-cover--big">
-                  <polygon points={BIG} class="rv-cover-base" />
-                  <polygon points={BIG} fill="url(#rv-hatch)" class="rv-cover-disc" />
-                  <text x="54" y="64" class="rv-q">
-                    ?
-                  </text>
-                </g>
-              </g>
-              <g class="rv-small">
-                <polygon points={SMALL} class="mark-small" />
-                <g class="rv-cover rv-cover--small">
-                  <polygon points={SMALL} class="rv-cover-base" />
-                  <polygon points={SMALL} fill="url(#rv-hatch)" class="rv-cover-disc" />
-                  <text x="118" y="76" class="rv-q rv-q--small">
-                    ?
-                  </text>
-                </g>
-              </g>
-              <path d={BORDER} class="mark-border rv-border" />
-              <circle cx={NODE.cx} cy={NODE.cy} r="2.6" class="mark-node rv-node" />
-              <g class="rv-words">
-                <text x="54" y="29" class="rv-label">
-                  大国词 BIG
-                </text>
-                <text x="54" y="46" class="rv-word" style={{ fontSize: `${bigFs / 2}px` }}>
-                  {rv.big}
-                </text>
-                <text x="118" y="48" class="rv-label">
-                  小国词 SMALL
-                </text>
-                <text x="118" y="64" class="rv-word" style={{ fontSize: `${smallFs / 2}px` }}>
-                  {rv.small}
-                </text>
-              </g>
-            </g>
-          </svg>
-          <p class="rv-link">
-            <small>联系 / LINK</small>
-            <span style={{ '--n': Array.from(rv.link).length }}>{open ? rv.link : '？？？'}</span>
+        <StepHead art="over" title={open ? resultLine(r) : '游戏结束'} sub={open ? '两国共用的那段国界，就是两个词之间的联系。' : '两个词都摆在这儿了，它们之间的联系还盖着。按住下面的按钮揭晓。'} />
+        <div
+          class={`rv-slab ${open ? 'is-open' : ''}`}
+          role="img"
+          aria-label={`大国词：${rv.big}；小国词：${rv.small}；联系：${open ? rv.link : '还没揭晓'}`}
+        >
+          {/* 和标志一样：大的一块在前、小的一块在后（顶边更低），中间一刀斜劈，上宽下窄的缝；缝的上方露出一段细线 */}
+          <div class="rv-ground">
+            <svg class="rv-land" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polygon class="rv-land-big" points="0,8 67.9,11 41.7,100 0,100" />
+              <polygon class="rv-land-small" points="65.6,26 100,34 100,100 42.3,100" />
+              <path class="rv-blade" d="M72.3 0.5 L70.6 6" vector-effect="non-scaling-stroke" />
+            </svg>
+            <p class="rv-w rv-w--big">
+              <small>大国词 · BIG</small>
+              <b style={{ fontSize: `${bigFs}px` }}>{rv.big}</b>
+            </p>
+            <p class="rv-w rv-w--small">
+              <small>小国词 · SMALL</small>
+              <b style={{ fontSize: `${smallFs}px` }}>{rv.small}</b>
+            </p>
+          </div>
+          <p class="rv-seal">
+            <small>联系 · LINK</small>
+            <span>{open ? rv.link : '？？？'}</span>
           </p>
         </div>
-        {open ? null : <LongPress label="按住揭晓谜底" sub="HOLD TO REVEAL · 大家一起看" ms={1400} onDone={() => setOpen(true)} />}
+        {open ? null : <LongPress label="按住揭晓联系" sub="HOLD TO REVEAL · 大家一起看" ms={1400} onDone={() => setOpen(true)} />}
       </Card>
 
       {open ? (

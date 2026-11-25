@@ -72,7 +72,7 @@ npm run dev
 - **主持人**：房主可以把一名成员设为主持人（不参与游戏）。主持人能自己出题（词对来源选「自带词」），或者手动判定（裁判方式选「主持人判定」），开局后在主持人台上看到两个词、所有人的身份和整局记录。
 - **题库**：格式见 `game/题库模板.xlsx`（「说明」工作表写了每一列的意思）。真正的题库放在 `game/server/bank/`（.xlsx 或 UTF-8 的 .csv，可以多个文件），**这个文件夹不提交**——仓库是公开的，提交了答案就公开了。在 `game/server` 里运行 `npm run bank` 检查并生成 `src/bank.generated.ts`（同样不提交）；`npm run dev` / `npm run deploy` 前会自动运行，有错误就停下。没有题库文件时用规则文档里的 5 组示例词对。
 - **页面预览**：https://yxzzxy.com/dgxg/preview.html 把每个画面（首页、大厅、各个游戏步骤、按住看身份、结算、主持人台）放进手机大小的框里并排看。数据是用真的规则引擎走一局 7 人游戏得到的（`game/client/preview-data.ts`），不连服务器；加场景就在 `SCENES` 里加一项。
-- **视觉**：「图纸」风格，变量在 `game/client/style.css` 开头——白天珊瑚红为主、电光蓝为辅，夜晚（`html:has(.is-night)`）换成靛蓝底、蓝色为主；背景地图、转场标题卡、档案、结算揭晓等在 `style-layers.css`。面板是暖白的纸（`--card`）加一层很淡的纸纹（`--grain`，SVG 噪点）和右下角一小片网点；标题用粗宋体（`--serif`，Noto Serif SC）。标志在 `game/client/logo.tsx`：粗壮的「大」「小」两块（各是一整块，只留最少的缺口分出笔画）站在同一条地平线上，用透视让「大」在前、「小」在后，中间一刀斜劈开，上宽下窄的缝是国界。背景地图 `game/client/map.svg` 由 `python scripts/dgxg-map.py` 生成（可无缝平铺）。
+- **视觉**：「图纸」风格，变量在 `game/client/style.css` 开头——白天珊瑚红为主、电光蓝为辅，夜晚（`html:has(.is-night)`）换成靛蓝底、蓝色为主；背景地图、转场标题卡、档案、结算揭晓等在 `style-layers.css`。面板是暖白的纸（`--card`）加一层很淡的纸纹（`--grain`，SVG 噪点）和右下角一小片网点；标题用粗宋体（`--serif`，Noto Serif SC）。标志在 `game/client/logo.tsx`：粗壮的「大」「小」两块（各是一整块，只留最少的缺口分出笔画）站在同一条地平线上，用透视让「大」在前、「小」在后，中间一刀斜劈开，上宽下窄的缝是国界。结算页把两个词直接摆在劈开的两块地上，联系是长按之后盖在缝脚上的一枚章。背景地图 `game/client/map.svg` 由 `python scripts/dgxg-map.py` 生成（可无缝平铺）。
 - **头像**：大厅里手绘、挑一个或随机（24 个卡通默认头像：16 个人物 + 8 只小动物，`game/client/avatar-art.tsx`）；服务器单独发 `avatars` 消息，不放在每次的状态里。
 - **题库**：一个表格文件就是一个题库（名字是文件名），也可以填「题库」列把一行归到别的题库；房主在大厅里勾选用哪几个。题目不再分难度（「难度」列可以不填）。
 - **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`（会先检查题库）。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
