@@ -1,0 +1,18 @@
+{
+  // 《大国小国》的 TypeScript 设置。只做类型检查（npm run typecheck），
+  // 打包交给 Vite（网页）和 Wrangler（服务器）。
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["**/*.ts"]
+}

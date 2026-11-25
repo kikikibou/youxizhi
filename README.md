@@ -64,6 +64,25 @@ npm run dev
 
 默认跟随访客自己的时间：06:00–19:00 为白天，其余为夜晚，页面开着时到点会自动切换。手动点昼夜开关只管到下一个切换时刻（下一个 06:00 或 19:00），之后又回到跟随时间。
 
+## 《大国小国》（`game/`）
+
+「消遣」页的第一个多人游戏，规则以《大国小国》线上版规则与开发说明为准。目前完成的是规则引擎（`game/engine/`），房间服务器和手机页面还没做。
+
+| 文件 | 作用 |
+| --- | --- |
+| `game/engine/rules.ts` | 人数预设、房间自选项、各环节计时，以及规则文档第 13 节所有「默认」处理（注释里标着 §13-编号），改规则先看这里 |
+| `game/engine/engine.ts` | 状态机：`createGame` 开局，`act` 玩家动作，`judge` 裁判判定，`advance` / `nextWake` 计时 |
+| `game/engine/view.ts` | `viewFor(state, 玩家)`：每个玩家能看到的内容。发给手机的只能是它的结果 |
+| `game/engine/words.ts` | 词对数据结构和猜词的精确匹配；`SAMPLE_PAIRS` 是规则文档里的 5 组测试词对 |
+| `game/engine/test/` | 逐条规则的测试，和 252 局随机机器人对局（每一步检查有没有泄密） |
+
+```bash
+npm test            # 跑测试
+npm run typecheck   # TypeScript 类型检查
+```
+
+同桌模式（默认开）：夜晚所有存活玩家都在同样的面板上选人和方向，只有白板阵营的选择生效，免得「谁在夜里低头操作」暴露身份。
+
 ## 新增一个工具
 
 在 `src/tools/` 写一个 `mountXxx(el)`（渲染进抽屉，返回清理函数），在 `src/main.js` 的 `TOOLS` 里注册，然后在 `pages.js` 的卡片上写 `tool: 'xxx', ready: true`。
