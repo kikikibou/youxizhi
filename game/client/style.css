@@ -381,36 +381,6 @@ a {
   transform-origin: center;
   animation: reg-in 0.4s var(--d, 0ms) var(--ease) both;
 }
-.hero-dash {
-  stroke: var(--line);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
-}
-.hero-ghost {
-  fill: none;
-  stroke-width: 2;
-}
-.hero-ghost--a {
-  stroke: var(--big);
-  transform-box: fill-box;
-  transform: translate(6px, 5px);
-  animation: ghost-a 1.2s 0.3s steps(1, end) both;
-}
-.hero-ghost--b {
-  stroke: var(--small);
-  transform-box: fill-box;
-  transform: translate(-5px, -4px);
-  animation: ghost-b 1.2s 0.3s steps(1, end) both;
-}
-.hero-big {
-  animation: slide-l 0.5s 0.25s steps(4, end) both;
-}
-.hero-small {
-  animation: slide-r 0.5s 0.4s steps(4, end) both;
-}
-.hero-lap {
-  animation: lap-flash 0.6s 0.95s steps(2, end) both;
-}
 .hero-pulse {
   fill: none;
   stroke: var(--ink);
@@ -420,42 +390,6 @@ a {
   transform-origin: center;
   animation: pulse-ring 1.1s 1s ease-out both;
 }
-.hero-orbits circle {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 1;
-  stroke-dasharray: 3 5;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: spin 60s linear infinite;
-}
-.hero-cross path {
-  stroke: var(--ink);
-  stroke-width: 1.4;
-}
-.hero-cross {
-  animation: appear 0.4s 1.1s steps(4, end) both;
-}
-.hero-char {
-  font-family: var(--cn);
-  font-weight: 900;
-  text-anchor: middle;
-  dominant-baseline: central;
-  fill: #ffffff;
-}
-.hero-char--big {
-  font-size: 108px;
-}
-.hero-char--small {
-  font-size: 34px;
-}
-.hero-link {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.6;
-  stroke-dasharray: 60;
-  animation: draw 0.4s 1s cubic-bezier(0.6, 0, 0.2, 1) both;
-}
 .hero-node {
   fill: var(--paper);
   stroke: var(--ink);
@@ -463,36 +397,6 @@ a {
   transform-box: fill-box;
   transform-origin: center;
   animation: pop 0.3s 1.3s var(--ease) both;
-}
-.hero-label text {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  fill: var(--ink);
-}
-.hero-label .hero-label-soft {
-  fill: var(--ink-2);
-}
-.hero-label {
-  animation: appear 0.35s 1.35s steps(4, end) both;
-}
-.hero-dim path {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.4;
-}
-.hero-dim text {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  fill: var(--ink-2);
-  text-anchor: middle;
-}
-.hero-dim .hero-dim-r {
-  text-anchor: end;
-}
-.hero-dim {
-  animation: appear 0.4s 1.5s steps(4, end) both;
 }
 .code-input {
   font-family: var(--wide);
@@ -2820,42 +2724,6 @@ button.rt-tag:disabled {
   }
   to {
     transform: scale(1);
-    opacity: 1;
-  }
-}
-@keyframes ghost-a {
-  0% {
-    transform: translate(26px, 20px);
-    opacity: 0;
-  }
-  25% {
-    transform: translate(26px, 20px);
-    opacity: 1;
-  }
-  50% {
-    transform: translate(14px, 10px);
-  }
-  75%,
-  100% {
-    transform: translate(6px, 5px);
-    opacity: 1;
-  }
-}
-@keyframes ghost-b {
-  0% {
-    transform: translate(-22px, -18px);
-    opacity: 0;
-  }
-  25% {
-    transform: translate(-22px, -18px);
-    opacity: 1;
-  }
-  50% {
-    transform: translate(-12px, -9px);
-  }
-  75%,
-  100% {
-    transform: translate(-5px, -4px);
     opacity: 1;
   }
 }

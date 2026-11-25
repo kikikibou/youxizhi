@@ -1,6 +1,6 @@
 /** 页面外壳：首页（建房 / 加入）、进房间、在大厅和对局之间切换、断线提示、错误提示、屏幕常亮。 */
 
-import { useEffect, useId, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { NAME_MAX, ROOM_CODE } from '../shared/protocol.ts';
 import { GameScreen } from './game.tsx';
 import { JudgeScreen } from './judge.tsx';
@@ -8,6 +8,7 @@ import { Lobby } from './lobby.tsx';
 import { RoomConnection, createRoom, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { HOW_TO } from './text.ts';
 import { AvatarContext } from './avatar.tsx';
+import { BIG, BORDER, NODE, SMALL_LEFT, SMALL_MAIN, SMALL_RIGHT } from './logo.tsx';
 import { Card, CropMarks, MapBackdrop, Mark } from './ui.tsx';
 
 function useHash(): string {
@@ -34,50 +35,45 @@ export function App() {
 
 /* ================================================================ 首页 */
 
-/** 首页的标志动画：一大一小两个圆从两边滑进来，叠在一起——叠出来的那一块就是「联系」。 */
+/**
+ * 首页的标志动画：「大」字形的领土从左边滑进来，「小」字形的三个岛依次冒出来，
+ * 两国之间的国界画出来，国界上的联系点亮起。
+ */
 export function Hero() {
-  const id = useId();
   return (
-    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：一大一小两个圆叠在一起">
-      <defs>
-        <clipPath id={`hb${id}`}>
-          <circle cx="146" cy="125" r="92" />
-        </clipPath>
-      </defs>
+    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：左边一块像「大」字的领土，右边一组像「小」字的群岛，两国共用一段国界">
       <g class="hero-reg">
         {[
-          [22, 18],
-          [338, 18],
-          [22, 232],
-          [338, 232],
+          [14, 12],
+          [346, 12],
+          [14, 238],
+          [346, 238],
         ].map(([x, y], i) => (
           <g key={i} style={{ '--d': `${i * 60}ms` }} class="hero-regmark">
             <circle cx={x} cy={y} r="6" />
             <path d={`M${x} ${y - 12} V${y + 12} M${x - 12} ${y} H${x + 12}`} />
           </g>
         ))}
-        <path class="hero-dash" d="M40 18 H320 M40 232 H320" />
       </g>
-      <g class="hero-orbits">
-        <circle cx="146" cy="125" r="104" />
-        <circle cx="251" cy="125" r="68" />
-      </g>
-      <circle class="hero-ghost hero-ghost--b" cx="146" cy="125" r="92" />
-      <circle class="hero-ghost hero-ghost--a" cx="251" cy="125" r="56" />
-      <g class="hero-big">
-        <circle cx="146" cy="125" r="92" class="mark-big" />
-      </g>
-      <g class="hero-small">
-        <circle cx="251" cy="125" r="56" class="mark-small" />
-      </g>
-      <g clip-path={`url(#hb${id})`}>
-        <g class="hero-small">
-          <circle cx="251" cy="125" r="56" class="mark-lap hero-lap" />
+      <path class="hero-grid" d="M30 85 H330 M30 165 H330 M100 22 V228 M260 22 V228" />
+      <g transform="translate(20 25) scale(2)">
+        <polygon points={BIG} class="hero-ghost hero-ghost--b" />
+        <g class="hero-ghost hero-ghost--a">
+          <polygon points={SMALL_MAIN} />
+          <polygon points={SMALL_LEFT} />
+          <polygon points={SMALL_RIGHT} />
         </g>
-      </g>
-      <circle class="hero-pulse" cx="217" cy="125" r="24" />
-      <g class="hero-cross">
-        <path d="M217 60 V82 M217 168 V190 M180 125 H192 M242 125 H254" />
+        <g class="hero-big">
+          <polygon points={BIG} class="mark-big mark-coast" />
+        </g>
+        <g class="hero-small">
+          <polygon points={SMALL_MAIN} class="mark-small mark-coast hero-isle" style={{ '--d': '0ms' }} />
+          <polygon points={SMALL_LEFT} class="mark-small mark-coast hero-isle" style={{ '--d': '120ms' }} />
+          <polygon points={SMALL_RIGHT} class="mark-small mark-coast hero-isle" style={{ '--d': '240ms' }} />
+        </g>
+        <path d={BORDER} class="mark-border hero-border" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="4" class="mark-node hero-node" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="9" class="hero-pulse" />
       </g>
     </svg>
   );

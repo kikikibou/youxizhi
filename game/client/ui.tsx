@@ -3,8 +3,9 @@
  * 视觉是「图纸」风格：白底细线 + 珊瑚红 / 电光蓝两种油墨；夜晚换成靛蓝底，蓝色当主角。
  */
 
-import { useEffect, useId, useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Avatar } from './avatar.tsx';
+import { LOGO_H, LOGO_W, LogoShapes } from './logo.tsx';
 import type { ComponentChildren } from 'preact';
 import type { Channel } from '../engine/types.ts';
 import type { PlayerView, PublicPlayer } from '../engine/view.ts';
@@ -32,40 +33,23 @@ export function useTick(ms = 250) {
 }
 
 /**
- * 标志：一大一小两个圆叠印——大圆是大国的词，小圆是小国的词，叠在一起的那一块就是两个词之间的「联系」。
- * 像双色印刷两种油墨叠出第三种颜色（这里用墨色）。
+ * 标志：两块领土共用一段国界——左边像「大」，右边像「小」，国界上的一点是两个词之间的「联系」。
+ * 形状见 logo.tsx。
  */
-export function Mark({ size = 26 }: { size?: number }) {
-  const id = useId();
+export function Mark({ size = 30 }: { size?: number }) {
   return (
-    <svg class="mark" aria-hidden="true" width={size} height={(size * 21) / 30} viewBox="0 0 30 21">
-      <defs>
-        <clipPath id={`mk${id}`}>
-          <circle cx="10.5" cy="10.5" r="10" />
-        </clipPath>
-      </defs>
-      <circle cx="10.5" cy="10.5" r="10" class="mark-big" />
-      <circle cx="23" cy="10.5" r="6.5" class="mark-small" />
-      <circle cx="23" cy="10.5" r="6.5" class="mark-lap" clip-path={`url(#mk${id})`} />
+    <svg class="mark" aria-hidden="true" width={size} height={(size * LOGO_H) / LOGO_W} viewBox={`0 0 ${LOGO_W} ${LOGO_H}`}>
+      <LogoShapes icon />
     </svg>
   );
 }
 
-/** 标志放在一个 SVG 坐标系里（圆桌中心等处用）。cx, cy 是大圆圆心，r 是大圆半径。 */
-export function MarkAt({ cx, cy, r }: { cx: number; cy: number; r: number }) {
-  const id = useId();
-  const sx = cx + r * 1.25;
-  const sr = r * 0.65;
+/** 标志放在一个 SVG 坐标系里（圆桌中心等处用）。x, y 是中心，w 是宽度。 */
+export function MarkAt({ x, y, w }: { x: number; y: number; w: number }) {
+  const s = w / LOGO_W;
   return (
-    <g aria-hidden="true">
-      <defs>
-        <clipPath id={`ma${id}`}>
-          <circle cx={cx} cy={cy} r={r} />
-        </clipPath>
-      </defs>
-      <circle cx={cx} cy={cy} r={r} class="mark-big" />
-      <circle cx={sx} cy={cy} r={sr} class="mark-small" />
-      <circle cx={sx} cy={cy} r={sr} class="mark-lap" clip-path={`url(#ma${id})`} />
+    <g aria-hidden="true" transform={`translate(${x - w / 2} ${y - (LOGO_H * s) / 2}) scale(${s})`}>
+      <LogoShapes icon />
     </g>
   );
 }
@@ -156,7 +140,7 @@ export function RoundTable({
           <circle cx="153" cy="153" r="98" class="rt-reg-b" />
           <circle cx="147" cy="154" r="98" class="rt-reg-a" />
           <circle cx="150" cy="150" r="40" class="rt-inner" />
-          <MarkAt cx={143} cy={150} r={11} />
+          <MarkAt x={150} y={150} w={46} />
         </svg>
         {ripple ? <i class="rt-ripple" aria-hidden="true" /> : null}
         {seats.map((s, i) => {
@@ -237,7 +221,7 @@ export function MiniTable({ v, active, start, dir }: { v: PlayerView; active?: s
       <circle cx="73" cy="77.5" r="33" class="rt-reg-a" />
       <circle cx="75" cy="75" r="33" class="mini-table" />
       <circle cx="75" cy="75" r="29" class="mini-hatch" />
-      <MarkAt cx={71} cy={75} r={6} />
+      <MarkAt x={75} y={75} w={30} />
       {arc ? (
         <>
           <path d={arc.d} class="mini-arc" />

@@ -18,6 +18,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Home, RoomScreen } from './app.tsx';
 import type { RoomConnection } from './net.ts';
 import { SCENES, type SceneData } from './preview-data.ts';
+import { LogoShapes } from './logo.tsx';
 import { CropMarks, MapBackdrop, Mark, previewFlags } from './ui.tsx';
 
 const params = new URLSearchParams(location.search);
@@ -88,7 +89,7 @@ function LogoBoard() {
   const options: { id: string; title: string; note: string; art: preact.JSX.Element }[] = [
     {
       id: 'A',
-      title: 'A · 叠印（现在用的）',
+      title: 'A · 叠印（上一版）',
       note: '大圆是大国的词，小圆是小国的词，叠出来的那一块就是联系。像两种油墨叠印出第三种颜色。',
       art: (
         <svg viewBox="0 0 160 100" aria-hidden="true">
@@ -105,14 +106,11 @@ function LogoBoard() {
     },
     {
       id: 'B',
-      title: 'B · 国界',
-      note: '一大一小两块领土共用一条国界（点划线），国界上的一点是联系。更像地图，和背景呼应。',
+      title: 'B · 国界（现在用的）',
+      note: '左边一块领土像「大」字，右边一组群岛像「小」字，两国共用一段国界（点划线），国界上的一点就是联系。',
       art: (
         <svg viewBox="0 0 160 100" aria-hidden="true">
-          <path d="M14 22 L58 8 L88 26 L92 58 L70 90 L24 84 L8 52 Z" class="mark-big" />
-          <path d="M92 58 L88 26 L118 18 L146 40 L138 72 L104 80 Z" class="mark-small" />
-          <path d="M88 26 L92 58" class="logo-border" />
-          <circle cx="90" cy="42" r="5" class="logo-node" />
+          <LogoShapes coast />
         </svg>
       ),
     },

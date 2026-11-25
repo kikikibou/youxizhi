@@ -1377,36 +1377,6 @@ html:has(.is-night) {
     transform: rotate(360deg);
   }
 }
-@keyframes slide-l {
-  from {
-    transform: translateX(-70px);
-  }
-  to {
-    transform: none;
-  }
-}
-@keyframes slide-r {
-  from {
-    transform: translateX(70px);
-  }
-  to {
-    transform: none;
-  }
-}
-@keyframes lap-flash {
-  0% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  75% {
-    opacity: 0.2;
-  }
-  100% {
-    opacity: 1;
-  }
-}
 @keyframes pulse-ring {
   0% {
     transform: scale(0.3);
@@ -1526,5 +1496,223 @@ html:has(.is-night) {
   }
   .phasecard {
     display: none;
+  }
+}
+
+/* ================================================================== 第四版标志：「大」「小」两块领土 + 共用的国界 */
+
+.mark-coast {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.mark-border {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-dasharray: 7 3 2 3;
+  stroke-linecap: round;
+}
+.mark-border--icon {
+  stroke-width: 7;
+  stroke-dasharray: none;
+}
+.mark-node {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+.mark-border--icon + .mark-node {
+  stroke-width: 5;
+}
+
+/* 首页标志动画 */
+.hero-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+.hero .hero-ghost {
+  fill: none;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.hero .hero-ghost--a {
+  stroke: var(--big);
+  transform: translate(3px, 2.5px);
+  animation: ghost-a2 1.2s 0.3s steps(1, end) both;
+}
+.hero .hero-ghost--b {
+  stroke: var(--small);
+  transform: translate(-2.5px, -2px);
+  animation: ghost-b2 1.2s 0.3s steps(1, end) both;
+}
+.hero .hero-big {
+  animation: slide-l2 0.5s 0.25s steps(4, end) both;
+}
+.hero .hero-small {
+  animation: slide-r2 0.5s 0.4s steps(4, end) both;
+}
+.hero-isle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 0.4s calc(0.55s + var(--d, 0ms)) var(--ease) both;
+}
+.hero-border {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: grow-y 0.35s 1.05s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+.hero-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 0.35s 1.3s var(--ease) both;
+}
+.hero .hero-pulse {
+  stroke-width: 0.8;
+  animation-delay: 1.35s;
+}
+
+/* 结算揭晓：两块领土靠拢，国界画出来，联系点亮起 */
+.rv-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+.rv-q {
+  font-size: 28px;
+}
+.rv-q--small {
+  font-size: 15px;
+}
+.rv-cover-disc {
+  stroke-width: 0.8;
+}
+.rv-small {
+  transform: translateX(22px);
+  transition: transform 0.5s cubic-bezier(0.7, 0, 0.2, 1) 0.6s;
+}
+.is-open .rv-small {
+  transform: none;
+}
+.rv-border {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0);
+  transition:
+    transform 0.35s cubic-bezier(0.6, 0, 0.2, 1) 1.05s,
+    opacity 0.1s 1.05s;
+}
+.is-open .rv-border {
+  opacity: 1;
+  transform: none;
+}
+.rv-node {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  transition:
+    transform 0.3s var(--ease) 1.3s,
+    opacity 0.1s 1.3s;
+}
+.is-open .rv-node {
+  opacity: 1;
+  transform: none;
+}
+.rv-words {
+  opacity: 0;
+  transition: opacity 0.3s 1.15s;
+}
+.is-open .rv-words {
+  opacity: 1;
+}
+.rv-word {
+  font-family: var(--cn);
+  font-weight: 900;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+}
+.rv-label {
+  font-family: var(--mono);
+  font-size: 4.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 1.6px;
+  stroke-linejoin: round;
+}
+.is-open .rv-link span {
+  animation-delay: 1.45s;
+}
+
+@keyframes slide-l2 {
+  from {
+    transform: translateX(-36px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes slide-r2 {
+  from {
+    transform: translateX(36px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes ghost-a2 {
+  0% {
+    transform: translate(13px, 10px);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(13px, 10px);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(7px, 5px);
+  }
+  75%,
+  100% {
+    transform: translate(3px, 2.5px);
+    opacity: 1;
+  }
+}
+@keyframes ghost-b2 {
+  0% {
+    transform: translate(-11px, -9px);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-11px, -9px);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-6px, -4.5px);
+  }
+  75%,
+  100% {
+    transform: translate(-2.5px, -2px);
+    opacity: 1;
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
   }
 }
