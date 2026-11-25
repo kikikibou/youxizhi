@@ -9,6 +9,8 @@
   "account_id": "83052ed0cde1cf2042578364bf32a5da",
   // 线上地址。workers.dev 在国内打不开，所以挂在自己的域名上。
   "routes": [{ "pattern": "api.yxzzxy.com", "custom_domain": true }],
+  // AI 裁判用的模型（OpenRouter 的模型名）。API key 是密钥，不写在这里：npm run secret:judge
+  "vars": { "JUDGE_MODEL": "anthropic/claude-opus-5.5" },
   "durable_objects": {
     "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
   },

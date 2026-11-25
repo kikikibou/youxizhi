@@ -8,7 +8,8 @@
     "types": "wrangler types",
     "whoami": "wrangler whoami",
     "login": "wrangler login --callback-host 127.0.0.1",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "secret:judge": "wrangler secret put OPENROUTER_API_KEY"
   },
   "devDependencies": {
     "wrangler": "^4.168.0"

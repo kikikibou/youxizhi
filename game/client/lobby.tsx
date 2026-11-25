@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import { renderSVG } from 'uqr';
 import { DEFAULT_TIMERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
-import type { RoomSettings } from '../shared/protocol.ts';
+import type { RoomSettings, RoomView } from '../shared/protocol.ts';
 import type { RoomConnection, Snapshot } from './net.ts';
 import { resultLine } from './text.ts';
 import { Card } from './ui.tsx';
@@ -104,7 +104,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
         </ul>
       </Card>
 
-      <Settings conn={conn} settings={room.settings} n={n} editable={isHost} />
+      <Settings conn={conn} settings={room.settings} n={n} editable={isHost} judge={room.judge} />
 
       {isHost ? <PasswordCard conn={conn} has={room.hasPassword} /> : null}
 
@@ -133,7 +133,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   );
 }
 
-function Settings({ conn, settings: s, n, editable }: { conn: RoomConnection; settings: RoomSettings; n: number; editable: boolean }) {
+function Settings({ conn, settings: s, n, editable, judge }: { conn: RoomConnection; settings: RoomSettings; n: number; editable: boolean; judge: RoomView['judge'] }) {
   const preset = PRESETS[n];
   const comp = s.composition ?? preset;
   const set = (patch: Partial<RoomSettings>) => editable && conn.settings(patch);
@@ -229,7 +229,11 @@ function Settings({ conn, settings: s, n, editable }: { conn: RoomConnection; se
 
         <dt>裁判</dt>
         <dd>
-          <small>AI 裁判接入中。现在猜词只认完全一致的写法（含别名），提问一律答「无法判断」。</small>
+          {judge.ai ? (
+            <small>AI 裁判（{modelName(judge.model)}）：回答是非问题、判定猜词。写法完全一致的猜词直接判对。</small>
+          ) : (
+            <small>AI 裁判还没配置好：现在猜词只认完全一致的写法（含别名），提问一律答「无法判断」。</small>
+          )}
         </dd>
       </dl>
     </Card>
@@ -368,6 +372,16 @@ function Toggle({ on, onChange, label, disabled }: { on: boolean; onChange: (on:
       <span>{label}</span>
     </button>
   );
+}
+
+/** 'anthropic/claude-opus-5.5' → 'Claude Opus 5.5' */
+function modelName(id: string | null): string {
+  if (!id) return '未知模型';
+  return id
+    .replace(/^.*\//, '')
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 /** 大厅里显示的上一局结果（一行）。 */

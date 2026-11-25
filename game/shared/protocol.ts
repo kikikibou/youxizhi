@@ -60,6 +60,8 @@ export interface RoomView {
   startBlocker: string | null;
   /** 本房间已经结束的对局用过的词对，客户端记下来，下次加入别的房间时带上。 */
   played: string[];
+  /** AI 裁判是否可用（服务器配了 key），以及用的模型。不可用时用兜底判定。 */
+  judge: { ai: boolean; model: string | null };
 }
 
 export type ServerMsg =

@@ -24,7 +24,7 @@ import {
 } from '../../engine/index.ts';
 import { NAME_MAX, type ClientMsg, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
 import { pickPair } from './bank.ts';
-import { decide, fallbackVerdict } from './judge.ts';
+import { decide, fallbackVerdict, judgeConfigured } from './judge.ts';
 import { DEFAULT_SETTINGS, mergeSettings, toRules } from './settings.ts';
 
 interface Member {
@@ -503,6 +503,7 @@ export class Room extends DurableObject<Env> {
       inGame: this.inGame(),
       startBlocker: this.startBlocker(),
       played: [...room.played],
+      judge: { ai: judgeConfigured(this.env), model: judgeConfigured(this.env) ? (this.env.JUDGE_MODEL ?? null) : null },
     };
     const inThisGame = this.game?.players.some((p) => p.id === id);
     return { t: 'state', room: view, game: inThisGame ? viewFor(this.game!, id, now) : null };
