@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // 《大国小国》房间服务器：一个 Durable Object 就是一个房间。
+  "name": "dgxg",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-20",
+  // 部署到拥有 yxzzxy.com 的账号。写死在这里，本机登录的是别的账号时会直接报错，不会部署错地方。
+  // （M0：拿到账号 ID 后填上，并加 routes: [{ "pattern": "api.yxzzxy.com", "custom_domain": true }]）
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "observability": { "enabled": true }
+}

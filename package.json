@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -p game"
+    "typecheck": "tsc -p game && tsc -p game/server"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.3.1",

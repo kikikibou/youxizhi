@@ -66,7 +66,7 @@ npm run dev
 
 ## 《大国小国》（`game/`）
 
-「消遣」页的第一个多人游戏，规则以《大国小国》线上版规则与开发说明为准。目前完成的是规则引擎（`game/engine/`），房间服务器和手机页面还没做。
+「消遣」页的第一个多人游戏，规则以《大国小国》线上版规则与开发说明为准。已完成规则引擎（`game/engine/`）和房间服务器（`game/server/`，本机可跑，还没部署）；手机页面和 LLM 裁判还没做。
 
 | 文件 | 作用 |
 | --- | --- |
@@ -76,10 +76,22 @@ npm run dev
 | `game/engine/words.ts` | 词对数据结构和猜词的精确匹配；`SAMPLE_PAIRS` 是规则文档里的 5 组测试词对 |
 | `game/engine/test/` | 逐条规则的测试，和 252 局随机机器人对局（每一步检查有没有泄密） |
 
+| `game/shared/protocol.ts` | 手机和服务器之间的消息格式 |
+| `game/server/` | 房间服务器：Cloudflare Worker + Durable Object（一个房间一个），有自己的 `package.json` |
+| `game/server/src/room.ts` | 房间：成员、密码、房主、设置、累计得分；跑引擎，按人推送视图，用一个 alarm 驱动所有计时 |
+| `game/server/src/bank.ts` | 题库，只在服务器上（打包进网页就能看到答案） |
+
 ```bash
-npm test            # 跑测试
-npm run typecheck   # TypeScript 类型检查
+npm test            # 跑引擎测试
+npm run typecheck   # 类型检查（先在 game/server 里 npm install 和 npm run types）
+
+# 本机跑房间服务器（也可以用 .claude/launch.json 里的 dgxg-server）
+cd game/server && npm install && npm run dev -- --ip 127.0.0.1 --port 8788
+# 另开一个终端，用 7 台模拟手机打几局
+node game/server/test/smoke.ts http://127.0.0.1:8788 3
 ```
+
+房间号是 4 位数字，密码可选；第一个进房间的人是房主，房主掉线一分钟后自动交给最早加入的在线成员。手机凭 token 重连，回到原来的位置。房间闲置 24 小时后清除。
 
 同桌模式（默认开）：夜晚所有存活玩家都在同样的面板上选人和方向，只有白板阵营的选择生效，免得「谁在夜里低头操作」暴露身份。
 

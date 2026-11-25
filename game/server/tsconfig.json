@@ -1,0 +1,16 @@
+{
+  // 房间服务器的类型检查。运行时类型来自 `npm run types`（wrangler types）生成的 worker-configuration.d.ts。
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["worker-configuration.d.ts", "src/**/*.ts", "../engine/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["../engine/test/**"]
+}

@@ -14,5 +14,7 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  // 服务器有自己的设置（Workers 运行时类型），见 server/tsconfig.json。
+  "exclude": ["server/**"]
 }

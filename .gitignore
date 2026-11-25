@@ -5,3 +5,9 @@ dist
 screenshots
 /文案/
 /导出/
+
+# 大国小国 server
+.wrangler
+game/server/worker-configuration.d.ts
+game/server/.dev.vars
+game/server/.env

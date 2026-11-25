@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "--port", "5173", "--strictPort"],
       "port": 5173
+    },
+    {
+      "name": "dgxg-server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "game/server", "--", "--ip", "127.0.0.1", "--port", "8788"],
+      "port": 8788,
+      "url": "http://127.0.0.1:8788"
     }
   ]
 }
