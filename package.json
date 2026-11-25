@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -p game && tsc -p game/server && tsc -p game/client"
+    "typecheck": "npm run bank --prefix game/server --silent && tsc -p game && tsc -p game/server && tsc -p game/client"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.3.1",

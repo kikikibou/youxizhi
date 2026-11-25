@@ -70,7 +70,8 @@ npm run dev
 
 - **裁判**：默认 AI 裁判，通过 OpenRouter 调用 Claude Opus 5.5（`game/server/src/judge.ts`，模型名在 `wrangler.jsonc` 的 `JUDGE_MODEL`）。key 是 Worker 密钥，在 `game/server` 里运行 `npm run secret:judge` 设置；没设置时猜词只认完全一致的写法，提问答「无法判断」。
 - **主持人**：房主可以把一名成员设为主持人（不参与游戏）。主持人能自己出题（词对来源选「自带词」），或者手动判定（裁判方式选「主持人判定」），开局后在主持人台上看到两个词、所有人的身份和整局记录。
-- **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
+- **题库**：格式见 `game/题库模板.xlsx`（「说明」工作表写了每一列的意思）。真正的题库放在 `game/server/bank/`（.xlsx 或 UTF-8 的 .csv，可以多个文件），**这个文件夹不提交**——仓库是公开的，提交了答案就公开了。在 `game/server` 里运行 `npm run bank` 检查并生成 `src/bank.generated.ts`（同样不提交）；`npm run dev` / `npm run deploy` 前会自动运行，有错误就停下。没有题库文件时用规则文档里的 5 组示例词对。
+- **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`（会先检查题库）。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
 
 | 文件 | 作用 |
 | --- | --- |

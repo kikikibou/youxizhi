@@ -206,6 +206,8 @@ export function createGame(input: NewGame): GameState {
     link: p.link,
     hints: p.hints ?? [],
     difficulty: p.difficulty ?? null,
+    linkType: p.linkType ?? '',
+    judgeNote: p.judgeNote ?? '',
   };
 
   emit(g, { t: 'start' }, input.now);

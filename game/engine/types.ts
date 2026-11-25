@@ -29,6 +29,9 @@ export interface Secret {
   /** 联系之后的提示。提示序号 0 是联系本身，1.. 是这里的第 0.. 条。 */
   hints: string[];
   difficulty: number | null;
+  /** 内部：联系类型、给裁判的说明。只给裁判和主持人，不进玩家视图。 */
+  linkType: string;
+  judgeNote: string;
 }
 
 /** 一条记录谁能看到。 */

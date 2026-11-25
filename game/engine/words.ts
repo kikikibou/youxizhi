@@ -18,6 +18,8 @@ export interface WordPair {
   difficulty?: 1 | 2 | 3;
   /** 联系类型的内部标签，不展示给玩家。 */
   linkType?: string;
+  /** 给裁判（AI 或主持人）的补充说明，处理边界情况。不展示给玩家。 */
+  judgeNote?: string;
   notes?: string;
 }
 

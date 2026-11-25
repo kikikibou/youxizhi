@@ -25,7 +25,7 @@ import {
   type JudgeRequest,
 } from '../../engine/index.ts';
 import { NAME_MAX, type ClientMsg, type CustomPair, type RoomSettings, type RoomView, type ServerMsg } from '../../shared/protocol.ts';
-import { pickPair } from './bank.ts';
+import { BANK_IS_SAMPLE, bankCounts, pickPair } from './bank.ts';
 import { decide, fallbackVerdict, judgeConfigured } from './judge.ts';
 import { DEFAULT_SETTINGS, cleanCustomPair, mergeSettings, toRules } from './settings.ts';
 
@@ -430,10 +430,14 @@ export class Room extends DurableObject<Env> {
     return null;
   }
 
-  private choosePair(random: () => number) {
+  /** 房间里任何人见过的词对（本房间玩过的 + 各人手机上记着的）。 */
+  private seenPairs(): Set<string> {
     const room = this.room!;
-    const exclude = new Set([...room.played, ...room.members.flatMap((m) => m.seen)]);
-    return pickPair(room.settings.difficulty, exclude, random);
+    return new Set([...room.played, ...room.members.flatMap((m) => m.seen)]);
+  }
+
+  private choosePair(random: () => number) {
+    return pickPair(this.room!.settings.difficulty, this.seenPairs(), random);
   }
 
   private startGame() {
@@ -453,6 +457,7 @@ export class Room extends DurableObject<Env> {
           aliasesB: custom.aliasesB,
           link: custom.link,
           hints: custom.hints,
+          judgeNote: custom.judgeNote,
         }
       : this.choosePair(random)!;
     this.game = createGame({
@@ -585,6 +590,7 @@ export class Room extends DurableObject<Env> {
       moderatorId: room.moderatorId,
       customPair: id === room.moderatorId ? room.customPair : null,
       customPairReady: !!room.customPair,
+      bank: { ...bankCounts(room.settings.difficulty, this.seenPairs()), sample: BANK_IS_SAMPLE },
     };
     const inThisGame = this.game?.players.some((p) => p.id === id);
     // 主持人不在对局里，拿主持人视图（看得到全部）；其他人只拿自己的视图

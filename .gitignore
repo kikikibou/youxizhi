@@ -11,3 +11,7 @@ screenshots
 game/server/worker-configuration.d.ts
 game/server/.dev.vars
 game/server/.env
+
+# 大国小国：真正的题库（仓库公开，答案不能提交）
+game/server/bank/
+game/server/src/bank.generated.ts

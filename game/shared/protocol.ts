@@ -35,6 +35,8 @@ export interface CustomPair {
   aliasesB?: string[];
   link: string;
   hints?: string[];
+  /** 给裁判的补充说明（玩家看不到）。 */
+  judgeNote?: string;
 }
 
 export type ClientMsg =
@@ -88,6 +90,8 @@ export interface RoomView {
   /** 主持人填的自带词：只发给主持人本人；其他人只知道填没填好。 */
   customPair: CustomPair | null;
   customPairReady: boolean;
+  /** 题库：当前难度下共几组、这个房间还没玩过几组；sample 表示还没导入题库、用的是 5 组示例。 */
+  bank: { total: number; left: number; sample: boolean };
 }
 
 export type ServerMsg =

@@ -95,7 +95,16 @@ export function JudgeScreen({ conn, snap, onLeave }: { conn: RoomConnection; sna
             {j.secret.smallAliases.length ? <small>（别名：{j.secret.smallAliases.join('、')}）</small> : null}
           </dd>
           <dt>联系</dt>
-          <dd>{j.secret.link}</dd>
+          <dd>
+            {j.secret.link}
+            {j.secret.linkType ? <small>（{j.secret.linkType}）</small> : null}
+          </dd>
+          {j.secret.judgeNote ? (
+            <>
+              <dt>裁判须知</dt>
+              <dd>{j.secret.judgeNote}</dd>
+            </>
+          ) : null}
           {j.secret.hints.map((h, i) => (
             <Fragment key={i}>
               <dt>提示 {i + 2}</dt>

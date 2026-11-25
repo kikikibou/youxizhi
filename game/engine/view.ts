@@ -240,7 +240,7 @@ export interface JudgeView {
   day: number;
   phase: PlayerView['phase'];
   players: (PublicPlayer & { faction: Faction; role: BlankRole | null })[];
-  secret: { big: string; small: string; bigSense: string; smallSense: string; bigAliases: string[]; smallAliases: string[]; link: string; hints: string[] };
+  secret: { big: string; small: string; bigSense: string; smallSense: string; bigAliases: string[]; smallAliases: string[]; link: string; hints: string[]; linkType: string; judgeNote: string };
   hintsShown: number;
   /** 当前步骤的完整内部状态（主持人可以看到谁选了什么、谁投了谁）。 */
   step: GameState['step'];
@@ -273,6 +273,8 @@ export function judgeView(g: GameState, now: number): JudgeView {
       smallAliases: [...g.secret.small.aliases],
       link: g.secret.link,
       hints: [...g.secret.hints],
+      linkType: g.secret.linkType ?? '',
+      judgeNote: g.secret.judgeNote ?? '',
     },
     hintsShown: g.hintsShown,
     step: JSON.parse(JSON.stringify(g.step)),

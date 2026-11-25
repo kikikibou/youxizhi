@@ -116,5 +116,7 @@ export function cleanCustomPair(input: unknown): CustomPair | string {
   if (aliasesB.length) pair.aliasesB = aliasesB;
   const hints = list(p.hints, 6, 80);
   if (hints.length) pair.hints = hints;
+  const judgeNote = text(p.judgeNote, 200);
+  if (judgeNote) pair.judgeNote = judgeNote;
   return pair;
 }

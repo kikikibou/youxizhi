@@ -126,7 +126,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
 
       {isModerator ? <ModeratorCard conn={conn} room={room} /> : null}
 
-      <Settings conn={conn} settings={room.settings} n={n} editable={isHost} judge={room.judge} />
+      <Settings conn={conn} settings={room.settings} n={n} editable={isHost} judge={room.judge} bank={room.bank} />
 
       {isHost ? <PasswordCard conn={conn} has={room.hasPassword} /> : null}
 
@@ -155,7 +155,21 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   );
 }
 
-function Settings({ conn, settings: s, n, editable, judge }: { conn: RoomConnection; settings: RoomSettings; n: number; editable: boolean; judge: RoomView['judge'] }) {
+function Settings({
+  conn,
+  settings: s,
+  n,
+  editable,
+  judge,
+  bank,
+}: {
+  conn: RoomConnection;
+  settings: RoomSettings;
+  n: number;
+  editable: boolean;
+  judge: RoomView['judge'];
+  bank: RoomView['bank'];
+}) {
   const preset = PRESETS[n];
   const comp = s.composition ?? preset;
   const set = (patch: Partial<RoomSettings>) => editable && conn.settings(patch);
@@ -260,7 +274,11 @@ function Settings({ conn, settings: s, n, editable, judge }: { conn: RoomConnect
             ]}
             onChange={(v) => set({ wordSource: v as RoomSettings['wordSource'] })}
           />
-          <small>自带词：由主持人在开局前填两个词和联系。</small>
+          <small>
+            {s.wordSource === 'custom'
+              ? '自带词：由主持人在开局前填两个词和联系。'
+              : `题库${bank.sample ? '（还没导入正式题库，现在是 5 组示例）' : ''}：${s.difficulty === 'random' ? '' : '这个难度'}共 ${bank.total} 组，这个房间里还没人玩过的 ${bank.left} 组。`}
+          </small>
         </dd>
 
         <dt>裁判方式</dt>
@@ -453,6 +471,7 @@ function ModeratorCard({ conn, room }: { conn: RoomConnection; room: RoomView })
     aliasesB: p?.aliasesB?.join('、') ?? '',
     link: p?.link ?? '',
     hints: p?.hints?.join('\n') ?? '',
+    judgeNote: p?.judgeNote ?? '',
   });
   const field = (k: keyof typeof f) => ({
     value: f[k],
@@ -518,6 +537,10 @@ function ModeratorCard({ conn, room }: { conn: RoomConnection; room: RoomView })
             <label class="field">
               <span>更多提示（每行一条，越往后越直白）</span>
               <textarea rows={3} {...field('hints')} />
+            </label>
+            <label class="field">
+              <span>裁判须知（给 AI 裁判的补充说明，玩家看不到）</span>
+              <textarea rows={2} maxLength={200} placeholder="例：问「能不能炒」答是；「墨鱼」不算鱿鱼" {...field('judgeNote')} />
             </label>
           </details>
           <button type="submit" class="btn btn--accent btn--wide">

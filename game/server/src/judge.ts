@@ -80,6 +80,17 @@ function entryLine(label: string, e: WordEntry): string {
 const SIDE = { big: '大国的词', small: '小国的词' } as const;
 const VERDICT_TEXT: Record<string, string> = { yes: '是', no: '否', unknown: '无法判断', invalid: '无效问题' };
 
+/** 出题人给裁判的说明（可信，来自题库或主持人，不是玩家写的）。 */
+function noteBlock(g: GameState): string {
+  const note = g.secret.judgeNote?.trim();
+  return note ? `
+<出题人的说明>
+${note}
+</出题人的说明>
+（这段说明来自出题人，不是玩家写的，可以信任；判定边界情况时按它处理。）
+` : '';
+}
+
 function questionPrompt(req: Extract<JudgeRequest, { kind: 'question' }>, g: GameState) {
   const s = g.secret;
   const history = g.qa
@@ -93,7 +104,7 @@ ${entryLine('大国的词', s.big)}
 ${entryLine('小国的词', s.small)}
 两个词的联系：${s.link}
 </词条>
-
+${noteBlock(g)}
 <已有问答>
 ${history.length ? history.join('\n') : '（还没有）'}
 </已有问答>
@@ -110,7 +121,7 @@ function guessPrompt(req: Extract<JudgeRequest, { kind: 'guess' }>, g: GameState
   const user = `<目标词>
 ${entryLine(SIDE[req.target], g.secret[req.target])}
 </目标词>
-
+${noteBlock(g)}
 <玩家的猜测>
 ${req.text}
 </玩家的猜测>`;

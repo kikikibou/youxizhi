@@ -3,15 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bank": "node scripts/bank.ts",
+    "predev": "npm run bank",
     "dev": "wrangler dev",
+    "predeploy": "npm run bank",
     "deploy": "wrangler deploy",
     "types": "wrangler types",
     "whoami": "wrangler whoami",
     "login": "wrangler login --callback-host 127.0.0.1",
-    "tail": "wrangler tail",
-    "secret:judge": "wrangler secret put OPENROUTER_API_KEY"
+    "secret:judge": "wrangler secret put OPENROUTER_API_KEY",
+    "tail": "wrangler tail"
   },
   "devDependencies": {
+    "read-excel-file": "^9.3.20",
     "wrangler": "^4.168.0"
   }
 }
