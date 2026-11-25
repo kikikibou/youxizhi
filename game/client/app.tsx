@@ -8,7 +8,7 @@ import { Lobby } from './lobby.tsx';
 import { RoomConnection, createRoom, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { HOW_TO } from './text.ts';
 import { AvatarContext } from './avatar.tsx';
-import { BIG, BORDER, NODE, SMALL_LEFT, SMALL_MAIN, SMALL_RIGHT } from './logo.tsx';
+import { BIG, BORDER, NODE, SMALL } from './logo.tsx';
 import { Card, CropMarks, MapBackdrop, Mark } from './ui.tsx';
 
 function useHash(): string {
@@ -41,7 +41,7 @@ export function App() {
  */
 export function Hero() {
   return (
-    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：粗壮的「大」「小」两个字站在同一条地平线上，「大」在前、「小」在后，中间一刀斜切的国界">
+    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：粗壮的「大」「小」两个字站在同一条地平线上，「大」在前、「小」在后，中间一刀斜劈开的国界">
       <g class="hero-reg">
         {[
           [14, 12],
@@ -58,22 +58,16 @@ export function Hero() {
       <path class="hero-grid" d="M30 85 H330 M30 165 H330 M100 22 V228 M260 22 V228" />
       <g transform="translate(20 25) scale(2)">
         <polygon points={BIG} class="hero-ghost hero-ghost--b" />
-        <g class="hero-ghost hero-ghost--a">
-          <polygon points={SMALL_MAIN} />
-          <polygon points={SMALL_LEFT} />
-          <polygon points={SMALL_RIGHT} />
-        </g>
+        <polygon points={SMALL} class="hero-ghost hero-ghost--a" />
         <g class="hero-big">
           <polygon points={BIG} class="mark-big" />
         </g>
         <g class="hero-small">
-          <polygon points={SMALL_MAIN} class="mark-small hero-isle" style={{ '--d': '0ms' }} />
-          <polygon points={SMALL_LEFT} class="mark-small hero-isle" style={{ '--d': '120ms' }} />
-          <polygon points={SMALL_RIGHT} class="mark-small hero-isle" style={{ '--d': '240ms' }} />
+          <polygon points={SMALL} class="mark-small hero-isle" />
         </g>
         <path d={BORDER} class="mark-border hero-border" />
-        <circle cx={NODE.cx} cy={NODE.cy} r="2.8" class="mark-node hero-node" />
-        <circle cx={NODE.cx} cy={NODE.cy} r="7" class="hero-pulse" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="2.4" class="mark-node hero-node" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="6" class="hero-pulse" />
       </g>
     </svg>
   );

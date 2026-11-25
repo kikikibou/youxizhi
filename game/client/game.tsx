@@ -7,7 +7,7 @@ import type { Faction, Timers } from '../engine/rules.ts';
 import type { LogEntry, PlayerView, StepView } from '../engine/view.ts';
 import { Avatar } from './avatar.tsx';
 import { Dossier, logGroups } from './dossier.tsx';
-import { BIG, BORDER, NODE, SMALL_LEFT, SMALL_MAIN, SMALL_RIGHT } from './logo.tsx';
+import { BIG, BORDER, NODE, SMALL } from './logo.tsx';
 import type { RoomConnection, Snapshot } from './net.ts';
 import { DIR, FACTION, ROLE, deadlineOf, phaseTitle, resultLine } from './text.ts';
 import { Card, Chat, Countdown, HoldIdentity, MiniTable, PhaseCard, RoundTable, StepArt, TextAction, Ticks, Track, pad2, previewFlags, type ArtKind } from './ui.tsx';
@@ -829,40 +829,34 @@ function Over({ v, name, onLeave }: P<'over'> & { onLeave: () => void }) {
                 <g class="rv-cover rv-cover--big">
                   <polygon points={BIG} class="rv-cover-base" />
                   <polygon points={BIG} fill="url(#rv-hatch)" class="rv-cover-disc" />
-                  <text x="56" y="68" class="rv-q">
+                  <text x="54" y="64" class="rv-q">
                     ?
                   </text>
                 </g>
               </g>
               <g class="rv-small">
-                <polygon points={SMALL_MAIN} class="mark-small" />
-                <polygon points={SMALL_LEFT} class="mark-small" />
-                <polygon points={SMALL_RIGHT} class="mark-small" />
+                <polygon points={SMALL} class="mark-small" />
                 <g class="rv-cover rv-cover--small">
-                  {[SMALL_MAIN, SMALL_LEFT, SMALL_RIGHT].map((pts) => (
-                    <g key={pts}>
-                      <polygon points={pts} class="rv-cover-base" />
-                      <polygon points={pts} fill="url(#rv-hatch)" class="rv-cover-disc" />
-                    </g>
-                  ))}
-                  <text x="119" y="74" class="rv-q rv-q--small">
+                  <polygon points={SMALL} class="rv-cover-base" />
+                  <polygon points={SMALL} fill="url(#rv-hatch)" class="rv-cover-disc" />
+                  <text x="118" y="76" class="rv-q rv-q--small">
                     ?
                   </text>
                 </g>
               </g>
               <path d={BORDER} class="mark-border rv-border" />
-              <circle cx={NODE.cx} cy={NODE.cy} r="3" class="mark-node rv-node" />
+              <circle cx={NODE.cx} cy={NODE.cy} r="2.6" class="mark-node rv-node" />
               <g class="rv-words">
-                <text x="56" y="26" class="rv-label">
+                <text x="54" y="29" class="rv-label">
                   大国词 BIG
                 </text>
-                <text x="56" y="43" class="rv-word" style={{ fontSize: `${bigFs / 2}px` }}>
+                <text x="54" y="46" class="rv-word" style={{ fontSize: `${bigFs / 2}px` }}>
                   {rv.big}
                 </text>
-                <text x="119" y="44" class="rv-label">
+                <text x="118" y="48" class="rv-label">
                   小国词 SMALL
                 </text>
-                <text x="119" y="61" class="rv-word" style={{ fontSize: `${smallFs / 2}px` }}>
+                <text x="118" y="64" class="rv-word" style={{ fontSize: `${smallFs / 2}px` }}>
                   {rv.small}
                 </text>
               </g>

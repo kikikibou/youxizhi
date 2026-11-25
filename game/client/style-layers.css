@@ -1535,16 +1535,16 @@ html:has(.is-night) {
   }
 }
 
-/* ================================================================== 第五版标志：透视里的「大」「小」两块 + 一刀斜切的国界 */
+/* ================================================================== 第六版标志：透视里的「大」「小」两块 + 一刀斜劈开的缝 */
 
 .mark-border {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 1.3;
+  stroke-width: 0.7;
   stroke-linecap: butt;
 }
 .mark-border--icon {
-  stroke-width: 3.6;
+  stroke-width: 3.4;
 }
 .mark-node {
   fill: var(--ink);
