@@ -586,7 +586,7 @@ export const SCENES: Scene[] = [
       },
     }),
   ),
-  { id: 'logos', group: '标志', title: 'Logo 方案', note: '四个方向对比；现在用的是 B 国界', build: () => ({ kind: 'logos' }) },
+  { id: 'logos', group: '标志', title: 'Logo 方案', note: '四个方向对比；现在用的是 B 透视', build: () => ({ kind: 'logos' }) },
   {
     id: 'moderator',
     group: '主持人',

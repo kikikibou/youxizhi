@@ -825,19 +825,19 @@ function Over({ v, name, onLeave }: P<'over'> & { onLeave: () => void }) {
             <path class="rv-grid" d="M4 72 H336 M4 142 H336 M118 2 V212 M232 2 V212" />
             <g transform="translate(10 7) scale(2)">
               <g class="rv-big">
-                <polygon points={BIG} class="mark-big mark-coast" />
+                <polygon points={BIG} class="mark-big" />
                 <g class="rv-cover rv-cover--big">
                   <polygon points={BIG} class="rv-cover-base" />
                   <polygon points={BIG} fill="url(#rv-hatch)" class="rv-cover-disc" />
-                  <text x="50" y="47" class="rv-q">
+                  <text x="56" y="68" class="rv-q">
                     ?
                   </text>
                 </g>
               </g>
               <g class="rv-small">
-                <polygon points={SMALL_MAIN} class="mark-small mark-coast" />
-                <polygon points={SMALL_LEFT} class="mark-small mark-coast" />
-                <polygon points={SMALL_RIGHT} class="mark-small mark-coast" />
+                <polygon points={SMALL_MAIN} class="mark-small" />
+                <polygon points={SMALL_LEFT} class="mark-small" />
+                <polygon points={SMALL_RIGHT} class="mark-small" />
                 <g class="rv-cover rv-cover--small">
                   {[SMALL_MAIN, SMALL_LEFT, SMALL_RIGHT].map((pts) => (
                     <g key={pts}>
@@ -845,24 +845,24 @@ function Over({ v, name, onLeave }: P<'over'> & { onLeave: () => void }) {
                       <polygon points={pts} fill="url(#rv-hatch)" class="rv-cover-disc" />
                     </g>
                   ))}
-                  <text x="125" y="60" class="rv-q rv-q--small">
+                  <text x="119" y="74" class="rv-q rv-q--small">
                     ?
                   </text>
                 </g>
               </g>
               <path d={BORDER} class="mark-border rv-border" />
-              <circle cx={NODE.cx} cy={NODE.cy} r="4.5" class="mark-node rv-node" />
+              <circle cx={NODE.cx} cy={NODE.cy} r="3" class="mark-node rv-node" />
               <g class="rv-words">
-                <text x="48" y="22" class="rv-label">
+                <text x="56" y="26" class="rv-label">
                   大国词 BIG
                 </text>
-                <text x="48" y="40" class="rv-word" style={{ fontSize: `${bigFs / 2}px` }}>
+                <text x="56" y="43" class="rv-word" style={{ fontSize: `${bigFs / 2}px` }}>
                   {rv.big}
                 </text>
-                <text x="127" y="36" class="rv-label">
+                <text x="119" y="44" class="rv-label">
                   小国词 SMALL
                 </text>
-                <text x="127" y="54" class="rv-word" style={{ fontSize: `${smallFs / 2}px` }}>
+                <text x="119" y="61" class="rv-word" style={{ fontSize: `${smallFs / 2}px` }}>
                   {rv.small}
                 </text>
               </g>

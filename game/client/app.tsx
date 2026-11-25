@@ -41,7 +41,7 @@ export function App() {
  */
 export function Hero() {
   return (
-    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：左边一块像「大」字的领土，右边一组像「小」字的群岛，两国共用一段国界">
+    <svg class="hero" viewBox="0 0 360 250" role="img" aria-label="大国小国的标志：粗壮的「大」「小」两个字站在同一条地平线上，「大」在前、「小」在后，中间一刀斜切的国界">
       <g class="hero-reg">
         {[
           [14, 12],
@@ -64,16 +64,16 @@ export function Hero() {
           <polygon points={SMALL_RIGHT} />
         </g>
         <g class="hero-big">
-          <polygon points={BIG} class="mark-big mark-coast" />
+          <polygon points={BIG} class="mark-big" />
         </g>
         <g class="hero-small">
-          <polygon points={SMALL_MAIN} class="mark-small mark-coast hero-isle" style={{ '--d': '0ms' }} />
-          <polygon points={SMALL_LEFT} class="mark-small mark-coast hero-isle" style={{ '--d': '120ms' }} />
-          <polygon points={SMALL_RIGHT} class="mark-small mark-coast hero-isle" style={{ '--d': '240ms' }} />
+          <polygon points={SMALL_MAIN} class="mark-small hero-isle" style={{ '--d': '0ms' }} />
+          <polygon points={SMALL_LEFT} class="mark-small hero-isle" style={{ '--d': '120ms' }} />
+          <polygon points={SMALL_RIGHT} class="mark-small hero-isle" style={{ '--d': '240ms' }} />
         </g>
         <path d={BORDER} class="mark-border hero-border" />
-        <circle cx={NODE.cx} cy={NODE.cy} r="4" class="mark-node hero-node" />
-        <circle cx={NODE.cx} cy={NODE.cy} r="9" class="hero-pulse" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="2.8" class="mark-node hero-node" />
+        <circle cx={NODE.cx} cy={NODE.cy} r="7" class="hero-pulse" />
       </g>
     </svg>
   );

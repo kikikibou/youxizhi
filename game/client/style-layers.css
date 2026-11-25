@@ -75,7 +75,8 @@ html:has(.is-night) {
 }
 .stephead-title {
   margin: 0;
-  font-size: 21px;
+  font-family: var(--serif);
+  font-size: 22px;
   font-weight: 900;
   line-height: 1.3;
   text-shadow:
@@ -209,6 +210,7 @@ html:has(.is-night) {
 }
 .pc-title {
   grid-column: 1;
+  font-family: var(--serif);
   font-size: 44px;
   font-weight: 900;
   line-height: 1.1;
@@ -481,6 +483,7 @@ html:has(.is-night) {
   flex-direction: column;
 }
 .dz-title b {
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -1532,31 +1535,24 @@ html:has(.is-night) {
   }
 }
 
-/* ================================================================== 第四版标志：「大」「小」两块领土 + 共用的国界 */
+/* ================================================================== 第五版标志：透视里的「大」「小」两块 + 一刀斜切的国界 */
 
-.mark-coast {
-  stroke: var(--ink);
-  stroke-width: 0.8;
-  stroke-linejoin: round;
-}
 .mark-border {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 2;
-  stroke-dasharray: 7 3 2 3;
-  stroke-linecap: round;
+  stroke-width: 1.3;
+  stroke-linecap: butt;
 }
 .mark-border--icon {
-  stroke-width: 7;
-  stroke-dasharray: none;
+  stroke-width: 3.6;
 }
 .mark-node {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 1.6;
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 1.2;
 }
 .mark-border--icon + .mark-node {
-  stroke-width: 5;
+  stroke-width: 2.4;
 }
 
 /* 首页标志动画 */

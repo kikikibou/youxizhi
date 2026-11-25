@@ -9,6 +9,7 @@ import '@fontsource/space-mono/latin-400.css';
 import '@fontsource/space-mono/latin-700.css';
 import '@fontsource/doto/latin-900.css';
 import '@fontsource-variable/noto-sans-sc';
+import '@fontsource-variable/noto-serif-sc';
 import './style.css';
 import './style-layers.css';
 import './preview.css';
@@ -107,11 +108,11 @@ function LogoBoard() {
     },
     {
       id: 'B',
-      title: 'B · 国界（现在用的）',
-      note: '左边一块领土像「大」字，右边一组群岛像「小」字，两国共用一段国界（点划线），国界上的一点就是联系。',
+      title: 'B · 透视（现在用的）',
+      note: '粗壮的「大」「小」两块站在同一条地平线上，「大」在前更大、「小」在后更小；中间一刀斜切的细缝是两国共用的国界，上面一点是联系。',
       art: (
         <svg viewBox="0 0 160 100" aria-hidden="true">
-          <LogoShapes coast />
+          <LogoShapes />
         </svg>
       ),
     },
