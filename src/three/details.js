@@ -118,6 +118,33 @@ function meshes(b, R) {
         if (fl && i < 2) head(new THREE.Vector3(0, hh, 0).applyMatrix4(m4), fl);
       }
     },
+    /**
+     * A low cushion of green on the ground, some with flowers on top: soft
+     * and round like the tree crowns (upright blades on the ground read as
+     * spiky). Darker underneath, lighter on top; it doesn't sway.
+     */
+    mound(x, y, z, r, flowers = null) {
+      const g = new THREE.IcosahedronGeometry(r, 1);
+      const sy = 0.5 + R() * 0.15;
+      g.scale(1 + (R() - 0.5) * 0.25, sy, 1 + (R() - 0.5) * 0.25);
+      g.rotateY(R() * 6.28);
+      g.translate(x, y + r * sy * 0.45, z);
+      const shade = 0.88 + R() * 0.26;
+      paint(g, (k, pos) => {
+        const t = Math.min(1, Math.max(0, (pos.getY(k) - y) / (r * sy * 1.45)));
+        const v = (0.72 + 0.38 * t) * shade;
+        return [v, v * 1.02, v * 0.9];
+      }, 0);
+      b.push('grass', g);
+      if (!flowers) return;
+      // (on its surface: the cushion's centre is r * sy * 0.45 up, its half-height r * sy)
+      for (let i = 3 + Math.floor(R() * 4); i > 0; i--) {
+        const a = R() * 6.28;
+        const d = Math.sqrt(R()) * r * 0.55;
+        const top = y + r * sy * (0.45 + Math.sqrt(1 - (d / r) ** 2)) + 0.02;
+        head(new THREE.Vector3(x + Math.cos(a) * d, top, z + Math.sin(a) * d), flowers);
+      }
+    },
     clump(x, y, z, size, nrm = [0, 1, 0]) {
       const g = new THREE.IcosahedronGeometry(size * 0.42, 0);
       const climber = nrm[2] > 0.8; // (flat against a wall facing +z)
@@ -246,54 +273,40 @@ function pieces(b, R) {
 }
 
 /**
- * A maze on a cols x rows grid (depth-first: every cell reachable, one way
- * through). right[r][c]: a wall east of cell (c, r); down[r][c]: south of it.
+ * The hedge maze in front of the 问答 cube, 10 x 3 cells (one way through:
+ * every cell reachable). right[r][c]: a wall east of cell (c, r); down[r][c]:
+ * south of it. Drawn once by a depth-first walk and fixed here, so changes to
+ * the other planting (which draws on the same random sequence) leave it be.
  */
-function maze(cols, rows, R) {
-  const right = Array.from({ length: rows }, () => Array(cols).fill(true));
-  const down = Array.from({ length: rows }, () => Array(cols).fill(true));
-  const seen = Array.from({ length: rows }, () => Array(cols).fill(false));
-  const stack = [[0, 0]];
-  seen[0][0] = true;
-  while (stack.length) {
-    const [c, r] = stack[stack.length - 1];
-    const next = [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].filter(([x, y]) => x >= 0 && y >= 0 && x < cols && y < rows && !seen[y][x]);
-    if (!next.length) {
-      stack.pop();
-      continue;
-    }
-    const [nc, nr] = next[Math.floor(R() * next.length)];
-    if (nc !== c) right[r][Math.min(c, nc)] = false;
-    else down[Math.min(r, nr)][c] = false;
-    seen[nr][nc] = true;
-    stack.push([nc, nr]);
-  }
-  return { right, down };
-}
+const MAZE = {
+  right: ['1001000011', '0010101111', '0000010101'],
+  down: ['0100111000', '1111000000', '1111111111'],
+};
 
 /** Shared helpers on top of the plants and the pieces. */
 function kit(p, g, R) {
   /** A planted bed: a low kerb, soil, and grass with flowers (and a few bushes). */
-  const bed = (b, x0, x1, z0, z1, { y = 0, h = [0.55, 1.15], step = 0.34, flowerChance = 0.35, bushes = 0 } = {}) => {
+  const bed = (b, x0, x1, z0, z1, { y = 0, flowerChance = 0.35, bushes = 0 } = {}) => {
     b.box('concrete', [x0, y, z0], [x1, y + 0.28, z1]);
     b.box('soil', [x0 + 0.15, y + 0.28, z0 + 0.15], [x1 - 0.15, y + 0.31, z1 - 0.15]);
-    for (let x = x0 + 0.3; x < x1 - 0.2; x += step) {
-      for (let z = z0 + 0.35; z < z1 - 0.2; z += step * 1.6) {
-        p.tuft(x + (R() - 0.5) * step, y + 0.3, z + (R() - 0.5) * step, h[0] + R() * (h[1] - h[0]), null, flowerChance);
+    for (let x = x0 + 0.5; x < x1 - 0.35; x += 0.85 * (0.8 + R() * 0.4)) {
+      for (let z = z0 + 0.5; z < z1 - 0.35; z += 0.85 * (0.9 + R() * 0.3)) {
+        p.mound(x + (R() - 0.5) * 0.3, y + 0.28, z + (R() - 0.5) * 0.3, 0.38 + R() * 0.22, R() < flowerChance ? pick(R, FLOWERS) : null);
       }
     }
     for (let i = 0; i < bushes; i++) {
       const x = x0 + 1 + R() * (x1 - x0 - 2);
       const z = (z0 + z1) / 2;
-      for (let k = 0; k < 4; k++) p.clump(x + (R() - 0.5) * 0.9, y + 0.7 + R() * 0.4, z + (R() - 0.5) * 0.8, 0.9 + R() * 0.3, [(R() - 0.5) * 0.6, 1, 0.4]);
+      // (a bigger cushion, in the same soft green: dark faceted shrubs over low cushions read as rocks)
+      p.mound(x, y + 0.28, z, 0.75 + R() * 0.2, null);
     }
   };
-  /** Grass round the foot of a tree. */
+  /** Low cushions round the foot of a tree, a few flowering. */
   const pit = (cx, cz, r = 2) => {
-    for (let i = 0; i < 26; i++) {
-      const a = R() * Math.PI * 2;
-      const d = 0.5 + Math.sqrt(R()) * (r - 0.5);
-      p.tuft(cx + Math.cos(a) * d, 0, cz + Math.sin(a) * d, 0.35 + R() * 0.35, null, 0.3);
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + R() * 0.5;
+      const d = 0.75 + R() * (r - 1);
+      p.mound(cx + Math.cos(a) * d, 0, cz + Math.sin(a) * d, 0.28 + R() * 0.2, R() < 0.25 ? pick(R, FLOWERS) : null);
     }
   };
   /** A long box planted with shrubs, trailing plants spilling over its front (skip: x ranges to leave clear). */
@@ -361,14 +374,14 @@ function debate(b, k, site, R) {
   k.bed(b, -27, -10, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   k.bed(b, 12, 29, 10.2, 11.8, { h: [0.45, 0.9], flowerChance: 0.45 });
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
-  // The sky gardens (GARDENS in buildings.js): the left one is a row of
+  // The sky gardens (GARDENS in buildings.js): the left one has a pair of
   // ordinary trees (planted there) on a low gravel bed behind its railing;
   // potted shrubs in the right one's loggia. (On a sequence of their own:
   // drawing on the shared one would reshuffle every page after this, the maze too.)
   const R2 = rng(20261125);
   const g = kit(meshes(b, R2), pieces(b, R2), R2);
   const ga = GARDENS.a.y0;
-  b.box('concrete', [-19.4, ga, -6.6], [-6.6, ga + 0.25, -3.5]);
+  b.box('concrete', [-19.1, ga, -6.6], [GARDENS.a.x1 - 0.1, ga + 0.25, -3.5]);
   for (const [x, z] of [[14.6, -2.4], [21, -2.4], [9.6, -8.5], [9.6, -12]]) g.topiary(x, z, { y: GARDENS.b.y0, r: 0.45, stem: 0.4 });
 }
 
@@ -383,7 +396,7 @@ function puzzle(b, k, site, R) {
   const z0 = 2.6; // back edge (row 0); rows run towards the plaza (+z)
   const t = 0.21; // half a hedge's thickness
   const h = 0.8;
-  const { right, down } = maze(cols, rows, R);
+  const [right, down] = [MAZE.right, MAZE.down].map((rows) => rows.map((row) => [...row].map((c) => c === '1')));
   // (one shade for every wall: where two meet, their tops share a plane)
   const wallX = (x, za, zb) => k.hedge([x - t, 0, za - t], [x + t, h, zb + t], 1.25);
   const wallZ = (z, xa, xb) => k.hedge([xa - t, 0, z - t], [xb + t, h, z + t], 1.25);
@@ -432,21 +445,21 @@ function games(b, k, site, R) {
 }
 
 /* ----------------------------------------------------------------- about */
-// By the sea: dune grass round the lighthouse's island, flowers along the
+// By the sea: low flowering cushions round the lighthouse's island, flowers along the
 // study's glass front, planters and lifebuoys along the pier.
 function about(b, k, site, R) {
   const LX = -21;
   const LZ = -66; // lighthouse (see buildings.js)
-  // Dune grass on the island's platform (top 1.6, radius 12), clear of the
+  // Cushions on the island's platform (top 1.6, radius 12), clear of the
   // pier's landing and the study.
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 70; i++) {
     const a = R() * Math.PI * 2;
     const r = 9.6 + R() * 2.1;
     const x = LX + Math.sin(a) * r;
     const z = LZ + Math.cos(a) * r;
     if (Math.abs(x - LX) < 4.4 && z > LZ + 5) continue; // the pier
     if (x < LX - 3 && z < LZ + 6.2) continue; // the study
-    k.tuft(x, 1.6, z, 0.5 + R() * 0.55, [1, 0.95, 0.88], 0.12);
+    k.mound(x, 1.6, z, 0.3 + R() * 0.25, R() < 0.3 ? [1, 0.72, 0.82] : null);
   }
   // Flower planters along the study's glass front (z -61, x -33.5 .. -24.6).
   for (const [xa, xb] of [[-33.1, -29.4], [-28.6, -24.9]]) {

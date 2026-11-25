@@ -235,7 +235,7 @@ export const FORUM = { gap: [1, 23.05, -3] };
 // tower's floors: five glazed ones, gH tall, with 0.95 m bands between.
 const B_GH = (FORUM.gap[1] - 1.55 - 0.08 - 0.06 - 5.3 - 4 * 0.95) / 5;
 export const GARDENS = {
-  a: { y0: 12.4, y1: 19.25, depth: 4.2 }, // two of the left tower's floors (3.6 m), opened up
+  a: { y0: 12.4, y1: 19.25, depth: 4.2, x1: -15.2 }, // two of the left tower's floors (3.6 m), opened up at its left corner, to the wide pier
   b: { y0: 5.3 + 2 * (B_GH + 0.95), y1: 5.3 + 2 * (B_GH + 0.95) + 2 * B_GH + 0.95, back: 3.2 }, // its 3rd and 4th
 };
 
@@ -264,12 +264,14 @@ function debate(mats) {
   // dark grid); the side looking at the other tower is plain glass.
   const fhA = 3.6;
   const zL = A.z1 - 1.45; // the sky bridge arm's front (see below)
-  // A sky garden two floors high across the front (GARDENS.a): there the
-  // glass and the slab between stand back by `depth`, the inner piers break
-  // off, two slim columns carry it, and a light strip runs under its
-  // ceiling. (Planting: details.js; trees: below.)
+  // A sky garden two floors high at the left corner, as far as the wide pier
+  // (GARDENS.a; right across the front it was too big a hole): there the
+  // glass and the slab between stand back by `depth`, the piers within it
+  // break off, a white wall closes its right side, and a light strip runs
+  // under its ceiling. (Planting: details.js; trees: below.)
   const G = GARDENS.a;
   const zr = A.z1 - G.depth; // the garden's back wall
+  const gardX = G.x1; // its right side
   const [s0, s1] = [5.2, A.top - 2.6]; // the shaft: from the lobby's slab to the crown
   const front = A.z1 - 0.45; // the glass, in the slots
   const slabFront = front + 0.15; // (the floor edges show as lines in the slots)
@@ -283,8 +285,9 @@ function debate(mats) {
     const corner = k === 0 || k === piers.length - 1;
     // (the corner piers 2 cm in: flush, their faces would share a plane with the slabs' and flicker)
     const [p0, p1] = [k === 0 ? px + 0.02 : px, corner && k > 0 ? px + pw - 0.02 : px + pw];
-    for (const [y0, y1] of corner ? [[s0, s1]] : [[s0, G.y0], [G.y1, s1]]) b.box('white', [p0, y0, front], [p1, y1, A.z1]);
-    if (!corner) backMullions.push(px + pw / 2);
+    const inside = !corner && px + pw <= gardX; // (a pier within the garden breaks off there)
+    for (const [y0, y1] of inside ? [[s0, G.y0], [G.y1, s1]] : [[s0, s1]]) b.box('white', [p0, y0, front], [p1, y1, A.z1]);
+    if (inside) backMullions.push(px + pw / 2);
     px += pw;
     if (k < slots.length) {
       bays.push([px, px + slots[k]]);
@@ -295,24 +298,30 @@ function debate(mats) {
   for (let y = 5.2; y < A.top - 3; y += fhA) {
     const yt = y + fhA - 0.35;
     const inGarden = y >= G.y0 && yt <= G.y1 + 0.01;
-    const gf = inGarden ? zr : front;
-    b.box('glassDark', [A.x0 + 0.3, y, A.z0 + 0.3], [A.x1 - 0.3, yt, gf]);
-    // (the slab between the garden's two floors stands back with the glass)
-    b.box('white', [A.x0, yt, A.z0], [A.x1, y + fhA, inGarden && yt < G.y1 ? zr + 0.3 : slabFront]);
+    // (in the garden's floors: its part stands back, the rest as on any floor)
+    const parts = inGarden ? [[A.x0 + 0.3, gardX, zr, zr + 0.3], [gardX, A.x1 - 0.3, front, slabFront]] : [[A.x0 + 0.3, A.x1 - 0.3, front, slabFront]];
+    for (const [x0, x1, gf, sf] of parts) {
+      b.box('glassDark', [x0, y, A.z0 + 0.3], [x1, yt, gf]);
+      // (the slab between the garden's two floors stands back with the glass)
+      b.box('white', [x0 === A.x0 + 0.3 ? A.x0 : x0, yt, A.z0], [x1 === A.x1 - 0.3 ? A.x1 : x1, y + fhA, inGarden && yt < G.y1 ? sf : slabFront]);
+    }
     if (inGarden) for (const x of backMullions) b.box('white', [x - 0.05, y, zr], [x + 0.05, yt, zr + 0.1]); // (mullions on the back wall)
     // The top floors stay dark: the title is read against them, day and night.
     if (y > A.top - 14) continue;
     for (const [x0, x1] of bays) {
       if (R() > 0.48) continue;
-      const a0 = Math.max(A.x0 + 0.3, x0 + (inGarden ? 0.06 : 0));
-      const a1 = Math.min(A.x1 - 0.3, x1 - (inGarden ? 0.06 : 0));
+      const back = inGarden && x1 <= gardX;
+      const gf = back ? zr : front;
+      const a0 = Math.max(A.x0 + 0.3, x0 + (back ? 0.06 : 0));
+      const a1 = Math.min(A.x1 - 0.3, x1 - (back ? 0.06 : 0));
       b.box('pane', [a0, y + 0.05, gf], [a1, yt - 0.05, gf + 0.03]);
       if (R() < 0.15) b.box('blind', [a0 + 0.04, yt - 0.06 - (0.5 + R() * 1.2), gf + 0.03], [a1 - 0.04, yt - 0.06, gf + 0.05]);
     }
   }
-  for (const x of [A.x0 + (A.x1 - A.x0) / 3, A.x1 - (A.x1 - A.x0) / 3]) b.cyl('white', x, A.z1 - 1.0, G.y0, G.y1, 0.22, 16);
-  b.box('strip', [A.x0 + 0.4, G.y1 - 0.08, A.z1 - 1.5], [A.x1 - 0.4, G.y1, A.z1 - 0.8]); // (a slim cove line: the whole ceiling lit read as a slab)
-  b.railingX('metal', A.x0 + 0.85, A.x1 - 1.25, A.z1 - 0.38, G.y0, 1.0, 1.4); // (between the corner piers)
+  // (its right side: a white wall from the back to the wide pier's face, a hair proud of the glass there)
+  b.box('white', [gardX - 0.02, G.y0, zr], [gardX + 0.5, G.y1, front]);
+  b.box('strip', [A.x0 + 0.85, G.y1 - 0.08, A.z1 - 1.5], [gardX - 0.05, G.y1, A.z1 - 0.8]); // (a slim cove line: the whole ceiling lit read as a slab)
+  b.railingX('metal', A.x0 + 0.85, gardX - 0.05, A.z1 - 0.38, G.y0, 1.0, 1.4);
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
@@ -531,11 +540,9 @@ function debate(mats) {
   const group = b.build();
 
   // Small trees in the two sky gardens.
-  // (the left one's three, loosely: a pair on the left, one in front of
-  // the other, and a bigger one on its own to the right; one in each bay
-  // stood too evenly. Clear of the two columns. On its gravel bed, 0.25 up.)
+  // (the left one's two, loosely, one half behind the other, on its gravel bed 0.25 up)
   const ga = GARDENS.a.y0 + 0.25;
-  for (const [x, z, y, s] of [[-17.9, A.z1 - 2.1, ga, 0.52], [-16, A.z1 - 2.9, ga, 0.42], [-8.7, A.z1 - 2.6, ga, 0.56], [18.6, B.z1 - 1.6, GARDENS.b.y0, 0.42]]) {
+  for (const [x, z, y, s] of [[-18, A.z1 - 2, ga, 0.5], [-16.5, A.z1 - 3.2, ga, 0.4], [18.6, B.z1 - 1.6, GARDENS.b.y0, 0.42]]) {
     const tree = createTree(mats, s);
     tree.position.set(x, y, z);
     group.add(tree);
