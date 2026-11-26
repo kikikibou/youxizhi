@@ -380,7 +380,7 @@ export const PAGES = [
             flight: 'CABIN 07',
             mark: '',
             board: '上车',
-            text: '三方，两个词：**大国**和**小国**各拿到一个词，两个词之间有一层微妙的联系；**白板**什么词也没有。轮流说一个词，听出谁和你是一国的，也别让对面听出你来。6–12 人面对面坐成一圈，各用各的手机。',
+            text: '猜词+身份推理的聚会游戏。玩家分成三个阵营：大国和小国各拿到一个词，两个词之间有一层微妙的联系；白板什么词也没有。轮流说一个词，找出没有队友的白板，也别让对方国家听出你的词。',
             fields: [['CABIN', '07'], ['PLAYERS', '6–12 人'], ['SIDES', '大国 · 小国 · 白板']],
             motto: 'Mundus vult decipi.', // (the world wants to be deceived: and a world it is, its globe)
           },
