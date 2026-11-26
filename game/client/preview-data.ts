@@ -516,7 +516,7 @@ export const SCENES: Scene[] = [
     id: 'over-revealed',
     group: '结算',
     title: '结算 · 揭晓后',
-    note: '每个人回到自己的阵营，白板在海上的木筏上；横幅展开写着联系；名次是一张剖面图',
+    note: '每个人回到自己的阵营，白板在挂白旗的木筏上；横幅展开写着联系；名次是一条地质剖面（三座山、岩层、三角点）',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -524,6 +524,18 @@ export const SCENES: Scene[] = [
       s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
       if (s.g.judge.length) s.verdict('wrong');
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')), revealed: true };
+    },
+  },
+  {
+    id: 'over-draw',
+    group: '结算',
+    title: '结算 · 平局（揭晓后）',
+    note: '抢答时提示全部放完也没人猜中：三座山一样矮',
+    build: () => {
+      const s = phase2();
+      for (let i = 0; i < 100 && s.step.k !== 'over'; i++) s.wait(30_000);
+      if (s.step.k !== 'over') throw new Error(`没结束：${s.step.k}`);
+      return { kind: 'room', snap: gameSnap(s, idOf(s, 'big')), revealed: true };
     },
   },
   ...(['clues', 'votes', 'secret', 'all'] as const).map(

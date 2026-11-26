@@ -409,7 +409,7 @@
 
 /*
  * 揭晓：海岸上的名字先淡掉，每个人从座位走回自己的阵营（一个接一个出发），
- * 木筏先漂过来；人到得差不多了，两卷横幅从中间往两边滚开，滚到头收起来、露出燕尾；最后名次的山长出来。
+ * 木筏先漂过来；人到得差不多了，两卷横幅从中间往两边滚开，滚到头收起来、露出燕尾；最后名次剖面从海平面长出来。
  */
 .b-o-old {
   animation: b-o-out 0.25s ease-in both;
@@ -515,15 +515,19 @@
   }
 }
 
-.b-o-rise {
-  animation: b-o-rise 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) 2s both;
+.b-o-land {
+  transform-origin: 0 630px;
+  animation: b-o-land 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 1.95s both;
 }
 
-@keyframes b-o-rise {
+@keyframes b-o-land {
   from {
-    opacity: 0;
-    transform: translateY(14px);
+    transform: scaleY(0.04);
   }
+}
+
+.b-o-tags {
+  animation: b-o-in 0.4s ease-out 2.45s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -535,7 +539,8 @@
   .b-o-banner.is-play .b-o-band,
   .b-o-roll,
   .b-o-banner.is-play .b-o-tails,
-  .b-o-rise {
+  .b-o-land,
+  .b-o-tags {
     animation: none;
   }
 
