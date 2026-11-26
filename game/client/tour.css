@@ -42,6 +42,12 @@
   color: var(--ink);
 }
 
+/* 右上角的按钮要盖在每页的画面（.b-tour-page 从画板顶上开始）上面，不然点不到 */
+.b-tour-x,
+.b-tour-doc {
+  z-index: 2;
+}
+
 .b-tour-x {
   position: absolute;
   right: 26px;

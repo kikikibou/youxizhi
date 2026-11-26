@@ -693,12 +693,19 @@ export function RulesTour({ onClose, start = 0 }: { onClose: () => void; start?:
   const down = useRef<{ x: number; y: number } | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const last = i === PAGES.length - 1;
+  const done = beat >= total;
 
   const go = (k: number) => {
     if (k < 0 || k >= PAGES.length || k === i) return;
     setDir(k > i ? 1 : -1);
     setI(k);
     setBeat(motion ? 1 : PAGES[k].beats.length);
+  };
+  /** 主按钮：这一页还没放完就「继续」出下一段，放完了才换页。 */
+  const primary = () => {
+    if (!done) setBeat(beat + 1);
+    else if (last) onClose();
+    else go(i + 1);
   };
   const replay = () => {
     setBeat(1);
@@ -719,7 +726,7 @@ export function RulesTour({ onClose, start = 0 }: { onClose: () => void; start?:
     const on = (e: KeyboardEvent) => {
       if (doc) return;
       if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') go(i + 1);
+      else if (e.key === 'ArrowRight') primary();
       else if (e.key === 'ArrowLeft') go(i - 1);
       else if ((e.key === ' ' || e.key === 'Enter') && beat < total && e.target === document.body) {
         e.preventDefault();
@@ -806,7 +813,7 @@ export function RulesTour({ onClose, start = 0 }: { onClose: () => void; start?:
           ← 上一页
         </button>
         <div class="b-tour-next">
-          <Btn onClick={() => (last ? onClose() : go(i + 1))}>{last ? '知道了，开始玩' : '下一页 →'}</Btn>
+          <Btn onClick={primary}>{!done ? '继续' : last ? '知道了，开始玩' : '下一页 →'}</Btn>
         </div>
       </Stage>
       {doc ? <RulesDoc onClose={() => setDoc(false)} /> : null}
