@@ -1,13 +1,13 @@
 /**
- * 版本 B 的主持人台：一张「总控图」。不参与游戏的出题人 / 人类裁判用，什么都标在同一张图上——
+ * 主持人台：一张「总控图」。不参与游戏的出题人 / 人类裁判用，什么都标在同一张图上——
  * 两国写着各自的词，每个座位涂着阵营色、白板写着子身份；待判定的提问或猜词是一张从卷筒上撕下来的单子；
  * 答案是这张图的图例（界碑就是提示）；整局记录（含私下内容）是单子的存根。整页往下滚。
  */
 
-import type { BlankRole, Faction, Timers } from '../../engine/rules.ts';
-import type { JudgeView } from '../../engine/view.ts';
-import type { RoomConnection, Snapshot } from '../net.ts';
-import { ANSWER, DIR, FACTION, ROLE, describe, phaseTitle, resultLine } from '../text.ts';
+import type { BlankRole, Faction, Timers } from '../engine/rules.ts';
+import type { JudgeView } from '../engine/view.ts';
+import type { RoomConnection, Snapshot } from './net.ts';
+import { ANSWER, DIR, FACTION, ROLE, describe, phaseTitle, resultLine } from './text.ts';
 import { P2 } from './art.ts';
 import { BIG, Btn, INK, Layer, MUTED, SMALL, Stage, Timer, WL, pad2, textWidth, useTick } from './board.tsx';
 import { coastSeat, labelSpot } from './seats.ts';

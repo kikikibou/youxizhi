@@ -18,7 +18,6 @@ import {
   type WordPair,
 } from '../engine/index.ts';
 import type { CustomPair, MemberView, RoomSettings, RoomView } from '../shared/protocol.ts';
-import { encodeDrawing, type Stroke } from './avatar.tsx';
 import type { RoomInfo, Snapshot } from './net.ts';
 
 const PAIR: WordPair = {
@@ -44,25 +43,7 @@ const NAMES: [string, string][] = [
 const CLUES = ['海边', '下锅', '涨停', '红色', '翻身', '潮汐', '牛市'];
 const CODE = '3572';
 
-/** 预览用的一个手绘头像：一只简笔鱿鱼。 */
-function squid(): string {
-  const strokes: Stroke[] = [];
-  const body: Stroke = [];
-  for (let t = 0; t <= 24; t++) {
-    const a = Math.PI + (t / 24) * Math.PI;
-    body.push([32 + 14 * Math.cos(a), 30 + 20 * Math.sin(a)]);
-  }
-  body.push([46, 30], [18, 30]);
-  strokes.push(body);
-  for (const x of [20, 26, 32, 38, 44]) {
-    const leg: Stroke = [];
-    for (let t = 0; t <= 6; t++) leg.push([x + Math.sin(t * 0.9 + x) * 3, 31 + t * 4.5]);
-    strokes.push(leg);
-  }
-  strokes.push([[27, 22]], [[37, 22]]);
-  return encodeDrawing(strokes);
-}
-const AVATARS: Record<string, string> = { a: squid(), c: 'p:3', e: 'p:15', g: 'p:20' };
+
 
 export class Sim {
   g: GameState;
@@ -195,7 +176,7 @@ function room(opts: {
 }
 
 function snapOf(r: RoomView, extra: Partial<Snapshot> = {}): Snapshot {
-  return { status: 'open', joined: true, room: r, game: null, judge: null, offset: 0, error: null, bye: null, avatars: AVATARS, ...extra };
+  return { status: 'open', joined: true, room: r, game: null, judge: null, offset: 0, error: null, bye: null, avatars: {}, ...extra };
 }
 
 /** 对局中的画面：某个玩家的视角。 */
@@ -222,11 +203,8 @@ export interface SceneFlags {
   hold?: boolean;
   dossier?: 'clues' | 'votes' | 'secret' | 'all';
   revealed?: boolean;
-  drawing?: boolean;
-  /** 大厅里打开挑默认头像的格子 */
-  picking?: boolean;
 }
-export type SceneData = { kind: 'home' } | { kind: 'logos' } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
+export type SceneData = { kind: 'home' } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
 
 export interface Scene {
   id: string;
@@ -264,12 +242,12 @@ function phase2() {
 }
 
 export const SCENES: Scene[] = [
-  { id: 'home', group: '首页', title: '首页', note: '标志动画、建房、加入', build: () => ({ kind: 'home' }) },
+  { id: 'home', group: '首页', title: '首页', note: '转动的地球、行李牌写名字、两张票：建房间 / 加入', build: () => ({ kind: 'home' }) },
   {
     id: 'join',
     group: '首页',
     title: '扫码进房',
-    note: '有口令的房间，填名字和口令',
+    note: '航路图 + 登岛牌，存根就是「进入房间」',
     build: () => ({
       kind: 'room',
       token: null,
@@ -281,21 +259,21 @@ export const SCENES: Scene[] = [
     id: 'lobby-host',
     group: '大厅',
     title: '大厅 · 房主',
-    note: '7 人在座，一人离线；可以改规则、开局',
+    note: '圆桌岛地形图上的座位 + 本局设置图例；往下滚是成员和规则',
     build: () => ({ kind: 'room', snap: snapOf(room({ me: 'a' })) }),
   },
   {
     id: 'lobby-guest',
     group: '大厅',
     title: '大厅 · 玩家',
-    note: '普通玩家看到的大厅',
+    note: '等房主开始时，飘带写着等待',
     build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })) }),
   },
   {
     id: 'lobby-moderator',
     group: '大厅',
     title: '大厅 · 主持人',
-    note: '自带词 + 人工判定，主持人填词对',
+    note: '主持人坐在罗盘上；出题 = 把两个词写进图例',
     build: () => {
       const members: MemberView[] = [
         ...NAMES.map(([id, name], i) => ({ id, name, online: true, host: id === 'a', score: [4, 3, 1, 0, 3, 1, 0][i] })),
@@ -314,20 +292,6 @@ export const SCENES: Scene[] = [
         ),
       };
     },
-  },
-  {
-    id: 'avatar-draw',
-    group: '大厅',
-    title: '画头像',
-    note: '大厅里画自己的头像，会同步到圆桌、护照和档案；淡淡的头肩轮廓只是参考',
-    build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })), drawing: true }),
-  },
-  {
-    id: 'avatar-pick',
-    group: '大厅',
-    title: '挑头像',
-    note: '24 个默认头像：16 个卡通人物 + 8 只小动物，点一下就换上',
-    build: () => ({ kind: 'room', snap: snapOf(room({ me: 'c', hasPassword: false })), picking: true }),
   },
   {
     id: 'night-start',
@@ -363,7 +327,7 @@ export const SCENES: Scene[] = [
     id: 'night-blank',
     group: '第一阶段',
     title: '夜晚 · 白板（按住）',
-    note: '白板按住看身份：今晚自己的选择决定什么',
+    note: '按住看身份：竖着对折的身份图打开',
     build: () => {
       const s = new Sim();
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'blank')), hold: true };
@@ -409,7 +373,7 @@ export const SCENES: Scene[] = [
     id: 'identity-nation',
     group: '第一阶段',
     title: '按住看身份 · 国家',
-    note: '护照：词在面额的位置，国籍「未知」',
+    note: '身份图：岛上写着你的词，①② 两条规则提示，本局人数',
     build: () => {
       const s = cluesMidway(3);
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'big')), hold: true };
@@ -470,7 +434,7 @@ export const SCENES: Scene[] = [
     id: 'identity-blank',
     group: '第一阶段',
     title: '按住看身份 · 白板',
-    note: '第二夜：队友、今晚的任务、裁判私下回答',
+    note: '白板的身份图：队友、今晚的任务、裁判私下的回答',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });
@@ -537,7 +501,7 @@ export const SCENES: Scene[] = [
     id: 'over',
     group: '结算',
     title: '结算 · 揭晓前',
-    note: '谜底盖着，长按按钮揭晓',
+    note: '历史疆域图：国界上贴着胶带，按住撕开',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -552,7 +516,7 @@ export const SCENES: Scene[] = [
     id: 'over-revealed',
     group: '结算',
     title: '结算 · 揭晓后',
-    note: '长按揭晓：两个词叠在一起，叠出来的就是联系',
+    note: '联系写在两国共用的国界上；名次是一张剖面图',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -586,12 +550,11 @@ export const SCENES: Scene[] = [
       },
     }),
   ),
-  { id: 'logos', group: '标志', title: 'Logo 方案', note: '四个方向对比；现在用的是 B 透视', build: () => ({ kind: 'logos' }) },
   {
     id: 'moderator',
     group: '主持人',
     title: '主持人台',
-    note: '人工判定：有一条提问等着判',
+    note: '总控图：所有人的身份都在图上，待判定是一张撕下来的单子',
     build: () => {
       const { s, b } = blankOut({ judge: 'human' });
       s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });

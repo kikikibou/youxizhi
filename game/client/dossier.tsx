@@ -1,13 +1,13 @@
 /**
- * 版本 B 的档案：一本上翻的测量手簿，摊在切割垫上。右边是索引页签（线索 / 投票 / 秘密 / 全部），
+ * 档案：一本上翻的测量手簿，摊在切割垫上。右边是索引页签（线索 / 投票 / 秘密 / 全部），
  * 内容写在横线上：线索是「人 × 天」的表，投票是手簿上画的岛和箭头，全部是倒着记的流水账。
  * 白天、夜晚都能打开，盖住整个屏幕；内容多了手簿就变长，往下滚。
  */
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import type { LogEntry, PlayerView } from '../../engine/view.ts';
-import { ANSWER, DIR, FACTION, ROLE, ROLE_DUTY, VERDICT, describe, resultLine } from '../text.ts';
+import type { LogEntry, PlayerView } from '../engine/view.ts';
+import { ANSWER, DIR, FACTION, ROLE, ROLE_DUTY, VERDICT, describe, resultLine } from './text.ts';
 import { P2 } from './art.ts';
 import { INK, Layer, MUTED, PAGE, Stage, WL, pad2, textWidth } from './board.tsx';
 import { flags } from './flags.ts';

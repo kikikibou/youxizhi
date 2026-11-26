@@ -2,12 +2,13 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>大国小国 · 版本 B 页面预览</title>
+    <title>大国小国 · 页面预览</title>
     <meta name="robots" content="noindex, nofollow" />
+    <script>
+      location.replace('../preview.html' + location.search + location.hash);
+    </script>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/game/client/b/preview.tsx"></script>
+    <p><a href="../preview.html">页面预览 →</a></p>
   </body>
 </html>

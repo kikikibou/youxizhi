@@ -6,10 +6,10 @@
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import { PRESETS } from '../../engine/rules.ts';
-import type { PlayerView } from '../../engine/view.ts';
-import type { Snapshot } from '../net.ts';
-import { ANSWER, ROLE, ROLE_DUTY } from '../text.ts';
+import { PRESETS } from '../engine/rules.ts';
+import type { PlayerView } from '../engine/view.ts';
+import type { Snapshot } from './net.ts';
+import { ANSWER, ROLE, ROLE_DUTY } from './text.ts';
 import { BIG, INK, MUTED, SMALL, Stage, WL } from './board.tsx';
 import { flags } from './flags.ts';
 

@@ -1,6 +1,6 @@
 /**
- * 版本 B 的页面预览器（/dgxg/b/preview.html）：每个画面放进一个手机大小的框里并排看。
- * 场景和 A 版用同一份（preview-data.ts：真的规则引擎走一局 7 人游戏），只是画成版本 B。按钮点了不会发出去。
+ * 页面预览器（/dgxg/preview.html）：每个画面放进一个手机大小的框里并排看。
+ * 场景在 preview-data.ts（真的规则引擎走一局 7 人游戏），这里再加几个 12 人的。按钮点了不会发出去。
  */
 
 import '@fontsource-variable/noto-sans-sc';
@@ -13,17 +13,14 @@ import './preview.css';
 
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import type { RoomConnection } from '../net.ts';
-import { SCENES, Sim, gameSnap, idOf, type Scene, type SceneData } from '../preview-data.ts';
+import type { RoomConnection } from './net.ts';
+import { SCENES, Sim, gameSnap, idOf, type Scene, type SceneData } from './preview-data.ts';
 import { RoomScreen } from './app.tsx';
 import { flags } from './flags.ts';
 import { Home } from './home.tsx';
 
 const params = new URLSearchParams(location.search);
 const sceneId = params.get('scene');
-
-/** A 版才有的场景（头像、标志对比），B 版不放。 */
-const SKIP = new Set(['avatar-draw', 'avatar-pick', 'logos']);
 
 /** 12 人（一个房间最多的人数）：看挤的时候排不排得下。 */
 const TWELVE: [string, string][] = [
@@ -92,22 +89,7 @@ const CROWDED: Scene[] = [
     },
   },
 ];
-const LIST = [...SCENES.filter((s) => !SKIP.has(s.id)), ...CROWDED];
-
-/** B 版自己的说明（和 A 版不一样的地方）。 */
-const NOTES: Record<string, string> = {
-  home: '转动的地球、行李牌写名字、两张票：建房间 / 加入',
-  join: '航路图 + 登岛牌，存根就是「进入房间」',
-  'lobby-host': '圆桌岛地形图上的座位 + 本局设置图例；往下滚是规则',
-  'lobby-guest': '等房主开始时，飘带写着等待',
-  'lobby-moderator': '主持人坐在罗盘上；出题 = 把两个词写进图例',
-  'night-blank': '按住看身份：竖着对折的身份图打开',
-  'identity-nation': '按住看身份：国家玩家的身份图',
-  'identity-blank': '按住看身份：白板的身份图（今晚的任务、裁判的回答）',
-  over: '历史疆域图：国界上贴着胶带，按住撕开',
-  'over-revealed': '联系写在两国共用的国界上；名次是一张剖面图',
-  moderator: '总控图：所有人的身份都在图上，待判定是一张撕下来的单子',
-};
+const LIST = [...SCENES, ...CROWDED];
 
 /** 假连接：组件调用的方法都在，但什么都不发。 */
 function fakeConn(token: string | null): RoomConnection {
@@ -175,13 +157,13 @@ function Gallery() {
   const d = DEVICES.find((x) => x.id === device)!;
   const list = LIST.filter((s) => group === '全部' || s.group === group);
   useEffect(() => {
-    document.title = '大国小国 · 版本 B 页面预览';
+    document.title = '大国小国 · 页面预览';
   }, []);
   return (
     <div class="pv">
       <header class="pv-bar">
         <div class="pv-brand">
-          <b>大国小国 · 版本 B「地图朋克」页面预览</b>
+          <b>大国小国 · 页面预览</b>
           <small>{list.length} 个画面 · 数据来自真实规则引擎，按钮不会发出去</small>
         </div>
         <div class="pv-controls">
@@ -207,10 +189,7 @@ function Gallery() {
             重新载入
           </button>
           <a class="pv-btn" href="./" target="_blank" rel="noreferrer">
-            打开 B 版正式页面 ↗
-          </a>
-          <a class="pv-btn" href="../preview.html" target="_blank" rel="noreferrer">
-            对照 A 版 ↗
+            打开正式页面 ↗
           </a>
         </div>
       </header>
@@ -222,7 +201,7 @@ function Gallery() {
                 <i>{String(i + 1).padStart(2, '0')}</i>
                 {s.title}
               </b>
-              <small>{NOTES[s.id] ?? s.note}</small>
+              <small>{s.note}</small>
               <a href={`?scene=${s.id}`} target="_blank" rel="noreferrer">
                 单独打开 ↗
               </a>

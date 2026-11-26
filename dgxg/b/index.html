@@ -2,15 +2,14 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#d4e3e1" />
-    <title>大国小国 · 游戏之致西柚</title>
-    <meta name="description" content="面对面的语言推理游戏：一个词、一句联系，各用各的手机。" />
-    <!-- Pre-launch, like the rest of the site. -->
+    <title>大国小国</title>
     <meta name="robots" content="noindex, nofollow" />
+    <!-- 版本 B 试运行时的地址；现在 /dgxg/ 就是这一版，跳过去（带上房间号）。 -->
+    <script>
+      location.replace('../' + location.search + location.hash);
+    </script>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/game/client/b/main.tsx"></script>
+    <p><a href="../">大国小国 →</a></p>
   </body>
 </html>

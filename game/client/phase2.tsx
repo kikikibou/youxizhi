@@ -6,8 +6,8 @@
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import type { LogEntry, StepView } from '../../engine/view.ts';
-import { ANSWER, FACTION } from '../text.ts';
+import type { LogEntry, StepView } from '../engine/view.ts';
+import { ANSWER, FACTION } from './text.ts';
 import { AtlasSheet, Border, Caption, Coast, Dot, MeRing, Plate, QPin, SeatLabel, Stone, Territories, markerAt, seatPlace } from './atlas.tsx';
 import { BIG, Btn, INK, Layer, MUTED, SMALL, Stage, Timer, TitleBlock, okText } from './board.tsx';
 import { Chips, type G } from './game.tsx';

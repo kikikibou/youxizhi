@@ -5,8 +5,8 @@
  */
 
 import { useState } from 'preact/hooks';
-import type { StepView } from '../../engine/view.ts';
-import { DIR } from '../text.ts';
+import type { StepView } from '../engine/view.ts';
+import { DIR } from './text.ts';
 import { ISLAND_ICON, NIGHT_ART, TOPO_COAST, TOPO_COAST_LEN } from './art.ts';
 import { Art, Layer, Stage, Timer } from './board.tsx';
 import { Chips, type G } from './game.tsx';

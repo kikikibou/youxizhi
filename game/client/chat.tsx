@@ -1,9 +1,9 @@
 /** 私密频道（白板阵营频道、大国频道）：从底下抽出来的一张密信纸，只有队友看得到。 */
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Channel } from '../../engine/types.ts';
-import type { PlayerView } from '../../engine/view.ts';
-import type { RoomConnection } from '../net.ts';
+import type { Channel } from '../engine/types.ts';
+import type { PlayerView } from '../engine/view.ts';
+import type { RoomConnection } from './net.ts';
 
 export function Chat({ v, conn, channel, title, onClose }: { v: PlayerView; conn: RoomConnection; channel: Channel; title: string; onClose: () => void }) {
   const [text, setText] = useState('');

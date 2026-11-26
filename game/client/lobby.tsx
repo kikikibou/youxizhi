@@ -1,5 +1,5 @@
 /**
- * 版本 B 的大厅。上面一屏是设计稿：圆桌岛地形图上围着圆桌的 12 个座位（进来的人按顺序坐上去，空位是虚线圈），
+ * 大厅。上面一屏是设计稿：圆桌岛地形图上围着圆桌的 12 个座位（进来的人按顺序坐上去，空位是虚线圈），
  * 主持人坐在罗盘上；左下角「本局设置」图例，右边人数刻度尺；房主是「开始游戏」，其他人是一条「等房主开始」的飘带。
  * 往下滚是邀请票（二维码在存根上）、成员名册、规则说明、口令、主持人的出题表、改名和离开。
  */
@@ -7,10 +7,10 @@
 import type { ComponentChildren, RefObject } from 'preact';
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { renderSVG } from 'uqr';
-import { DEFAULT_TIMERS, MAX_PLAYERS, MIN_PLAYERS, PRESETS, compositionError, type Composition, type Timers } from '../../engine/rules.ts';
-import type { CustomPair, MemberView, RoomSettings, RoomView } from '../../shared/protocol.ts';
-import type { RoomConnection, Snapshot } from '../net.ts';
-import { RULE_INFO } from '../text.ts';
+import { DEFAULT_TIMERS, MAX_PLAYERS, MIN_PLAYERS, PRESETS, compositionError, type Composition, type Timers } from '../engine/rules.ts';
+import type { CustomPair, MemberView, RoomSettings, RoomView } from '../shared/protocol.ts';
+import type { RoomConnection, Snapshot } from './net.ts';
+import { RULE_INFO } from './text.ts';
 import { TOPO_ART } from './art.ts';
 import { Art, Layer, Stage, pad2, textWidth } from './board.tsx';
 import { ringPoint } from './seats.ts';

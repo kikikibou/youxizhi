@@ -1,10 +1,10 @@
 /** 首页（转动的地球 + 行李牌写名字 + 两张票：建房间、加入）、扫码进房（航路图 + 登岛牌）、找不到房间、已离开。 */
 
 import { useState } from 'preact/hooks';
-import { NAME_MAX, ROOM_CODE } from '../../shared/protocol.ts';
-import { MAX_PLAYERS } from '../../engine/rules.ts';
-import { createRoom, store, type RoomConnection, type RoomInfo, type Snapshot } from '../net.ts';
-import { HOW_TO } from '../text.ts';
+import { NAME_MAX, ROOM_CODE } from '../shared/protocol.ts';
+import { MAX_PLAYERS } from '../engine/rules.ts';
+import { createRoom, store, type RoomConnection, type RoomInfo, type Snapshot } from './net.ts';
+import { HOW_TO } from './text.ts';
 import { JOIN_ART } from './art.ts';
 import { Art, Stage } from './board.tsx';
 import globeUrl from './globe.svg';
@@ -157,7 +157,7 @@ export function Home() {
         </button>
         <span>6–12 人，面对面坐成一圈，各用各的手机。</span>
       </p>
-      <Footer back="← 回到 游戏之致西柚" href="../../#/games" />
+      <Footer back="← 回到 游戏之致西柚" href="../#/games" />
       {rules ? <Rules onClose={() => setRules(false)} /> : null}
     </Stage>
   );

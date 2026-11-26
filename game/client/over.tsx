@@ -6,9 +6,9 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { factionScore } from '../../engine/engine.ts';
-import type { Faction } from '../../engine/rules.ts';
-import { ROLE } from '../text.ts';
+import { factionScore } from '../engine/engine.ts';
+import type { Faction } from '../engine/rules.ts';
+import { ROLE } from './text.ts';
 import { AtlasSheet, BX0, BX1, BY0, BY1, Border, Caption, Coast, Dot, FactionDot, MIDX, MIDY, MeRing, Plate, SeatLabel, Territories, seatPlace } from './atlas.tsx';
 import { BIG, Btn, INK, Layer, MUTED, PAGE, SMALL, Stage, TitleBlock } from './board.tsx';
 import { flags } from './flags.ts';

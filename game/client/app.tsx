@@ -1,7 +1,7 @@
-/** 版本 B 的页面外壳：首页、进房间、在大厅 / 对局 / 主持人台之间切换、断线提示、错误提示、屏幕常亮。 */
+/** 页面外壳：首页、进房间、在大厅 / 对局 / 主持人台之间切换、断线提示、错误提示、屏幕常亮。 */
 
 import { useEffect, useState } from 'preact/hooks';
-import { RoomConnection, roomInfo, store, type RoomInfo, type Snapshot } from '../net.ts';
+import { RoomConnection, roomInfo, store, type RoomInfo, type Snapshot } from './net.ts';
 import { GameScreen } from './game.tsx';
 import { Bye, Connecting, Home, JoinForm, NotFound } from './home.tsx';
 import { JudgeScreen } from './judge.tsx';

@@ -1,14 +1,14 @@
 /**
- * 版本 B 的对局：每一步一张图（夜航海图、地铁线路、分区图、未定的国界、历史疆域图），
+ * 对局：每一步一张图（夜航海图、地铁线路、分区图、未定的国界、历史疆域图），
  * 右上角「按住看身份」和「档案」；按住时整屏换成身份图，档案是一本测量手簿。
  */
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import type { Timers } from '../../engine/rules.ts';
-import type { PlayerView, StepView } from '../../engine/view.ts';
-import type { RoomConnection, Snapshot } from '../net.ts';
-import { deadlineOf } from '../text.ts';
+import type { Timers } from '../engine/rules.ts';
+import type { PlayerView, StepView } from '../engine/view.ts';
+import type { RoomConnection, Snapshot } from './net.ts';
+import { deadlineOf } from './text.ts';
 import { DocIcon, EyeIcon } from './board.tsx';
 import { Chat } from './chat.tsx';
 import { DayScreen } from './day.tsx';

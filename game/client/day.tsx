@@ -5,8 +5,8 @@
  */
 
 import { useState } from 'preact/hooks';
-import type { LogEntry, StepView } from '../../engine/view.ts';
-import { DIR } from '../text.ts';
+import type { LogEntry, StepView } from '../engine/view.ts';
+import { DIR } from './text.ts';
 import { Btn, Layer, Stage, Timer, okText } from './board.tsx';
 import { Chips, type G } from './game.tsx';
 

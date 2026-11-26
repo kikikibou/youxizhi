@@ -71,10 +71,9 @@ npm run dev
 - **裁判**：默认 AI 裁判，通过 OpenRouter 调用 Claude Opus 5.5（`game/server/src/judge.ts`，模型名在 `wrangler.jsonc` 的 `JUDGE_MODEL`）。key 是 Worker 密钥，在 `game/server` 里运行 `npm run secret:judge` 设置；没设置时猜词只认完全一致的写法，提问答「无法判断」。
 - **主持人**：房主可以把一名成员设为主持人（不参与游戏）。主持人能自己出题（词对来源选「自带词」），或者手动判定（裁判方式选「主持人判定」），开局后在主持人台上看到两个词、所有人的身份和整局记录。
 - **题库**：格式见 `game/题库模板.xlsx`（「说明」工作表写了每一列的意思）。真正的题库放在 `game/server/bank/`（.xlsx 或 UTF-8 的 .csv，可以多个文件），**这个文件夹不提交**——仓库是公开的，提交了答案就公开了。在 `game/server` 里运行 `npm run bank` 检查并生成 `src/bank.generated.ts`（同样不提交）；`npm run dev` / `npm run deploy` 前会自动运行，有错误就停下。没有题库文件时用规则文档里的 5 组示例词对。
-- **页面预览**：https://yxzzxy.com/dgxg/preview.html 把每个画面（首页、大厅、各个游戏步骤、按住看身份、结算、主持人台）放进手机大小的框里并排看。数据是用真的规则引擎走一局 7 人游戏得到的（`game/client/preview-data.ts`），不连服务器；加场景就在 `SCENES` 里加一项。
-- **视觉**：「图纸」风格，变量在 `game/client/style.css` 开头——白天珊瑚红为主、电光蓝为辅，夜晚（`html:has(.is-night)`）换成靛蓝底、蓝色为主；背景地图、转场标题卡、档案、结算揭晓等在 `style-layers.css`。面板是暖白的纸（`--card`）加一层很淡的纸纹（`--grain`，SVG 噪点）和右下角一小片网点；标题用粗宋体（`--serif`，Noto Serif SC）。标志在 `game/client/logo.tsx`：粗壮的「大」「小」两块（各是一整块，只留最少的缺口分出笔画）站在同一条地平线上，用透视让「大」在前、「小」在后，中间一刀斜劈开，上宽下窄的缝是国界。结算页把两个词直接摆在劈开的两块地上，联系是长按之后盖在缝脚上的一枚章。背景地图 `game/client/map.svg` 由 `python scripts/dgxg-map.py` 生成（可无缝平铺）。
-- **版本 B「地图朋克」**：https://yxzzxy.com/dgxg/b/ 是同一个游戏的另一套画面（连同一个房间服务器，A、B 两版的人可以在同一个房间里玩），预览在 https://yxzzxy.com/dgxg/b/preview.html 。代码在 `game/client/b/`：每个画面是一张 390 × 844 的设计画板，按屏幕等比缩放（`board.tsx` 的 `Stage`），每一步一种地图——大厅地形图、夜航海图、地铁线路、选区图、未定的国界、历史疆域图；按住看身份是一张竖着对折的身份图，档案是一本测量手簿，主持人台是总控图。地图底图和几何数据（`art.ts`、`globe.svg`）是从设计稿生成的，不要手改。没有头像，只用名字。
-- **头像**：大厅里手绘、挑一个或随机（24 个卡通默认头像：16 个人物 + 8 只小动物，`game/client/avatar-art.tsx`）；服务器单独发 `avatars` 消息，不放在每次的状态里。
+- **页面预览**：https://yxzzxy.com/dgxg/preview.html 把每个画面（首页、大厅、各个游戏步骤、按住看身份、结算、档案、主持人台）放进手机大小的框里并排看，可以切几种手机尺寸。数据是用真的规则引擎走一局 7 人游戏得到的（`game/client/preview-data.ts`），另有几个 12 人的场景（`preview.tsx`），不连服务器；加场景就在 `SCENES` 里加一项。
+- **视觉**：「地图朋克」——整个游戏是一本地图集，每一步一种地图：首页转动的地球、扫码进房的航路图、大厅的圆桌岛地形图、夜晚的夜航海图、白天发言的地铁线路、投票的选区图、第二阶段未定的国界和界碑、结算的历史疆域图；按住看身份是一张竖着对折的身份图，档案是一本测量手簿，主持人台是总控图。每个画面是一张 390 × 844 的设计画板，按屏幕等比缩放（`game/client/board.tsx` 的 `Stage`），画板外面是同一张海图的底纹和图框；样式在 `base.css` 和各画面的 css。平面印刷风格，强调色只给「你」、能点的、正在发生的。地图底图和几何数据（`art.ts`、`globe.svg`）是从设计稿生成的，不要手改。上一版「图纸」风格（A 版）已归档，在 git 标签 `dgxg-vA`。
+- **名字**：不用头像，玩家只用名字标出来（服务器里头像的消息还在，页面不再用）。
 - **题库**：一个表格文件就是一个题库（名字是文件名），也可以填「题库」列把一行归到别的题库；房主在大厅里勾选用哪几个。题目不再分难度（「难度」列可以不填）。
 - **部署**：网页随 `main` 推送自动发布；服务器在 `game/server` 里手动 `npm run deploy`（会先检查题库）。这台电脑访问 Cloudflare 要走 IPv4，`game/server/.npmrc` 已经设好；重新登录用 `npm run login`。
 
@@ -86,7 +85,7 @@ npm run dev
 | `game/engine/words.ts` | 词对数据结构和猜词的精确匹配；`SAMPLE_PAIRS` 是规则文档里的 5 组测试词对 |
 | `game/engine/test/` | 逐条规则的测试，和 252 局随机机器人对局（每一步检查有没有泄密） |
 
-| `game/client/` | 手机页面（Preact）：`app.tsx` 首页和房间外壳，`lobby.tsx` 大厅，`game.tsx` 对局，`judge.tsx` 主持人台，`ui.tsx` 圆桌、护照等共用部件 |
+| `game/client/` | 手机页面（Preact）：`app.tsx` 外壳，`home.tsx` 首页 / 扫码进房，`lobby.tsx` 大厅，`game.tsx` 对局（`night.tsx` 夜晚、`day.tsx` 发言、`vote.tsx` 投票与出局、`phase2.tsx` 第二阶段、`over.tsx` 结算），`identity.tsx` 按住看身份，`dossier.tsx` 档案，`judge.tsx` 主持人台，`board.tsx` 画板和共用部件 |
 | `game/shared/protocol.ts` | 手机和服务器之间的消息格式 |
 | `game/server/` | 房间服务器：Cloudflare Worker + Durable Object（一个房间一个），有自己的 `package.json` |
 | `game/server/src/room.ts` | 房间：成员、密码、房主、设置、累计得分；跑引擎，按人推送视图，用一个 alarm 驱动所有计时 |

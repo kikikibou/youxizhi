@@ -7,7 +7,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import type { LogEntry, StepView } from '../../engine/view.ts';
+import type { LogEntry, StepView } from '../engine/view.ts';
 import { VOTE } from './art.ts';
 import { Btn, Layer, Stage, Timer, TitleBlock, okText } from './board.tsx';
 import { Chips, type G } from './game.tsx';
