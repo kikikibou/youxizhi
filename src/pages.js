@@ -351,7 +351,41 @@ export const PAGES = [
     intro: '这里是一些我自己设计的，需要**多人参与**的聚会小游戏。之后也会把一些自己设计的桌游所需要用到的桌游助手也放在这里，欢迎大家尝试。',
     cards: [
       // (href: a page of its own, opened in place of the drawer)
-      { no: '01', title: '大国小国', en: 'Big & Small', desc: '基于微妙联系的猜词类身份推理游戏', href: 'dgxg/', ready: true },
+      {
+        no: '01',
+        title: '大国小国',
+        en: 'Big & Small',
+        desc: '基于微妙联系的猜词类身份推理游戏',
+        href: 'dgxg/',
+        ready: true,
+        // Its close-up (see 攻错's): the camera flies to a cabin of the Ferris
+        // wheel as it comes up on the right (ride.start: its angle on the
+        // wheel, 0 at the top, turning anticlockwise) and rides along with it
+        // (World.followRide), the cabin still on the screen, the park going
+        // by behind; a ride ticket opens. 上车 dives into the cabin's window
+        // and 大国小国's globe opens out of it (takeoff, kind 'atlas').
+        // (view / portrait / dive: from the cabin's hanging point on the rim,
+        // in the building's frame)
+        spot: {
+          // (from behind the wheel, looking out over the park: the drum's
+          // floors slide down past the cabin, then its roof, then the sea)
+          ride: { start: 4.6 },
+          view: { pos: [-5.8, 2.0, -8.4], target: [3.6, -3.9, 0.6], fov: 44 },
+          portrait: { pos: [-4.5, 1.5, -6.5], target: [1.4, -4.6, 1.6], fov: 44 },
+          dive: [0, -1.165, 0.92],
+          pass: {
+            kind: 'atlas',
+            head: 'ADMIT ONE · 乘车券',
+            label: '乘车券',
+            flight: 'CABIN 07',
+            mark: '',
+            board: '上车',
+            text: '三方，两个词：**大国**和**小国**各拿到一个词，两个词之间有一层微妙的联系；**白板**什么词也没有。轮流说一个词，听出谁和你是一国的，也别让对面听出你来。6–12 人面对面坐成一圈，各用各的手机。',
+            fields: [['CABIN', '07'], ['PLAYERS', '6–12 人'], ['SIDES', '大国 · 小国 · 白板']],
+            motto: 'Mundus vult decipi.', // (the world wants to be deceived: and a world it is, its globe)
+          },
+        },
+      },
       { no: '02', title: '对抗性问答猜人', en: 'Twenty Questions, Versus', desc: '用Yes/No锁定人物的经典游戏，加入对抗与策略', ready: false },
       // (纵横: a crossword's two directions)
       { no: '03', title: '纵横猜词', en: 'Across & Down', desc: '强调战略性的团队对抗猜词游戏', ready: false },

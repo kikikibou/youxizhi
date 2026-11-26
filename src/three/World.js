@@ -184,6 +184,7 @@ export class World {
 
     this._v = new THREE.Vector3();
     this._v2 = new THREE.Vector3();
+    this._ride = new THREE.Vector3();
     this._focus = new THREE.Vector3();
     this._q = new THREE.Quaternion();
     this._euler = new THREE.Euler();
@@ -370,10 +371,16 @@ export class World {
     return new LampDevice(this.mats, sc.lamp);
   }
 
-  /** Camera pose for a view given in a building's local frame. */
-  viewFor(group, v) {
-    const pos = group.localToWorld(new THREE.Vector3(...v.pos));
-    const target = group.localToWorld(new THREE.Vector3(...v.target));
+  /** Camera pose for a view given in a building's local frame (from `origin` there, if given). */
+  viewFor(group, v, origin = null) {
+    const pos = new THREE.Vector3(...v.pos);
+    const target = new THREE.Vector3(...v.target);
+    if (origin) {
+      pos.add(origin);
+      target.add(origin);
+    }
+    group.localToWorld(pos);
+    group.localToWorld(target);
     const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
     quat.multiply(new THREE.Quaternion().setFromAxisAngle(Z, v.roll || 0));
     return { pos, quat, fov: v.fov };
@@ -786,26 +793,83 @@ export class World {
    * camera cranes up to a view of the page's building given in its local
    * frame (`portrait`: the view for a screen held upright). Meanwhile the
    * page's titles and reveal fade (see update). flyTo() brings it back.
+   * A spot with `ride` is a Ferris-wheel cabin's (see games() in
+   * buildings.js): its view and dive are from the cabin's hanging point, and
+   * the camera rides along with the cabin, flying to it and diving into it
+   * as it goes (see followRide).
    */
   flyToSpot(spot, duration = 3.4) {
-    const tall = this.camera.aspect < 0.9 && !!spot.portrait;
-    const group = this.sites[this.active].group;
-    const to = this.viewFor(group, tall ? spot.portrait : spot.view);
+    const c = this.closeUpFor(spot);
+    const to = this.spotView(c);
     const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
     // (straight up the tower first, then over to the view: the curve's
     // middle point stands near the start, a little above the end)
     const mid = from.pos.clone().lerp(to.pos, 0.3);
     mid.y = to.pos.y + 4;
-    // (tall: which view it took, so the ground lettering goes with it)
-    this.closeUp = { spot, tall, dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
-    return this.fly(from, to, mid, duration);
+    const flight = this.fly(from, to, mid, duration);
+    this.flight.carry = [0, 0.5, 1]; // (a ride's cabin carries the end along, and half the bend)
+    return flight;
+  }
+
+  /**
+   * The close-up state for a spot: `tall`, which view it took, so the
+   * ground lettering goes with it; for a ride, its cabin (kept if the
+   * camera is already at this spot, back from the card's site; else the
+   * one nearest `ride.start` on the wheel).
+   */
+  closeUpFor(spot) {
+    const tall = this.camera.aspect < 0.9 && !!spot.portrait;
+    const group = this.sites[this.active].group;
+    const prev = this.closeUp?.spot === spot ? this.closeUp : null;
+    const cabin = spot.ride ? (prev?.cabin ?? group.userData.wheel.nearest(spot.ride.start, this.time)) : -1;
+    return (this.closeUp = { spot, tall, cabin, ride: !!spot.ride, last: null });
+  }
+
+  /** A close-up's origin in its building's frame: a ride's cabin where it is now, into out (else null). */
+  rideOrigin(c, out) {
+    return c.ride ? this.sites[this.active].group.userData.wheel.cabinAt(c.cabin, this.time, out) : null;
+  }
+
+  /** A close-up's camera pose now. */
+  spotView(c) {
+    const group = this.sites[this.active].group;
+    return this.viewFor(group, c.tall ? c.spot.portrait : c.spot.view, this.rideOrigin(c, new THREE.Vector3()));
+  }
+
+  /** A close-up's dive point now, in the world. */
+  diveTarget(c) {
+    const v = new THREE.Vector3(...c.spot.dive);
+    if (c.ride) v.add(this.rideOrigin(c, new THREE.Vector3()));
+    return this.sites[this.active].group.localToWorld(v);
+  }
+
+  /**
+   * At a ride's close-up the camera moves with the cabin, by as far as its
+   * hanging point moved since the last frame (in a flight its ends and bend,
+   * as far as `carry` says; else the camera itself). The view turns only
+   * with the pointer, so the cabin holds still on the screen while the park
+   * and the sky go by behind it.
+   */
+  followRide() {
+    const c = this.closeUp;
+    if (!c?.ride) return;
+    const now = this.sites[this.active].group.localToWorld(this.rideOrigin(c, this._ride));
+    const d = c.last ? this._v2.copy(now).sub(c.last) : this._v2.set(0, 0, 0);
+    c.last = (c.last || new THREE.Vector3()).copy(now);
+    const f = this.flight;
+    if (!f) this.basePos.add(d);
+    else if (f.carry) {
+      f.from.pos.addScaledVector(d, f.carry[0]);
+      f.mid.addScaledVector(d, f.carry[1]);
+      f.to.pos.addScaledVector(d, f.carry[2]);
+    }
   }
 
   /** Put the camera where dive() ends at a close-up (back from the card's site, to rise again). */
   placeAtDive(spot) {
-    const group = this.sites[this.active].group;
-    const v = this.viewFor(group, this.camera.aspect < 0.9 && spot.portrait ? spot.portrait : spot.view);
-    const target = group.localToWorld(new THREE.Vector3(...spot.dive));
+    const c = this.closeUpFor(spot);
+    const v = this.spotView(c);
+    const target = this.diveTarget(c);
     this.basePos.copy(v.pos).sub(target).setLength(2.6).add(target);
     this.baseQuat.setFromRotationMatrix(new THREE.Matrix4().lookAt(this.basePos, target, UP));
     this.baseFov = v.fov - 6;
@@ -815,12 +879,21 @@ export class World {
 
   /** From a close-up, drop towards its `dive` point (leaving for the card's site). */
   dive(duration = 1.5) {
-    const target = this.closeUp.dive;
+    const target = this.diveTarget(this.closeUp);
     const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
     const pos = from.pos.clone().sub(target).setLength(2.6).add(target);
     const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
     const to = { pos, quat, fov: this.baseFov - 6 };
-    return this.fly(from, to, from.pos.clone().lerp(pos, 0.5), duration);
+    const flight = this.fly(from, to, from.pos.clone().lerp(pos, 0.5), duration);
+    this.flight.carry = [1, 1, 1]; // (into a ride's cabin as it goes)
+    return flight;
+  }
+
+  /** Where a close-up's dive point is on the screen now, in CSS pixels (for the leaving's own effects). */
+  diveOnScreen() {
+    if (!this.closeUp) return null;
+    const p = this.diveTarget(this.closeUp).project(this.camera);
+    return { x: ((p.x + 1) / 2) * window.innerWidth, y: ((1 - p.y) / 2) * window.innerHeight };
   }
 
   /** Opening shot: start high above the plaza and descend into the page. */
@@ -873,7 +946,7 @@ export class World {
     const c = this.closeUp;
     if (c && !this.flight && (w / h < 0.9 && !!c.spot.portrait) !== c.tall) {
       c.tall = !c.tall;
-      const v = this.viewFor(this.sites[this.active].group, c.tall ? c.spot.portrait : c.spot.view);
+      const v = this.spotView(c);
       this.basePos.copy(v.pos);
       this.baseQuat.copy(v.quat);
       this.baseFov = v.fov;
@@ -972,6 +1045,7 @@ export class World {
   /* ------------------------------------------------------------------ */
 
   updateCamera(dt) {
+    this.followRide();
     const f = this.flight;
     if (f) {
       f.t = Math.min(1, f.t + dt / f.duration);
@@ -1019,6 +1093,9 @@ export class World {
     fwd.y = 0;
     fwd.normalize();
     const focus = this._focus.copy(this.basePos).addScaledVector(fwd, 28).setY(0);
+    // (riding a cabin, the camera never stops: its centre moves in 2 m steps,
+    // so the shadow map isn't redrawn every frame; the shadows stay put)
+    if (this.closeUp?.ride) focus.set(Math.round(focus.x / 2) * 2, 0, Math.round(focus.z / 2) * 2);
     this.sun.position
       .set(Math.sin(yaw) * Math.cos(elev), Math.sin(elev), Math.cos(yaw) * Math.cos(elev))
       .multiplyScalar(180)

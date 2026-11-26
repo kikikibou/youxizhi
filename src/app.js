@@ -293,9 +293,10 @@ window.addEventListener('hashchange', () => go(currentId()));
 /* -------------------------------------------------------------- close-ups */
 // A card with a `spot` (pages.js) doesn't leave at once: its page steps
 // aside, the camera cranes up to a place on the building, and a boarding
-// pass opens there. 返回 (or Esc) flies back down to the page. 登机 tears off
+// pass opens there (大国小国's: the camera rides along with a Ferris-wheel
+// cabin). 返回 (or Esc) flies back down to the page. 登机 / 上车 tears off
 // the stub, drops the camera into the spot and, the screen gone to the other
-// site's dark, goes there in this tab (Back returns to the pass).
+// site's own first colour, goes there in this tab (Back returns to the pass).
 const spotEl = $('#spot');
 const takeoff = $('#takeoff');
 let spot = null; // { idx, c, landed } while at a close-up
@@ -355,7 +356,26 @@ function closeSpot() {
   showPage(idx, delay * 0.62);
 }
 
-/** 登机: tear off the stub, drop into the spot, go dark, leave. */
+/**
+ * The leaving's look, as the card's pass says (its `kind`): by default the
+ * black 攻错 opens on; 'atlas', 大国小国's globe opening out of the spot
+ * (where it is on the screen: --x, --y) to the grey-green its page opens on.
+ * Set without a transition, so nothing slides over from the last one.
+ */
+function readyTakeoff(kind) {
+  const ring = takeoff.querySelector('.takeoff-ring');
+  const at = world.diveOnScreen();
+  takeoff.style.transition = ring.style.transition = 'none';
+  takeoff.dataset.kind = kind || '';
+  if (at) {
+    takeoff.style.setProperty('--x', `${at.x.toFixed(1)}px`);
+    takeoff.style.setProperty('--y', `${at.y.toFixed(1)}px`);
+  }
+  void takeoff.offsetWidth; // (commit it before the transitions come back)
+  takeoff.style.transition = ring.style.transition = '';
+}
+
+/** 登机 / 上车: tear off the stub, drop into the spot, the screen goes to the other site's, leave. */
 function board() {
   if (!spot?.landed) return;
   const s = spot; // (this boarding: called off if the close-up changes meanwhile)
@@ -371,10 +391,11 @@ function board() {
   }
   setTimeout(() => {
     if (spot !== s) return;
+    readyTakeoff(c.spot.pass.kind);
     world.dive();
     takeoff.classList.add('is-on');
-    // (black by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
-    // only black is left, and the site opens on black)
+    // (covered by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
+    // only the other site's first colour is left, and it opens on that)
     setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), 2200);
     setTimeout(() => {
       if (spot === s) location.assign(c.href);
@@ -401,6 +422,12 @@ document.addEventListener('click', (e) => {
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   takeBackSpot();
+  // (大国小国's globe closes again, into the cabin where it is now)
+  const at = world.diveOnScreen();
+  if (at) {
+    takeoff.style.setProperty('--x', `${at.x.toFixed(1)}px`);
+    takeoff.style.setProperty('--y', `${at.y.toFixed(1)}px`);
+  }
   takeoff.classList.remove('is-on', 'is-quiet');
   if (!spot) return;
   const s = spot;

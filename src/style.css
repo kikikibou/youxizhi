@@ -2125,7 +2125,7 @@ html[data-theme='night'] .pass-head {
   border-top: 2px dashed color-mix(in srgb, var(--paper-ink) 35%, transparent);
 }
 .pass-path::after {
-  content: 'H';
+  content: attr(data-mark);
   position: absolute;
   right: -6px;
   top: -10px;
@@ -2291,6 +2291,62 @@ html[data-theme='night'] .pass-head {
   transition-delay: 0.08s;
 }
 
+/* 大国小国's ride ticket (pass--atlas): the stub in its own map-punk look,
+   map paper under a crosshair grid, the black-and-white degree scale of its
+   frames along the top, its globe, ink; the route ends at a small globe. */
+.pass--atlas {
+  --atlas-ink: #1e1b17;
+  --atlas-paper: #f4ecda;
+  --atlas-sea: #d4e3e1;
+}
+.pass--atlas .pass-path::before,
+.pass--atlas .pass-path::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  height: 18px;
+  border-radius: 50%;
+}
+.pass--atlas .pass-path::after {
+  right: -6px;
+  width: 18px;
+  background: radial-gradient(circle at 38% 32%, #e6f0ee, var(--atlas-sea) 60%, #b7cdcc);
+  box-shadow: 0 0 0 1.5px var(--atlas-ink);
+}
+/* (a meridian across it) */
+.pass--atlas .pass-path::before {
+  z-index: 1;
+  right: 0;
+  width: 6px;
+  border-left: 1px solid var(--atlas-ink);
+  border-right: 1px solid var(--atlas-ink);
+  opacity: 0.55;
+}
+.pass--atlas .pass-stub {
+  background-color: var(--atlas-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.25' height='45.333'%3E%3Cpath d='M19.625 22.667h6M22.625 19.667v6' stroke='%231e1b17' stroke-width='0.6' opacity='0.3'/%3E%3C/svg%3E");
+  color: var(--atlas-ink);
+  border-top: 0;
+}
+/* (the perforation in ink; the degree scale along the top) */
+.pass--atlas .pass-stub::before {
+  border-left-color: rgba(30, 27, 23, 0.45);
+}
+.pass--atlas .pass-stub::after {
+  inset: 0 0 auto;
+  height: 6px;
+  background: repeating-linear-gradient(90deg, var(--atlas-ink) 0 9px, var(--atlas-paper) 9px 18px);
+  border-bottom: 1px solid var(--atlas-ink);
+}
+.pass--atlas .pass-motto {
+  color: var(--atlas-ink);
+}
+.pass--atlas .pass-stub small {
+  color: #5d564c;
+  text-transform: none;
+  letter-spacing: 0.08em;
+}
+
 /* Leaving for the card's site: the screen goes to the black that site opens
    on (debatestone.com's first frame is a black veil), its motto comes up in
    gold and goes again, and the site follows on the same black. */
@@ -2326,6 +2382,65 @@ html[data-theme='night'] .pass-head {
 .takeoff.is-on.is-quiet .takeoff-motto {
   opacity: 0;
   transition: opacity 0.6s ease;
+}
+.takeoff-ring {
+  display: none;
+}
+/* 大国小国 (kind 'atlas'): its globe opens out of the cabin's window (where
+   that is on the screen: --x, --y, set by app.js) to fill the screen, ringed
+   by its degree scale, in the grey-green its page opens on; on its map grid
+   the motto comes up in ink and goes, and the grid with it, so the page
+   follows on the bare grey-green. (Coming back, the globe closes again.) */
+.takeoff[data-kind='atlas'] {
+  --x: 50%;
+  --y: 50%;
+  background: #b9c7c4;
+  opacity: 1;
+  clip-path: circle(0px at var(--x) var(--y));
+  transition: clip-path 0.9s cubic-bezier(0.25, 0.6, 0.35, 1);
+}
+.takeoff[data-kind='atlas'].is-on {
+  clip-path: circle(75vmax at 50% 50%);
+  transition: clip-path 1.3s cubic-bezier(0.6, 0, 0.8, 0.45) 0.15s;
+}
+.takeoff[data-kind='atlas']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.25' height='45.333'%3E%3Cpath d='M19.625 22.667h6M22.625 19.667v6' stroke='%231e1b17' stroke-width='0.6' opacity='0.3'/%3E%3C/svg%3E");
+  transition: opacity 0.6s ease;
+}
+.takeoff[data-kind='atlas'].is-quiet::before {
+  opacity: 0;
+}
+.takeoff[data-kind='atlas'] .takeoff-ring {
+  display: block;
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  /* an ink line, the degree scale, an ink line: only the ring's outer 9px show */
+  background:
+    radial-gradient(closest-side, transparent calc(100% - 9px), #1e1b17 calc(100% - 9px) calc(100% - 7.8px), transparent calc(100% - 7.8px) calc(100% - 1.6px), #1e1b17 calc(100% - 1.6px)),
+    repeating-conic-gradient(#1e1b17 0 3deg, #f4ecda 3deg 6deg);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 9px), #000 calc(100% - 9px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 9px), #000 calc(100% - 9px));
+  transition: left 0.9s cubic-bezier(0.25, 0.6, 0.35, 1), top 0.9s cubic-bezier(0.25, 0.6, 0.35, 1), width 0.9s cubic-bezier(0.25, 0.6, 0.35, 1), height 0.9s cubic-bezier(0.25, 0.6, 0.35, 1);
+}
+.takeoff[data-kind='atlas'].is-on .takeoff-ring {
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  transition: left 1.3s cubic-bezier(0.6, 0, 0.8, 0.45) 0.15s, top 1.3s cubic-bezier(0.6, 0, 0.8, 0.45) 0.15s,
+    width 1.3s cubic-bezier(0.6, 0, 0.8, 0.45) 0.15s, height 1.3s cubic-bezier(0.6, 0, 0.8, 0.45) 0.15s;
+}
+.takeoff[data-kind='atlas'] .takeoff-motto {
+  position: relative;
+  color: #1e1b17;
 }
 
 /* Phones: the pass along the bottom, the stub narrower. */

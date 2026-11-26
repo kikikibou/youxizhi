@@ -1168,33 +1168,73 @@ function games(mats) {
   wheel.add(hub);
   group.add(wheel);
 
-  // Cabins hang from the rim and stay upright as it turns (one draw call).
-  const cabinGeo = new THREE.BoxGeometry(2.2, 2.0, 2.0);
-  const cabins = new THREE.InstancedMesh(cabinGeo, mats.orange, N);
-  const roofGeo = new THREE.BoxGeometry(2.5, 0.25, 2.3);
-  const roofs = new THREE.InstancedMesh(roofGeo, mats.white, N);
-  group.add(cabins, roofs);
+  // Cabins hang from the rim and stay upright as it turns: one instanced
+  // mesh per material (orange body and posts, the window band, the white
+  // roof and sill, the hanger), each part placed from the cabin's hanging
+  // point on the rim. (A card's close-up rides along in one: see `wheel` below.)
+  const part = (w, h, d, x, y, z) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
+  const cabinParts = {
+    orange: [
+      part(2.2, 0.95, 2.0, 0, -2.075, 0), // the lower body
+      part(2.2, 0.18, 2.0, 0, -0.64, 0), // the band under the roof
+      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => part(0.16, 0.87, 0.16, sx * 1.02, -1.165, sz * 0.92))), // corner posts
+      ...[-1, 1].map((sz) => part(0.09, 0.87, 0.06, 0, -1.165, sz * 0.95)), // a mullion front and back
+      ...[-1, 1].map((sx) => part(0.06, 0.87, 0.09, sx * 1.05, -1.165, 0)), // and at each side
+    ],
+    glass: [part(2.04, 0.87, 1.84, 0, -1.165, 0)], // the window band (lit at night)
+    white: [
+      part(2.5, 0.22, 2.3, 0, -0.44, 0), // the roof
+      part(1.2, 0.12, 1.1, 0, -0.27, 0), // its cap
+      part(2.28, 0.07, 2.08, 0, -1.6, 0), // the sill under the windows
+    ],
+    metal: [part(0.12, 0.3, 0.12, 0, -0.15, 0)], // the hanger up to the rim
+  };
+  const cabinMeshes = Object.entries(cabinParts).map(([key, geos]) => {
+    const g = mergeGeometries(geos);
+    geos.forEach((x) => x.dispose());
+    const m = new THREE.InstancedMesh(g, mats[key], N);
+    m.castShadow = false;
+    return m;
+  });
+  group.add(...cabinMeshes);
   // Moving parts don't cast shadows: the shadow map is only redrawn when
   // the sun moves (see World.update), so their shadows would go stale.
-  for (const m of [frame, hub, cabins, roofs]) m.castShadow = false;
+  for (const m of [frame, hub]) m.castShadow = false;
+
+  // The wheel turns WHEEL_SPEED radians a second; cabin i hangs from the rim
+  // at angle i / N of a turn plus that (0: the top; it turns anticlockwise
+  // as seen from the front, so cabins rise on the right).
+  const WHEEL_SPEED = 0.07;
+  const angleOf = (i, t) => (i / N) * Math.PI * 2 + t * WHEEL_SPEED;
+  /** Where cabin i hangs from the rim at time t (seconds), in the building's frame, into out. */
+  const cabinAt = (i, t, out) => {
+    const a = angleOf(i, t);
+    return out.set(W.x - Math.sin(a) * W.r, W.y + Math.cos(a) * W.r, W.z);
+  };
+  /** The cabin nearest the angle `a` at time t. */
+  const nearest = (a, t) => {
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < N; i++) {
+      const d = Math.abs(Math.atan2(Math.sin(angleOf(i, t) - a), Math.cos(angleOf(i, t) - a)));
+      if (d < bestD) [best, bestD] = [i, d];
+    }
+    return best;
+  };
+  group.userData.wheel = { cabinAt, nearest };
 
   const m4 = new THREE.Matrix4();
+  const at = new THREE.Vector3();
   const spin = (t) => {
-    const rot = t * 0.07;
-    wheel.rotation.z = rot;
+    wheel.rotation.z = t * WHEEL_SPEED;
     for (let i = 0; i < N; i++) {
-      const a = (i / N) * Math.PI * 2 + rot;
-      const x = W.x - Math.sin(a) * W.r;
-      const y = W.y + Math.cos(a) * W.r;
-      m4.makeTranslation(x, y - 1.55, W.z);
-      cabins.setMatrixAt(i, m4);
-      m4.makeTranslation(x, y - 0.42, W.z);
-      roofs.setMatrixAt(i, m4);
+      m4.makeTranslation(cabinAt(i, t, at));
+      for (const m of cabinMeshes) m.setMatrixAt(i, m4);
     }
-    cabins.instanceMatrix.needsUpdate = true;
-    roofs.instanceMatrix.needsUpdate = true;
-    cabins.computeBoundingSphere();
-    roofs.computeBoundingSphere();
+    for (const m of cabinMeshes) {
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
   };
   spin(0);
   group.userData.animate = spin;
