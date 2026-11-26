@@ -120,10 +120,15 @@ export interface PlayerView {
     big: string;
     small: string;
     link: string;
+    /** 题号（例：「1-3」），题库里编了号的才有；自带词没有。 */
+    pairNo: string | null;
     hints: string[];
     players: { id: PlayerId; faction: Faction; role: BlankRole | null }[];
   } | null;
 }
+
+/** 题库里的题号是「数字-数字」；别的编号（自动生成的、自带词的）不显示。 */
+const pairNo = (id: string) => (/^\d+-\d+$/.test(id) ? id : null);
 
 function canSee(ev: GameEvent, me: PlayerState, over: boolean): boolean {
   if (over) return true;
@@ -269,6 +274,8 @@ export interface JudgeView {
   players: (PublicPlayer & { faction: Faction; role: BlankRole | null })[];
   secret: { big: string; small: string; bigSense: string; smallSense: string; bigAliases: string[]; smallAliases: string[]; link: string; hints: string[]; linkType: string; judgeNote: string };
   hintsShown: number;
+  /** 题号（例：「1-3」），题库里编了号的才有。 */
+  pairNo: string | null;
   /** 当前步骤的完整内部状态（主持人可以看到谁选了什么、谁投了谁）。 */
   step: GameState['step'];
   /** 等待判定的请求；人类裁判模式下由主持人判定，超过 judgeDeadlineMs 自动兜底。 */
@@ -304,6 +311,7 @@ export function judgeView(g: GameState, now: number): JudgeView {
       judgeNote: g.secret.judgeNote ?? '',
     },
     hintsShown: g.hintsShown,
+    pairNo: pairNo(g.secret.pairId),
     step: JSON.parse(JSON.stringify(g.step)),
     pending: g.judge.map((r) => ({ ...r, deadline: r.at + timeout })),
     judgeMode: g.rules.judge,
@@ -367,6 +375,7 @@ export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerVi
           big: g.secret.big.word,
           small: g.secret.small.word,
           link: g.secret.link,
+          pairNo: pairNo(g.secret.pairId),
           hints: [...g.secret.hints],
           players: g.players.map((p) => ({ id: p.id, faction: p.faction, role: p.role })),
         }

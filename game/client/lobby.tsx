@@ -495,7 +495,7 @@ type PairForm = {
   link: string;
   hints: string;
   judgeNote: string;
-  /** '' 每局随机，'A' / 'B' 固定当大国的词 */
+  /** 'A'（默认）/ 'B' 固定当大国的词，'random' 每局随机 */
   bigWord: string;
 };
 
@@ -510,7 +510,7 @@ function initialPair(p: CustomPair | null): PairForm {
     link: p?.link ?? '',
     hints: p?.hints?.join('\n') ?? '',
     judgeNote: p?.judgeNote ?? '',
-    bigWord: p?.bigWord ?? '',
+    bigWord: p ? (p.bigWord ?? 'random') : 'A',
   };
 }
 
@@ -645,9 +645,9 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
         <label class="b-lb-field">
           <span>哪个词当大国的词（白板要猜它，还会知道它有几个字；很难凭空想到的词别当大国的词）</span>
           <select value={f.bigWord} onChange={(e) => set('bigWord', e.currentTarget.value)}>
-            <option value="">每局随机</option>
-            <option value="A">词 A{f.wordA.trim() ? `：${f.wordA.trim()}` : ''}</option>
+            <option value="A">词 A{f.wordA.trim() ? `：${f.wordA.trim()}` : ''}（默认）</option>
             <option value="B">词 B{f.wordB.trim() ? `：${f.wordB.trim()}` : ''}</option>
+            <option value="random">每局随机</option>
           </select>
         </label>
         <div class="b-lb-cols">
@@ -687,6 +687,43 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
 /* ================================================================ 往下滚的部分 */
 
 /** 图纸上的一张说明表：黑色表头带 + 双线框。 */
+/** 跳过这些题号：在别的聚会玩过的题，房主填进来就不会抽到；下面列出这个房间已经玩过的（会自动跳过）。 */
+function SkipNumbers({ skip, played, editable, onSave }: { skip: string[]; played: string[]; editable: boolean; onSave: (v: string) => void }) {
+  const shown = skip.join('、');
+  const [text, setText] = useState(shown);
+  const [focus, setFocus] = useState(false);
+  const value = focus ? text : shown;
+  const save = () => {
+    setFocus(false);
+    if (text.trim() !== shown) onSave(text);
+  };
+  return (
+    <div class="b-lb-skip">
+      <label>
+        <span>跳过这些题号</span>
+        {editable ? (
+          <input
+            value={value}
+            placeholder="例：1-3、2-5（在别处玩过的）"
+            onFocus={() => {
+              setText(shown);
+              setFocus(true);
+            }}
+            onInput={(e) => setText(e.currentTarget.value)}
+            onBlur={save}
+            onKeyDown={(e) => e.key === 'Enter' && !e.isComposing && (e.currentTarget as HTMLInputElement).blur()}
+          />
+        ) : (
+          <b>{shown || '没有'}</b>
+        )}
+      </label>
+      <small class="b-lb-muted">
+        题号在每局结算时显示。{played.length ? `这个房间玩过：${played.join('、')}（会自动跳过）。` : ''}
+      </small>
+    </div>
+  );
+}
+
 function SheetHead({ title, sub }: { title: string; sub?: ComponentChildren }) {
   return (
     <header class="b-lb-sheet-head">
@@ -1010,6 +1047,7 @@ function Rules({ conn, room, n, editable }: { conn: RoomConnection; room: RoomVi
                     <label class={`b-lb-bank ${picked(b.name) ? 'is-on' : ''}`}>
                       <input type="checkbox" checked={picked(b.name)} disabled={!editable} onChange={() => toggleBank(b.name)} />
                       <i aria-hidden="true" />
+                      {b.no ? <b class="b-lb-bank-no">{b.no}</b> : null}
                       <span>{b.name}</span>
                       <small>
                         {b.left}/{b.total}
@@ -1019,8 +1057,9 @@ function Rules({ conn, room, n, editable }: { conn: RoomConnection; room: RoomVi
                 ))}
               </ul>
               <small class="b-lb-muted">
-                {bank.sample ? '还没导入正式题库，现在是 5 组示例。' : ''}勾选的题库共 {bank.total} 组，这个房间里还没人玩过的 {bank.left} 组。
+                {bank.sample ? '还没导入正式题库，现在是 5 组示例。' : ''}勾选的题库共 {bank.total} 组，这个房间里还能抽的 {bank.left} 组。
               </small>
+              <SkipNumbers skip={s.skip ?? []} played={room.played.filter((x) => /^\d+-\d+$/.test(x))} editable={editable} onSave={(v) => set({ skip: v.split(/[,，、;；\s/]+/).filter(Boolean) })} />
             </>
           )}
         </Rule>

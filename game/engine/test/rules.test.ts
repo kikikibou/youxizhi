@@ -601,6 +601,20 @@ describe('视图', () => {
     expect(v.reveal).toMatchObject({ big: s.g.secret.big.word, small: s.g.secret.small.word, link: s.g.secret.link });
     expect(v.reveal!.players.length).toBe(7);
   });
+
+  it('结算时给出题号：题库里编了号（「数字-数字」）的才有', () => {
+    const play = (id: string) => {
+      const s = new Sim({ n: 7, seed: 29, pair: { id, wordA: '股票', wordB: '鱿鱼', link: '都能炒' } });
+      s.toPhase2();
+      const a = (s.step as Extract<GameState['step'], { k: 'turn' }>).order[0];
+      s.do(a, { a: 'guess', text: s.g.secret[s.p(a).faction === 'big' ? 'small' : 'big'].word });
+      for (let i = 0; i < 6; i++) s.wait(T(s).hintInterval);
+      return viewFor(s.g, 'p1', s.t).reveal?.pairNo;
+    };
+    expect(play('1-3')).toBe('1-3');
+    expect(play('custom:2')).toBeNull();
+    expect(play('p_0123abcd')).toBeNull();
+  });
 });
 
 describe('主持人（§8.4）', () => {

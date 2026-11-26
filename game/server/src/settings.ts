@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: RoomSettings = {
   judge: DEFAULT_RULES.judge,
   wordSource: 'bank',
   banks: null,
+  skip: [],
   recognition: DEFAULT_RULES.recognition,
   wipeoutThreshold: DEFAULT_RULES.wipeoutThreshold,
   wipeoutVsBlanks: DEFAULT_RULES.wipeoutVsBlanks,
@@ -64,6 +65,7 @@ export function mergeSettings(cur: RoomSettings, input: unknown): RoomSettings {
       if (picked.length) next.banks = picked.length === BANK_NAMES.length ? null : picked;
     }
   }
+  if ('skip' in p) next.skip = cleanSkip(p.skip);
   next.recognition = oneOf(p.recognition, ['auto', 'group', 'oneWay', 'all'] as const, cur.recognition);
   if (Number.isInteger(p.wipeoutThreshold) && (p.wipeoutThreshold as number) >= 0 && (p.wipeoutThreshold as number) <= WIPEOUT_MAX) {
     next.wipeoutThreshold = p.wipeoutThreshold as number;
@@ -85,6 +87,22 @@ export function mergeSettings(cur: RoomSettings, input: unknown): RoomSettings {
     if (next.timers.exitMinShow > next.timers.exitChoice) next.timers.exitMinShow = next.timers.exitChoice;
   }
   return next;
+}
+
+/** 题号：全角、各种横线都认，「1 - 3」「1—3」「１－３」都算「1-3」。 */
+export function normalizeNo(s: string): string | null {
+  const t = s
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .replace(/[－—–_~～·.。]/g, '-');
+  return /^\d{1,3}-\d{1,4}$/.test(t) ? t.replace(/^0+(?=\d)/, '').replace(/-0+(?=\d)/, '-') : null;
+}
+
+/** 房主填的「跳过这些题号」：可以是数组，也可以是一段用逗号、顿号、空格隔开的文字。 */
+export function cleanSkip(v: unknown): string[] {
+  const raw = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : typeof v === 'string' ? v.split(/[,，、;；\s/]+/) : [];
+  const out = raw.map(normalizeNo).filter((x): x is string => !!x);
+  return [...new Set(out)].slice(0, 300);
 }
 
 /** 房间设置 → 引擎规则。 */

@@ -340,7 +340,7 @@ function Legend({ j, top }: { j: JudgeView; top: number }) {
   return (
     <section class="b-jd-legend" style={{ top: `${top}px`, height: `${h}px` }} aria-label="答案">
       <p class="b-jd-lg-h">
-        <b>图例 · 答案</b>
+        <b>图例 · 答案{j.pairNo ? ` · 第 ${j.pairNo} 题` : ''}</b>
         <span>只有你看得到</span>
       </p>
       <dl class="b-jd-lg-rows">

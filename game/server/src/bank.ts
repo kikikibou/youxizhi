@@ -27,11 +27,17 @@ export function pickPair(banks: readonly string[] | null, exclude: Set<string>, 
   return p[Math.floor(random() * p.length)];
 }
 
+/** 题库的编号：这个题库里所有题号都是「N-几」时就是 N（例：经典 → 1），否则没有。 */
+function bankNo(name: string): string | null {
+  const nos = new Set(BANK.filter((p) => (p.bank ?? '题库') === name).map((p) => /^(\d+)-\d+$/.exec(p.id)?.[1] ?? '?'));
+  return nos.size === 1 && !nos.has('?') ? [...nos][0] : null;
+}
+
 /** 大厅里显示：每个题库几组、还剩几组；勾选的加起来几组、还剩几组。 */
 export function bankInfo(banks: readonly string[] | null, exclude: Set<string>) {
   return {
     total: pool(banks, new Set()).length,
     left: pool(banks, exclude).length,
-    banks: BANK_NAMES.map((name) => ({ name, total: pool([name], new Set()).length, left: pool([name], exclude).length })),
+    banks: BANK_NAMES.map((name) => ({ name, no: bankNo(name), total: pool([name], new Set()).length, left: pool([name], exclude).length })),
   };
 }

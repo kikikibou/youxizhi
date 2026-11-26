@@ -17,6 +17,8 @@ export interface RoomSettings {
   wordSource: 'bank' | 'custom';
   /** 用哪几个题库（名字）；null = 全部。 */
   banks: string[] | null;
+  /** 跳过这些题号（例：在别的聚会玩过的「1-3」）。 */
+  skip: string[];
   recognition: 'auto' | Recognition;
   /** 某国存活人数降到这个数（含）以下，白板提前获胜；0 = 某国全部出局。 */
   wipeoutThreshold: number;
@@ -105,7 +107,7 @@ export interface RoomView {
    * 题库：每个题库几组、这个房间还没玩过几组；total / left 是勾选的题库加起来的。
    * sample 表示还没导入题库、用的是 5 组示例。
    */
-  bank: { total: number; left: number; sample: boolean; banks: { name: string; total: number; left: number }[] };
+  bank: { total: number; left: number; sample: boolean; banks: { name: string; no: string | null; total: number; left: number }[] };
 }
 
 export type ServerMsg =

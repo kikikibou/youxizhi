@@ -1084,6 +1084,69 @@
   color: #f7f2e6;
 }
 
+.b-lb-bank-no {
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 10.5px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.b-lb-skip {
+  margin-top: 10px;
+}
+
+.b-lb-skip label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.b-lb-skip label span {
+  flex: none;
+  font-weight: 700;
+}
+
+.b-lb-skip input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  font-family: var(--cond);
+  font-size: 15px;
+  outline: none;
+}
+
+.b-lb-skip input:focus {
+  border-bottom-color: var(--acc);
+}
+
+.b-lb-skip input::placeholder {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: #b3a994;
+}
+
+.b-lb-skip b {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.b-lb-skip small {
+  display: block;
+  margin-top: 4px;
+}
+
 .b-lb-banks {
   list-style: none;
   margin: 0;

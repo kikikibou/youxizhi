@@ -821,9 +821,9 @@ export function OverScreen({ g }: { g: G }) {
       </Layer>
       <Podium g={g} open={open} play={play} />
       {open ? (
-        <TitleBlock kicker="游戏结束" title={TITLE_OF(v.result)} sub="大家回到了各自的阵营；国界通向的那条线上，写着两个词之间的联系" size={26} />
+        <TitleBlock kicker={v.reveal.pairNo ? `游戏结束 · 第 ${v.reveal.pairNo} 题` : '游戏结束'} title={TITLE_OF(v.result)} sub="大家回到了各自的阵营；国界通向的那条线上，写着两个词之间的联系" size={26} />
       ) : (
-        <TitleBlock kicker="游戏结束" title="谜底" sub="两个词都摆在这儿了，它们之间的联系还没揭晓" />
+        <TitleBlock kicker={v.reveal.pairNo ? `游戏结束 · 第 ${v.reveal.pairNo} 题` : '游戏结束'} title="谜底" sub="两个词都摆在这儿了，它们之间的联系还没揭晓" />
       )}
       <Chips g={g} hold={false} />
       {open ? (

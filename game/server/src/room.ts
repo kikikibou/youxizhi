@@ -458,7 +458,7 @@ export class Room extends DurableObject<Env> {
   /** 房间里任何人见过的词对（本房间玩过的 + 各人手机上记着的）。 */
   private seenPairs(): Set<string> {
     const room = this.room!;
-    return new Set([...room.played, ...room.members.flatMap((m) => m.seen)]);
+    return new Set([...room.played, ...(room.settings.skip ?? []), ...room.members.flatMap((m) => m.seen)]);
   }
 
   private choosePair(random: () => number) {

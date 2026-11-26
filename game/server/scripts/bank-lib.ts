@@ -140,16 +140,17 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
     if (!link) err(line, '联系必填（抢答时提示放完最后才公布，结算时揭晓）');
     else if (len(link) > 80) err(line, `联系最多 80 字（现在 ${len(link)} 字）`);
 
-    // 大国词：填词A或词B本身（也认 A / B / 词A / 词B），留空每局随机
+    // 大国词：默认是词A；填词B本身（或 B）就让词B当大国的词；填「随机」每局随机
     const bigRaw = get('bigWord');
-    let bigWord: 'A' | 'B' | undefined;
+    let bigWord: 'A' | 'B' | undefined = 'A';
     if (bigRaw) {
       const n = normalizeWord(bigRaw);
       if (wordA && n === normalizeWord(wordA)) bigWord = 'A';
       else if (wordB && n === normalizeWord(wordB)) bigWord = 'B';
       else if (['a', '词a'].includes(n)) bigWord = 'A';
       else if (['b', '词b'].includes(n)) bigWord = 'B';
-      else err(line, `「大国词」要填这一行的词A或词B（现在是「${bigRaw}」）`);
+      else if (['随机', '每局随机'].includes(n)) bigWord = undefined;
+      else err(line, `「大国词」要填这一行的词A、词B，或者「随机」（现在是「${bigRaw}」）`);
     }
 
     const dRaw = get('difficulty');

@@ -40,6 +40,7 @@ describe('题库导入', () => {
         wordB: '股票',
         link: '都能炒',
         bank: 'x',
+        bigWord: 'A',
         difficulty: 1,
         hints: ['动词', '厨房'],
         aliasesA: ['柔鱼', '枪乌贼'],
@@ -114,13 +115,13 @@ describe('题库导入', () => {
     expect(r.pairs[0]).toMatchObject({ bank: '家常菜', link: '都能炒', hints: ['一个动词', '厨房里也用'] });
   });
 
-  it('大国词：填词本身或 A / B，留空每局随机；填了别的词报错', () => {
+  it('大国词：默认是词A；填词本身或 A / B 指定，填「随机」每局随机；填了别的词报错', () => {
     const head: Cell[] = ['★词A', '★词B', '大国词', '★联系'];
     const r = parseRows(
-      [head, ['花旦', '天鹅', '天鹅', '都能接在「四小」后面'], ['鱿鱼', '股票', 'A', '都能炒'], ['神', '狗', '', '倒过来'], ['米', '万', '面', '旗']],
+      [head, ['花旦', '天鹅', '天鹅', '都能接在「四小」后面'], ['鱿鱼', '股票', '随机', '都能炒'], ['神', '狗', '', '倒过来'], ['米', '万', '面', '旗']],
       'x.xlsx',
     );
-    expect(r.pairs.map((p) => p.bigWord)).toEqual(['B', 'A', undefined]);
+    expect(r.pairs.map((p) => p.bigWord)).toEqual(['B', undefined, 'A']);
     expect(r.issues).toEqual([expect.objectContaining({ row: 5, level: 'error', message: expect.stringContaining('大国词') })]);
   });
 
@@ -129,7 +130,7 @@ describe('题库导入', () => {
     const rows = (await readSheet(path, '题库')) as Cell[][];
     const r = parseRows(rows, '题目采集表.xlsx');
     expect(r.issues.filter((i) => i.level === 'error')).toEqual([]);
-    expect(r.pairs.map((p) => `${p.wordA}/${p.wordB}`)).toEqual(['鱿鱼/股票', '清一色/唐三彩', '雷达/射手', '神/狗', '米/万']);
+    expect(r.pairs.map((p) => `${p.id} ${p.wordA}/${p.wordB}`)).toEqual(['0-1 股票/鱿鱼', '0-2 清一色/唐三彩', '0-3 雷达/射手', '0-4 神/狗', '0-5 米/万']);
     expect(r.pairs.find((p) => p.wordB === '狗')?.aliasesB).toEqual(['犬', '狗狗']);
   });
 });
