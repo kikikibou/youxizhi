@@ -16,7 +16,8 @@ const emph = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
 function cardHtml(c, i) {
   const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : c.href ? `data-href="${esc(c.href)}"` : '';
   const ready = c.go || c.ready;
-  const tag = c.go ? 'ENTER →' : c.href && ready ? 'PLAY →' : ready ? 'OPEN' : 'SOON';
+  // (a link to another site: VISIT, it opens in a new tab; a page of this one: PLAY)
+  const tag = c.go ? 'ENTER →' : c.href && ready ? (/^https?:/.test(c.href) ? 'VISIT →' : 'PLAY →') : ready ? 'OPEN' : 'SOON';
   return `
     <li class="reveal" style="--d:${6 + i}">
       <button class="card" type="button" ${action} ${ready ? '' : 'disabled'}>

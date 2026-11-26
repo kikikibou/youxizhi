@@ -326,6 +326,8 @@ stage.addEventListener('click', (e) => {
   if (!card || card.disabled) return;
   if (card.dataset.go) location.hash = `#/${card.dataset.go}`;
   else if (card.dataset.tool && TOOLS[card.dataset.tool]) drawer.open(TOOLS[card.dataset.tool]);
+  // (another site opens in a new tab, so the street stays where it was)
+  else if (/^https?:/.test(card.dataset.href || '')) window.open(card.dataset.href, '_blank', 'noopener');
   else if (card.dataset.href) location.href = card.dataset.href;
 });
 

@@ -310,7 +310,9 @@ function debate(mats) {
     if (y > A.top - 14) continue;
     for (const [x0, x1] of bays) {
       if (R() > 0.48) continue;
-      const back = inGarden && x1 <= gardX;
+      // (1e-6: the slots' ends add up in floating point, and the last slot
+      // before the wide pier ends a hair past gardX; its window hung at the front)
+      const back = inGarden && x1 <= gardX + 1e-6;
       const gf = back ? zr : front;
       const a0 = Math.max(A.x0 + 0.3, x0 + (back ? 0.06 : 0));
       const a1 = Math.min(A.x1 - 0.3, x1 - (back ? 0.06 : 0));
@@ -322,6 +324,8 @@ function debate(mats) {
   b.box('white', [gardX - 0.02, G.y0, zr], [gardX + 0.5, G.y1, front]);
   b.box('strip', [A.x0 + 0.85, G.y1 - 0.08, A.z1 - 1.5], [gardX - 0.05, G.y1, A.z1 - 0.8]); // (a slim cove line: the whole ceiling lit read as a slab)
   b.railingX('metal', A.x0 + 0.85, gardX - 0.05, A.z1 - 0.38, G.y0, 1.0, 1.4);
+  // (and along its open left side, from the back glass to the corner pier)
+  b.railingZ('metal', zr + 0.2, front, A.x0 + 0.4, G.y0, 1.0, 1.4);
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);

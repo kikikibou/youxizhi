@@ -125,19 +125,21 @@ export const PAGES = [
       title: '辩论',
       // (the lines call debate an adversarial TRPG: "roll for initiative")
       sub: 'Roll for rebuttal.',
-      mark: 'Toolbox',
-      lines: ['开放世界', '角色扮演', '对抗性trpg', '文恨'],
+      // (the watermarks speak French, like home's Enchanté: here a bout's opening call)
+      mark: 'En garde',
+      lines: ['开放世界', '角色扮演', '对抗性TRPG', '文恨'],
     },
     intro: [
       '我之所以喜欢辩论，是因为它有一个独一无二的好处：辩论是大学校园里唯一一种不需要特殊道具、不需要专门场地的团队竞技。',
       '——如果你看到上面这句话之后、本能的第一反应就是在脑海里搜寻反例，那么或许你也会喜欢这项活动。',
     ],
     cards: [
-      { no: '01', title: '攻错', en: 'Touchstone', desc: '竞技辩论AI评委工具', ready: false },
+      // (a site of its own: opens in a new tab, see app.js)
+      { no: '01', title: '攻错', en: 'Touchstone', desc: '竞技辩论AI评委工具', href: 'https://debatestone.com', ready: true },
       // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
       { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', ready: false },
       { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑元素的新型赛制', ready: false },
-      { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了包含更多动效之外没有什么提升点的辩论计时器', tool: 'timer', ready: true },
+      { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了包含更多动效之外没有什么提升点的辩论计时器', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 4, items: [['Straw', '0 g'], ['Steel', '100%'], ['Red Herring', 'trace']] },
@@ -192,8 +194,8 @@ export const PAGES = [
       title: '问答',
       // (before sleep, instead of it, in it: "sleep on it" is to think it over)
       sub: 'Sleep on it. Or don’t.',
-      mark: 'Enigma',
-      lines: ['睡前智力题', '睡不着智力题', '睡梦中智力题', '愉快的单机小游戏'],
+      mark: 'Bonne nuit',
+      lines: ['睡前智力题', '睡不着智力题', '睡梦中智力题'],
     },
     intro: [
       '纯粹的「知识竞答」对我来说有一个问题：它只考验「是否知道」，所以只要我「不知道」，就只剩下无所适从的垃圾时间了。',
@@ -277,8 +279,9 @@ export const PAGES = [
       title: '消遣',
       // (party games: an assembly of people, and the line on a flat-pack box)
       sub: 'Some assembly required.',
-      mark: 'Arcade',
-      lines: ['聚会游戏', '独立游戏开发', '其实跟上一页的区分并不明显所以我还在思考'],
+      // (come to the table: dinner's ready, and the table games are laid out)
+      mark: 'À table',
+      lines: ['聚会游戏', '独立游戏开发'],
     },
     intro: '这里是一些我自己设计的，需要「多人参与」的聚会小游戏。之后也会把一些自己设计的桌游所需要用到的桌游助手也放在这里，欢迎大家尝试。',
     cards: [
@@ -337,7 +340,8 @@ export const PAGES = [
       title: '其他',
       // (whatever you guess about the hobby at the far end, it will be denied)
       sub: 'Any resemblance is purely coincidental.',
-      mark: 'Signal',
+      // (the last page: home's Enchanté answered)
+      mark: 'Au revoir',
       lines: ['除了上面三个大类之外', '另一个同样构成了我的爱好'],
     },
     intro: [
