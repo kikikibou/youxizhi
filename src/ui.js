@@ -14,9 +14,10 @@ export function renderNav(pages, el) {
 const emph = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
 function cardHtml(c, i) {
-  const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : c.href ? `data-href="${esc(c.href)}"` : '';
+  // (a card with a close-up flies there first: see openSpot in app.js)
+  const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : c.spot ? `data-spot="${i}"` : c.href ? `data-href="${esc(c.href)}"` : '';
   const ready = c.go || c.ready;
-  // (a link to another site: VISIT, it opens in a new tab; a page of this one: PLAY)
+  // (a link to another site: VISIT; a page of this one: PLAY)
   const tag = c.go ? 'ENTER →' : c.href && ready ? (/^https?:/.test(c.href) ? 'VISIT →' : 'PLAY →') : ready ? 'OPEN' : 'SOON';
   return `
     <li class="reveal" style="--d:${6 + i}">
@@ -29,6 +30,61 @@ function cardHtml(c, i) {
         <span class="card-tag ${ready ? 'is-ready' : ''}">${tag}</span>
       </button>
     </li>`;
+}
+
+/**
+ * The other site's emblem, for the stub of a boarding pass: gold rays, wide
+ * and narrow in turn, round a gold ring, and in it the black touchstone with
+ * a streak of gold rubbed on it (after debatestone.com's first plate).
+ */
+function emblemSvg() {
+  const [cx, cy] = [75, 92];
+  const rays = Array.from({ length: 24 }, (_, k) => {
+    const a = (k / 24) * Math.PI * 2 + 0.1;
+    const h = k % 2 ? 0.025 : 0.06;
+    const p = (ang, d) => `${(cx + Math.cos(ang) * d).toFixed(1)},${(cy + Math.sin(ang) * d).toFixed(1)}`;
+    return `${p(a - h, 30)} ${p(a + h, 30)} ${p(a + h, 260)} ${p(a - h, 260)}`;
+  });
+  return `<svg class="pass-emblem" viewBox="0 0 150 250" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+    ${rays.map((r, k) => `<polygon points="${r}" fill="${k % 2 ? '#e8b04b' : '#c8862f'}" opacity="${k % 2 ? 0.55 : 0.8}"/>`).join('')}
+    <circle cx="${cx}" cy="${cy}" r="31" fill="#14110d" stroke="#e8b04b" stroke-width="1.6"/>
+    <circle cx="${cx}" cy="${cy}" r="27" fill="none" stroke="#e8b04b" stroke-width="0.6" opacity="0.6"/>
+    <polygon points="57,89 65,79 86,80 94,90 89,104 64,106 55,98" fill="#2a241e"/>
+    <polygon points="65,79 86,80 94,90 80,88 62,87" fill="#40372e"/>
+    <path d="M62 99 Q75 94 88 86" stroke="#e8b04b" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+
+/**
+ * A card's boarding pass (its spot.pass in pages.js), shown where the camera
+ * lands at its close-up: the face in this site's paper and ink, the stub in
+ * the other site's black and gold. 登机 is a real link (so it can open in a
+ * new tab too); app.js plays the leaving first.
+ */
+export function passHtml(c) {
+  const p = c.spot.pass;
+  return `
+    <div class="pass" role="dialog" aria-label="${esc(c.title)} · 登机牌">
+      <div class="pass-main">
+        <p class="pass-head"><span>BOARDING PASS · 登机牌</span><span>${esc(p.flight)}</span></p>
+        <div class="pass-route">
+          <span class="pass-port"><small>FROM</small><b>西柚</b><i>Pamplemousse</i></span>
+          <span class="pass-path" aria-hidden="true"></span>
+          <span class="pass-port"><small>TO</small><b>${esc(c.title)}</b><i>${esc(c.en)}</i></span>
+        </div>
+        <p class="pass-text">${emph(p.text)}</p>
+        <dl class="pass-fields">${p.fields.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+        <div class="pass-actions">
+          <a class="pass-board" href="${esc(c.href)}">登机 <span aria-hidden="true">→</span></a>
+          <button class="pass-back" type="button">返回</button>
+        </div>
+      </div>
+      <div class="pass-stub">
+        ${emblemSvg()}
+        <span class="pass-motto">${esc(p.motto)}</span>
+        <small>${esc(new URL(c.href).host)}</small>
+      </div>
+    </div>`;
 }
 
 /**

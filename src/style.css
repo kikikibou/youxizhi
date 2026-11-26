@@ -1817,3 +1817,339 @@ html[data-theme='night'] .pz b {
   letter-spacing: 0.1em;
   color: var(--orange);
 }
+
+/* -------------------------------------------------------------- close-ups */
+/* A card's close-up (openSpot in app.js): while the camera is up there the
+   page has stepped aside (faded, and out of the pointer's way), and a
+   boarding pass opens where it lands: the face in this site's paper and
+   ink, the stub in the other site's black and gold (攻错: debatestone.com). */
+body.is-spot .stage,
+body.is-spot .stage * {
+  pointer-events: none !important;
+}
+/* (the footer steps aside too, its hint and shade with it) */
+.bottom {
+  transition: opacity 0.8s var(--ease);
+}
+body.is-spot .bottom {
+  opacity: 0;
+}
+.spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pass {
+  --gold: #e8b04b;
+  --amber: #c8862f;
+  --stage: #14110d;
+  --bone: #ece4d2;
+  position: absolute;
+  left: clamp(18px, 4vw, 70px);
+  top: 50%;
+  display: flex;
+  width: min(590px, calc(100vw - 36px));
+  translate: 0 -42%;
+  /* (hidden, not just clear, until it opens: its buttons mustn't catch the
+     clicks meant for the page's cards underneath) */
+  visibility: hidden;
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition: opacity 0.45s var(--ease), transform 0.6s var(--ease), visibility 0s linear 0.6s;
+  filter: drop-shadow(0 10px 22px rgba(var(--shade-rgb), 0.4));
+}
+.spot.is-open .pass {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition: opacity 0.9s var(--ease), transform 1.1s var(--ease), visibility 0s;
+}
+.pass-main {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 20px 16px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-top: 3px solid var(--orange-ink);
+  border-radius: 4px 10px 10px 4px; /* (the rounded inner corners make the notches at the perforation) */
+  transition: background 1.2s var(--ease), color 1.2s var(--ease), opacity 0.4s var(--ease), transform 0.5s var(--ease);
+}
+.pass-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  color: var(--orange-ink);
+}
+html[data-theme='night'] .pass-head {
+  color: var(--orange);
+}
+.pass-route {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+.pass-port {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pass-port small,
+.pass-fields dt {
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  opacity: 0.55;
+}
+.pass-port b {
+  font-family: var(--cn);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+.pass-port i {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.8;
+}
+/* the route: a dashed line out to a small helipad */
+.pass-path {
+  position: relative;
+  flex: 1;
+  align-self: center;
+  margin: 8px 6px 0 2px;
+  border-top: 2px dashed color-mix(in srgb, var(--paper-ink) 35%, transparent);
+}
+.pass-path::after {
+  content: 'H';
+  position: absolute;
+  right: -6px;
+  top: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--stage);
+  box-shadow: 0 0 0 1.5px var(--gold);
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--bone);
+}
+.pass-text {
+  margin: 13px 0 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  opacity: 0.88;
+}
+.pass-fields {
+  display: flex;
+  gap: 24px;
+  margin: 0 0 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--paper-line);
+}
+.pass-fields dd {
+  margin: 4px 0 0;
+  font-family: var(--cn);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.pass-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pass-board,
+.pass-back {
+  padding: 7px 16px;
+  font-family: var(--cn);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+.pass-board {
+  background: var(--orange-ink);
+  border: 1px solid var(--orange-ink);
+  color: #fff;
+  text-decoration: none;
+}
+.pass-back {
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--paper-ink) 40%, transparent);
+  color: var(--paper-ink);
+}
+.pass-board:hover span {
+  margin-left: 3px;
+}
+.pass-back:hover {
+  border-color: var(--paper-ink);
+}
+.pass-stub {
+  position: relative;
+  flex: none;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 12px 10px 15px;
+  overflow: hidden;
+  background: var(--stage);
+  color: var(--bone);
+  border-top: 3px solid var(--gold);
+  border-radius: 10px 4px 4px 10px;
+  transition: transform 0.7s var(--ease), opacity 0.5s var(--ease);
+}
+/* the perforation, in gold */
+.pass-stub::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  z-index: 1;
+  border-left: 2px dashed rgba(232, 176, 75, 0.55);
+}
+.pass-emblem {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* (the rays fade out into the dark at the bottom, under the motto) */
+.pass-stub::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 50%;
+  background: linear-gradient(to top, var(--stage) 42%, transparent);
+}
+.pass-motto,
+.pass-stub small {
+  position: relative;
+  z-index: 1;
+}
+.pass-motto {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.1;
+  color: var(--gold);
+}
+.pass-stub small {
+  font-family: var(--serif);
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9a8f7c;
+}
+/* 登机: the stub tears off and drifts away, the face folds down */
+.spot.is-boarding .pass {
+  pointer-events: none;
+}
+.spot.is-boarding .pass-main {
+  opacity: 0;
+  transform: translate3d(-10px, 10px, 0);
+}
+.spot.is-boarding .pass-stub {
+  opacity: 0;
+  transform: translate3d(26px, -10px, 0) rotate(6deg);
+  transition-delay: 0.08s;
+}
+
+/* Leaving for the card's site: the screen goes to that site's dark, its
+   motto in gold (debatestone.com opens on a dark stage too). */
+.takeoff {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: #14110d;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease-out;
+}
+.takeoff.is-on {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 1.2s ease-in 0.2s;
+}
+.takeoff-motto {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(20px, 2.2vw, 28px);
+  color: #e8b04b;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.takeoff.is-on .takeoff-motto {
+  opacity: 1;
+  transition: opacity 0.8s ease 1.2s;
+}
+
+/* Phones: the pass along the bottom, the stub narrower. */
+@media (max-width: 860px) {
+  .pass {
+    left: 12px;
+    top: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 24px);
+    translate: none;
+  }
+  .pass-main {
+    padding: 12px 14px 13px;
+  }
+  .pass-head {
+    margin-bottom: 9px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+  }
+  .pass-port b {
+    font-size: 22px;
+  }
+  .pass-port i {
+    font-size: 13px;
+  }
+  .pass-text {
+    margin: 9px 0;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .pass-fields {
+    gap: 14px;
+    margin-bottom: 11px;
+    padding-top: 8px;
+  }
+  .pass-fields dd {
+    font-size: 12px;
+  }
+  .pass-stub {
+    width: 96px;
+    padding-bottom: 12px;
+  }
+  .pass-motto {
+    font-size: 13px;
+  }
+  .pass-stub small {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+}

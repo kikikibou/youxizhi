@@ -1,6 +1,6 @@
 import { PAGES } from './pages.js';
 import { World } from './three/World.js';
-import { renderNav, renderPages, renderFooter, Drawer } from './ui.js';
+import { renderNav, renderPages, renderFooter, Drawer, passHtml } from './ui.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
@@ -227,9 +227,29 @@ function setGlyph(g, animate) {
   glyphTimer = setTimeout(show, 260);
 }
 
+/** Bring a page's content in `delay` ms from now (once the camera is nearly there). */
+function showPage(idx, delay) {
+  setTimeout(() => {
+    if (current !== idx || spot) return;
+    const el = pageEls[idx];
+    el.classList.add('is-active');
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (current === idx && !spot) el.classList.add('is-in');
+      }),
+    );
+    // After the entrance, let the text drop its own compositing layer: layered
+    // text loses sub-pixel anti-aliasing on Windows and looks softer.
+    setTimeout(() => {
+      if (current === idx && !spot) el.classList.add('is-settled');
+    }, 1700);
+  }, delay);
+}
+
 function go(id, mode = 'fly') {
   const idx = ids.indexOf(id);
   if (idx === current) return;
+  if (spot) dropSpot(); // (another page chosen from a close-up: fly there instead)
   const prev = current;
   current = idx;
   lastNav = performance.now();
@@ -249,7 +269,7 @@ function go(id, mode = 'fly') {
 
   bottom.classList.add('is-swapping');
   setTimeout(() => {
-    if (current !== idx) return;
+    if (current !== idx || spot) return; // (at a close-up the footer stays away: closeSpot brings it)
     renderFooter(PAGES[idx], bottom);
     bottom.classList.remove('is-swapping');
   }, mode === 'jump' ? 0 : 900);
@@ -264,23 +284,134 @@ function go(id, mode = 'fly') {
     delay = world.flight.duration * 1000 * 0.62;
   }
 
-  setTimeout(() => {
-    if (current !== idx) return;
-    const el = pageEls[idx];
-    el.classList.add('is-active');
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
-    // After the entrance, let the text drop its own compositing layer: layered
-    // text loses sub-pixel anti-aliasing on Windows and looks softer.
-    setTimeout(() => {
-      if (current === idx) el.classList.add('is-settled');
-    }, 1700);
-  }, delay);
+  showPage(idx, delay);
 }
 
 window.addEventListener('hashchange', () => go(currentId()));
 
+/* -------------------------------------------------------------- close-ups */
+// A card with a `spot` (pages.js) doesn't leave at once: its page steps
+// aside, the camera cranes up to a place on the building, and a boarding
+// pass opens there. 返回 (or Esc) flies back down to the page. 登机 tears off
+// the stub, drops the camera into the spot and, the screen gone to the other
+// site's dark, goes there in this tab (Back returns to the pass).
+const spotEl = $('#spot');
+const takeoff = $('#takeoff');
+let spot = null; // { idx, c, landed } while at a close-up
+
+/** `back`: coming back from the card's site, the camera rises again from the spot. */
+function openSpot(idx, c, back = false) {
+  spot = { idx, c, landed: false };
+  if (back) world.placeAtDive(c.spot);
+  const el = pageEls[idx];
+  if (el.contains(document.activeElement)) document.activeElement.blur();
+  el.classList.remove('is-in', 'is-settled');
+  bottom.classList.add('is-swapping');
+  document.body.classList.add('is-spot');
+  spotEl.innerHTML = passHtml(c);
+  spotEl.setAttribute('aria-hidden', 'false');
+  world.flyToSpot(c.spot, back ? 2 : undefined).then(() => {
+    if (spot?.c !== c || spot.landed) return;
+    spot.landed = true;
+    spotEl.classList.add('is-open');
+  });
+}
+
+/** Leave a close-up's pass behind (the camera is about to fly elsewhere). */
+function dropSpot() {
+  spot = null;
+  spotEl.classList.remove('is-open', 'is-boarding');
+  spotEl.setAttribute('aria-hidden', 'true');
+  if (spotEl.contains(document.activeElement)) document.activeElement.blur();
+  document.body.classList.remove('is-spot');
+}
+
+/** 返回: fly back down to the page. */
+function closeSpot() {
+  if (!spot) return;
+  const idx = spot.idx;
+  dropSpot();
+  world.flyTo(idx);
+  const delay = world.flight.duration * 1000;
+  setTimeout(() => {
+    if (current !== idx || spot) return;
+    renderFooter(PAGES[idx], bottom);
+    bottom.classList.remove('is-swapping');
+  }, delay * 0.7);
+  showPage(idx, delay * 0.62);
+}
+
+/** 登机: tear off the stub, drop into the spot, go dark, leave. */
+function board() {
+  if (!spot?.landed) return;
+  const c = spot.c;
+  spot.landed = false;
+  spotEl.classList.add('is-boarding');
+  takeoff.querySelector('.takeoff-motto').textContent = c.spot.pass.motto;
+  // (so that Back, even if it loads this site afresh, comes back to this pass)
+  try {
+    sessionStorage.setItem(SPOT_KEY, JSON.stringify({ page: ids[spot.idx], card: PAGES[spot.idx].cards.indexOf(c) }));
+  } catch {
+    /* storage unavailable */
+  }
+  setTimeout(() => {
+    if (spot?.c !== c) return;
+    world.dive();
+    takeoff.classList.add('is-on');
+    setTimeout(() => {
+      if (spot?.c === c) location.assign(c.href);
+    }, 2100);
+  }, 380);
+}
+
+spotEl.addEventListener('click', (e) => {
+  if (e.target.closest('.pass-back')) closeSpot();
+  const boardLink = e.target.closest('.pass-board');
+  // (a modified click, e.g. into a new tab, goes the browser's own way)
+  if (boardLink && e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) {
+    e.preventDefault();
+    board();
+  }
+});
+// The current page's own name in the nav (or Esc) also flies back down.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-nav]');
+  if (spot && a && a.dataset.nav === ids[current]) closeSpot();
+});
+// Back from the other site with this page kept as it was: the camera rises
+// back up from the pad and the pass is there again.
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  takeBackSpot();
+  takeoff.classList.remove('is-on');
+  if (!spot) return;
+  world.flyToSpot(spot.c.spot, 1.6).then(() => {
+    if (!spot) return;
+    spot.landed = true;
+    spotEl.classList.remove('is-boarding');
+    spotEl.classList.add('is-open');
+  });
+});
+
+// Back from the other site with this one loaded afresh: board() left a note
+// of the pass. (Read once; only a Back or Forward to the same page uses it.)
+const SPOT_KEY = 'youxizhi-spot';
+function takeBackSpot() {
+  let s = null;
+  try {
+    s = JSON.parse(sessionStorage.getItem(SPOT_KEY) || 'null');
+    sessionStorage.removeItem(SPOT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+  const how = performance.getEntriesByType?.('navigation')[0]?.type;
+  if (!s || how !== 'back_forward' || s.page !== currentId()) return null;
+  const c = PAGES[ids.indexOf(s.page)]?.cards[s.card];
+  return c?.spot ? c : null;
+}
+
 function step(dir) {
-  if (drawer.isOpen) return;
+  if (drawer.isOpen || spot) return;
   if (performance.now() - lastNav < 1400) return;
   const next = (current + dir + ids.length) % ids.length;
   location.hash = `#/${ids[next]}`;
@@ -298,6 +429,7 @@ window.addEventListener(
 
 window.addEventListener('keydown', (e) => {
   if (drawer.isOpen) return;
+  if (spot && e.key === 'Escape') return closeSpot();
   if (e.target.closest?.('input, textarea')) return; // (typing, e.g. in a poem's blank)
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') step(1);
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') step(-1);
@@ -326,8 +458,7 @@ stage.addEventListener('click', (e) => {
   if (!card || card.disabled) return;
   if (card.dataset.go) location.hash = `#/${card.dataset.go}`;
   else if (card.dataset.tool && TOOLS[card.dataset.tool]) drawer.open(TOOLS[card.dataset.tool]);
-  // (another site opens in a new tab, so the street stays where it was)
-  else if (/^https?:/.test(card.dataset.href || '')) window.open(card.dataset.href, '_blank', 'noopener');
+  else if (card.dataset.spot && !spot) openSpot(current, PAGES[current].cards[card.dataset.spot]);
   else if (card.dataset.href) location.href = card.dataset.href;
 });
 
@@ -356,7 +487,11 @@ function frame(now) {
 (async () => {
   await world.buildTypography();
   world.warmUp();
-  go(currentId(), 'intro');
+  const back = takeBackSpot();
+  if (back) {
+    go(currentId(), 'jump');
+    openSpot(current, back, true);
+  } else go(currentId(), 'intro');
   requestAnimationFrame((t) => {
     last = lastRaw = t;
     frame(t);

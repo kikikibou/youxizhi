@@ -651,6 +651,7 @@ export class World {
     this.baseQuat.copy(v.quat);
     this.baseFov = v.fov;
     this.flight = null;
+    this.closeUp = null;
     this.sites.forEach((s, i) => (s.activity = i === index ? 1 : 0));
   }
 
@@ -663,10 +664,56 @@ export class World {
     mid.lerp(new THREE.Vector3(0, mid.y, 0), 0.25);
     mid.y += 5 + dist * 0.12;
     this.active = index;
+    this.closeUp = null; // (back from a close-up, if the camera was at one)
+    return this.fly(from, to, mid, duration * (0.75 + Math.min(dist, 110) / 440));
+  }
+
+  /** Start a flight along a curve through `mid` (see updateCamera). */
+  fly(from, to, mid, duration) {
     if (this.flight) this.flight.resolve();
     return new Promise((resolve) => {
-      this.flight = { from, to, mid, t: 0, duration: duration * (0.75 + Math.min(dist, 110) / 440), resolve };
+      this.flight = { from, to, mid, t: 0, duration, resolve };
     });
+  }
+
+  /**
+   * A card's close-up (its `spot` in pages.js): from the page's view the
+   * camera cranes up to a view of the page's building given in its local
+   * frame (`portrait`: the view for a screen held upright). Meanwhile the
+   * page's titles and reveal fade (see update). flyTo() brings it back.
+   */
+  flyToSpot(spot, duration = 3.4) {
+    const v = this.camera.aspect < 0.9 && spot.portrait ? spot.portrait : spot.view;
+    const group = this.sites[this.active].group;
+    const to = this.viewFor(group, v);
+    const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
+    // (straight up the tower first, then over to the view: the curve's
+    // middle point stands near the start, a little above the end)
+    const mid = from.pos.clone().lerp(to.pos, 0.3);
+    mid.y = to.pos.y + 4;
+    this.closeUp = { dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
+    return this.fly(from, to, mid, duration);
+  }
+
+  /** Put the camera where dive() ends at a close-up (back from the card's site, to rise again). */
+  placeAtDive(spot) {
+    const group = this.sites[this.active].group;
+    const v = this.viewFor(group, this.camera.aspect < 0.9 && spot.portrait ? spot.portrait : spot.view);
+    const target = group.localToWorld(new THREE.Vector3(...spot.dive));
+    this.basePos.copy(v.pos).sub(target).setLength(2.6).add(target);
+    this.baseQuat.setFromRotationMatrix(new THREE.Matrix4().lookAt(this.basePos, target, UP));
+    this.baseFov = v.fov - 6;
+    this.flight = null;
+  }
+
+  /** From a close-up, drop towards its `dive` point (leaving for the card's site). */
+  dive(duration = 1.5) {
+    const target = this.closeUp.dive;
+    const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
+    const pos = from.pos.clone().sub(target).setLength(2.6).add(target);
+    const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
+    const to = { pos, quat, fov: this.baseFov - 6 };
+    return this.fly(from, to, from.pos.clone().lerp(pos, 0.5), duration);
   }
 
   /** Opening shot: start high above the plaza and descend into the page. */
@@ -1206,7 +1253,8 @@ export class World {
 
     const p = this.progress;
     this.sites.forEach((site, i) => {
-      const on = i === this.active && p > 0.62 ? 1 : 0;
+      // (at a card's close-up the page's titles and reveal stand down)
+      const on = i === this.active && p > 0.62 && !this.closeUp ? 1 : 0;
       site.activity = damp(site.activity, on, on ? 2.6 : 5, dt);
       if (this.quality.ribbons) site.ribbon?.update(this.time + i * 3.1);
       site.plane?.update(this.time);

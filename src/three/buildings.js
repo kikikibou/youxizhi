@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createTree } from './props.js';
 
-const THIN = new Set(['pane', 'paneLit', 'frosted', 'blind', 'beacon']);
+const THIN = new Set(['pane', 'paneLit', 'frosted', 'blind', 'beacon', 'gold', 'bone']);
 
 /** A small seeded random generator (mulberry32): the same building on every visit. */
 function seeded(seed) {
@@ -107,6 +107,20 @@ export class Builder {
   geo(key, geometry, x = 0, y = 0, z = 0) {
     geometry.translate(x, y, z);
     return this.push(key, geometry);
+  }
+
+  /** A flat polygon lying at height y, its corners [x, z] (paint on a floor). */
+  flat(key, points, y) {
+    const g = new THREE.ShapeGeometry(new THREE.Shape(points.map(([x, z]) => new THREE.Vector2(x, -z))));
+    g.rotateX(-Math.PI / 2);
+    return this.geo(key, g, 0, y, 0);
+  }
+
+  /** A flat ring lying at height y round (cx, cz). */
+  ring(key, cx, cz, y, r0, r1, segments = 64) {
+    const g = new THREE.RingGeometry(r0, r1, segments);
+    g.rotateX(-Math.PI / 2);
+    return this.geo(key, g, cx, y, cz);
   }
 
   /** Window that sits flush on a facade facing +Z at depth z. */
@@ -239,6 +253,82 @@ export const GARDENS = {
   b: { y0: 5.3 + 2 * (B_GH + 0.95), y1: 5.3 + 2 * (B_GH + 0.95) + 2 * B_GH + 0.95, back: 3.2 }, // its 3rd and 4th
 };
 
+// The helipad on the affirmative tower's roof: 攻错's card flies the camera up
+// here before it leaves for debatestone.com (its `spot` in pages.js). From
+// the plaza it stays out of sight behind the crown; from above it is that
+// site's first plate laid on a roof: the black touchstone in a gold ring,
+// with gold rays painted out across the roof round it.
+export const HELIPAD = { x: -11.6, z: -10.2, y: 39.25, r: 4.4 };
+
+/** `poly` ([x, z] corners, convex) cut down to the rectangle x0..x1 × z0..z1. */
+function clipRect(poly, [x0, z0, x1, z1]) {
+  for (const [ax, v, keepAbove] of [[0, x0, true], [0, x1, false], [1, z0, true], [1, z1, false]]) {
+    const inside = (p) => (keepAbove ? p[ax] >= v : p[ax] <= v);
+    const out = [];
+    poly.forEach((p, i) => {
+      const q = poly[(i + 1) % poly.length];
+      if (inside(p)) out.push(p);
+      if (inside(p) !== inside(q)) {
+        const t = (v - p[ax]) / (q[ax] - p[ax]);
+        out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+      }
+    });
+    poly = out;
+    if (!poly.length) break;
+  }
+  return poly;
+}
+
+/** HELIPAD, on tower A's roof (A: the tower's box, see debate()). */
+function helipad(b, A) {
+  const { x: cx, z: cz, y, r } = HELIPAD;
+  const roof = A.top;
+  // Gold rays painted across the roof from under the deck, wide and narrow
+  // in turn, out to the roof's edges.
+  const edge = [A.x0 + 0.1, A.z0 + 0.1, A.x1 - 0.1, A.z1 + 0.5];
+  const at = (a, d) => [cx + Math.cos(a) * d, cz + Math.sin(a) * d];
+  for (let k = 0; k < 20; k++) {
+    const a = (k / 20) * Math.PI * 2 + 0.09;
+    const half = k % 2 ? 0.026 : 0.062;
+    const ray = clipRect([at(a - half, r - 0.4), at(a + half, r - 0.4), at(a + half, 40), at(a - half, 40)], edge);
+    if (ray.length >= 3) b.flat('gold', ray, roof + 0.02);
+  }
+  // The deck on short legs over a low plant room: a white slab with the
+  // black stone laid on it, a gold touchdown ring, a fine gold rim, a bone H
+  // (upright as seen from the plaza side, where the camera comes up).
+  b.box('whiteShade', [cx - 2.6, roof, cz - 2.4], [cx + 2.6, y - 0.4, cz + 2.4]);
+  for (let k = 0; k < 8; k++) {
+    const [lx, lz] = at(((k + 0.5) / 8) * Math.PI * 2, r - 0.8);
+    b.box('metal', [lx - 0.12, roof, lz - 0.12], [lx + 0.12, y - 0.38, lz + 0.12]);
+  }
+  b.cyl('white', cx, cz, y - 0.4, y - 0.04, r, 48);
+  b.cyl('stone', cx, cz, y - 0.12, y, r - 0.22, 48);
+  b.ring('gold', cx, cz, y + 0.012, 2.75, 3.15);
+  b.ring('gold', cx, cz, y + 0.012, r - 0.5, r - 0.42);
+  const [hw, hh, t] = [0.8, 1.2, 0.19];
+  for (const s of [-1, 1]) b.box('bone', [cx + s * hw - t, y, cz - hh], [cx + s * hw + t, y + 0.01, cz + hh]);
+  b.box('bone', [cx - hw + t, y, cz - t], [cx + hw - t, y + 0.01, cz + t]);
+  // Rim lights (lit at night), and three steps up from the roof on the left.
+  for (let k = 0; k < 16; k++) {
+    const [lx, lz] = at((k / 16) * Math.PI * 2, r - 0.12);
+    b.cyl('padLight', lx, lz, y - 0.04, y + 0.07, 0.07, 8);
+  }
+  for (let s = 1; s <= 3; s++) b.box('white', [cx - r - s * 0.38, roof, cz - 0.6], [cx - r - (s - 1) * 0.38 + 0.05, roof + 1.21 - s * 0.3, cz + 0.6]);
+  // A windsock in the back corner: accent and white bands, tapering
+  // downwind (towards the front left) and drooping a little.
+  const [wx, wz, wy] = [-7.3, -13.9, roof + 4.2];
+  b.cyl('metal', wx, wz, roof, wy + 0.1, 0.06, 8);
+  const dir = new THREE.Vector3(-0.62, -0.3, 0.72).normalize();
+  const turn = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  const rad = (s) => 0.3 - s * 0.085;
+  for (let k = 0; k < 4; k++) {
+    const g = new THREE.CylinderGeometry(rad(k + 1), rad(k), 0.46, 12);
+    g.applyQuaternion(turn);
+    const mid = dir.clone().multiplyScalar(0.12 + (k + 0.5) * 0.46);
+    b.geo(k % 2 ? 'white' : 'orange', g, wx + mid.x, wy + mid.y, wz + mid.z);
+  }
+}
+
 function debate(mats) {
   // ('pane': a window lit at night only, laid on the glass, see THIN)
   const b = new Builder({ ...mats, pane: mats.paneNight });
@@ -329,7 +419,6 @@ function debate(mats) {
   // Crown with an orange slot.
   b.box('white', [A.x0, A.top - 2.6, A.z0], [A.x1, A.top, A.z1 + 0.6]);
   b.box('orange', [A.x0 + 1, A.top - 1.65, A.z1 + 0.6], [A.x1 - 1, A.top - 1.25, A.z1 + 0.7]);
-  b.box('whiteShade', [-16, A.top, -12], [-10, A.top + 2.2, -7]);
   // Roof: a railing round the front corner, a water tank on legs, plant
   // boxes, and a mast with a red warning light (blinks at night). (Seen from
   // the plaza, steeply up: only what stands near the front edge shows over
@@ -347,6 +436,7 @@ function debate(mats) {
   b.box('metal', [mx - 0.7, A.top + 6.2, mz - 0.03], [mx + 0.7, A.top + 6.27, mz + 0.03]);
   b.box('metal', [mx - 0.45, A.top + 7.6, mz - 0.03], [mx + 0.45, A.top + 7.67, mz + 0.03]);
   b.cyl('beacon', mx, mz, A.top + 9, A.top + 9.35, 0.17, 10);
+  helipad(b, A);
 
   /* --- Negative tower (right): lower, horizontal bands, rounded corner --- */
   // (Its front stands 2 m proud of the bridge arms, so the right arm runs

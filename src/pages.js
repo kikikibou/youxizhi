@@ -28,6 +28,8 @@
  *               small caps, Chinese in the Chinese sans).
  * intro         a paragraph, or several: on a short screen the ones after the
  *               first fold away behind a 展开 link (see fitPoems in ui.js)
+ * cards[].spot  (optional) a close-up before a card's href: where the camera
+ *               flies and the boarding pass shown there (see 攻错 below)
  * panelTop      (optional) the highest the content panel's top may stand, as a
  *               share of the window's height, for a title standing above it
  * footer        the strip along the bottom: left { title, stars, items },
@@ -134,8 +136,30 @@ export const PAGES = [
       '——如果你看到上面这句话之后、本能的第一反应就是在脑海里搜寻反例，那么或许你也会喜欢这项活动。',
     ],
     cards: [
-      // (a site of its own: opens in a new tab, see app.js)
-      { no: '01', title: '攻错', en: 'Touchstone', desc: '竞技辩论AI评委工具', href: 'https://debatestone.com', ready: true },
+      {
+        no: '01',
+        title: '攻错',
+        en: 'Touchstone',
+        desc: '竞技辩论AI评委工具',
+        href: 'https://debatestone.com',
+        ready: true,
+        // Before leaving, a close-up (see openSpot in app.js): the camera
+        // cranes up to the helipad on this tower's roof (HELIPAD in
+        // buildings.js, painted in 攻错's own black and gold) and a boarding
+        // pass opens there; boarding dives into the pad and on to the site.
+        // (view / portrait: in the building's frame like scene.view; dive: the pad's centre)
+        spot: {
+          view: { pos: [-13.5, 60, 3], target: [-17.2, 38.5, -9.6], fov: 44 },
+          portrait: { pos: [-11.4, 55, -1.5], target: [-11.5, 35.2, -5.2], fov: 50 },
+          dive: [-11.6, 39.25, -10.2],
+          pass: {
+            flight: 'TS 001',
+            text: '贴进一场比赛的内容，挑一位评委——白纸裁、心证裁、交锋裁……——拿回一份判词：胜负与分票、个人 MVP、场上发生了什么，以及给双方的改进建议。',
+            fields: [['GATE', 'H'], ['SEAT', '正方 / 反方'], ['JUDGES', '8 位任选']],
+            motto: 'Saxa loquuntur.', // (攻错's own motto: the stones speak)
+          },
+        },
+      },
       // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
       { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', ready: false },
       { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑元素的新型赛制', ready: false },

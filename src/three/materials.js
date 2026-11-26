@@ -90,7 +90,16 @@ export function createMaterials() {
   const skyWin = new THREE.MeshStandardMaterial({ color: 0x8f98a3, roughness: 0.8 });
   const skyWinLit = new THREE.MeshStandardMaterial({ color: 0x8f98a3, roughness: 0.8, emissive: new THREE.Color(0xffb46a), emissiveIntensity: 0 });
 
-  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit };
+  // 攻错's own colours (debatestone.com), painted on the helipad its card
+  // flies to (see debate() in buildings.js): gold leaf, the black touchstone,
+  // bone. Kept out of the colour schemes: they belong to the other site.
+  const gold = new THREE.MeshStandardMaterial({ color: 0xe8b04b, roughness: 0.42, metalness: 0.35, emissive: new THREE.Color(0xc8862f), emissiveIntensity: 0 });
+  const stone = new THREE.MeshStandardMaterial({ color: 0x211c17, roughness: 0.92 });
+  const bone = new THREE.MeshStandardMaterial({ color: 0xece4d2, roughness: 0.85 });
+  // The pad's rim lights: a pale gold by day, lit at night.
+  const padLight = new THREE.MeshStandardMaterial({ color: 0xf3d79a, roughness: 0.4, emissive: new THREE.Color(0xffc45e), emissiveIntensity: 0 });
+
+  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit, gold, stone, bone, padLight };
 }
 
 /** Blades and petals sway in the wind, as far as their uv.y says (0 at the root). */
@@ -120,4 +129,6 @@ export function updateMaterials(m, night) {
   m.blind.emissiveIntensity = night * 0.85;
   m.beacon.emissiveIntensity = night * (m.beacon.userData.on ? 5 : 0.25);
   m.skyWinLit.emissiveIntensity = night * 0.9;
+  m.gold.emissiveIntensity = night * 0.45;
+  m.padLight.emissiveIntensity = 0.15 + night * 3.5;
 }

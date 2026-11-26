@@ -64,7 +64,13 @@
           <div class="strip-rule strip-rule--bottom"><span class="hint" id="hint">滚轮 / ← → 切换建筑</span></div>
         </div>
       </footer>
+
+      <!-- A card's close-up: the boarding pass where the camera lands (app.js fills it in) -->
+      <section class="spot" id="spot" aria-hidden="true"></section>
     </div>
+
+    <!-- Leaving for a card's site: the screen goes to that site's dark (see board() in app.js) -->
+    <div class="takeoff" id="takeoff" aria-hidden="true"><span class="takeoff-motto"></span></div>
 
     <aside class="drawer" id="drawer" aria-hidden="true">
       <div class="drawer-scrim" data-close></div>
