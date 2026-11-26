@@ -20,6 +20,8 @@ export default defineConfig({
         // 试运行时的旧地址，跳到 /dgxg/
         dgxgB: 'dgxg/b/index.html',
         dgxgBPreview: 'dgxg/b/preview.html',
+        // 解码与三国知识问答: a page of its own at /sgjm/ (no three.js, no passphrase gate)
+        sgjm: 'sgjm/index.html',
       },
     },
   },

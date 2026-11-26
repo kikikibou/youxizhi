@@ -267,11 +267,12 @@ export const PAGES = [
       '相比之下，我更喜欢**智力竞答**——依然要求知识量，但也考验**能不能搞懂**。开动脑筋、驱使策略，一起享受这份活动大脑的乐趣吧。',
     ],
     cards: [
-      { no: '01', title: '人造语言的三国问答', en: 'Conlang Kingdoms', desc: '很久以前出的一套题，是板块建成前的占位…', ready: false },
+      // (a page of its own, /sgjm/: src/sgjm/)
+      { no: '01', title: '解码与三国知识问答', en: 'Kingdoms, Decoded', desc: '连题目都要先破译的三国知识问答', href: 'sgjm/', ready: true },
       { no: '02', title: '三园警察', en: 'Mole Patrol', desc: '考验反应速度、知识量，与直觉的打地鼠小游戏', ready: false },
       { no: '03', title: '切半', en: 'Bisect', desc: '一个考验地理知识与常识的小游戏', ready: false },
       // (until the old ones move in, the stand-in puzzle from the first prototype)
-      { no: '04', title: '每周睡前智力题', en: 'Weekly Bedtime Puzzle', desc: '新游戏更新不出来时，会在这里用旧作拖延时间', tool: 'daily', ready: true },
+      { no: '04', title: '每周睡前智力题', en: 'Weekly Bedtime Puzzle', desc: '新游戏更新不出来时，会在这里用旧作拖延时间', tool: 'daily', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 5, items: [['Drunk Bird', '34%'], ['Goats', '⅔'], ['Camels', '17 + 1'], ['Pigeons', 'n + 1']] },
