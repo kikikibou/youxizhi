@@ -177,12 +177,11 @@ export function mountDebug(world) {
 
   const report = () => {
     const p = world.perf;
-    const r = world.renderer;
-    const size = r.getDrawingBufferSize(world._size);
+    const size = world.renderSize(world._size); // (the 3D's own pixels; the canvas may be finer)
     return [
       `FPS ${p.fps.toFixed(1)}，平均帧 ${p.frameMs.toFixed(1)} ms，最慢 ${p.worstMs.toFixed(1)} ms`,
       `GPU ${p.gpuMs == null ? '无法计时' : p.gpuMs.toFixed(1) + ' ms'}，显示器约 ${Math.round(p.refreshHz)} Hz`,
-      `像素比 ${world.pixelRatio.toFixed(2)}（屏幕 ${world.dpr}），画布 ${size.x}×${size.y}`,
+      `像素比 ${world.pixelRatio.toFixed(2)}（屏幕 ${world.dpr}），3D ${size.x}×${size.y}`,
       `绘制 ${p.calls} 次，${(p.triangles / 1e6).toFixed(2)} M 三角形`,
       `设置 ${JSON.stringify(world.quality)}`,
       `浏览器 ${navigator.userAgent}`,
@@ -240,7 +239,7 @@ export function mountDebug(world) {
 
   function tick() {
     const p = world.perf;
-    const size = world.renderer.getDrawingBufferSize(world._size);
+    const size = world.renderSize(world._size);
     fpsEl.innerHTML = `${p.fps ? p.fps.toFixed(0) : '--'}<small>fps</small>`;
     subEl.textContent = `${p.frameMs.toFixed(1)} ms · ${Math.round((world.pixelRatio / world.dpr) * 100)}%`;
     const pct = Math.round((world.pixelRatio / world.dpr) * 100);
@@ -249,7 +248,7 @@ export function mountDebug(world) {
       `帧 <b>${p.frameMs.toFixed(1)}</b> ms，最慢 <b>${p.worstMs.toFixed(1)}</b> ms`,
       `GPU ${gpu}，显示器 ≈ <b>${Math.round(p.refreshHz) || '…'}</b> Hz`,
       `分辨率 <b>${pct}%</b>（像素比 ${world.pixelRatio.toFixed(2)} / 屏幕 ${world.dpr}）`,
-      `画布 ${size.x}×${size.y} · 绘制 ${p.calls} 次 · ${(p.triangles / 1e6).toFixed(2)}M 面`,
+      `3D ${size.x}×${size.y} · 绘制 ${p.calls} 次 · ${(p.triangles / 1e6).toFixed(2)}M 面`,
     ]
       .map((line) => `<div>${line}</div>`)
       .join('');

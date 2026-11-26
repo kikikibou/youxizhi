@@ -33,6 +33,9 @@ const SHARED = {
   uInkNight: { value: new THREE.Vector3(1, 1, 1) },
   uHaloDay: { value: new THREE.Vector3(1, 1, 1) },
   uHaloNight: { value: new THREE.Vector3(0, 0, 0) },
+  // the canvas in pixels: the reveal mask is in the 3D's own, maybe coarser
+  // (World.renderSize), so a pixel here is found in it by its share of the screen
+  uViewRes: { value: new THREE.Vector2(1, 1) },
 };
 
 const vertexShader = /* glsl */ `
@@ -51,13 +54,14 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uInkNight;
   uniform vec3 uHaloDay;
   uniform vec3 uHaloNight;
+  uniform vec2 uViewRes;
   varying vec2 vUv;
   ${MASK_GLSL}
   void main() {
     vec2 t = uSolid > 0.5 ? vec2(1.0, 0.0) : texture2D(tInk, vUv).rg;
     // (inside the reveal, the other time: so a poem standing on the split's
     // other side, pages.js poemTone, needs nothing of its own here)
-    float m = mix(uNight, 1.0 - uNight, beamCoverage(gl_FragCoord.xy));
+    float m = mix(uNight, 1.0 - uNight, beamCoverage(gl_FragCoord.xy / uViewRes * uMaskRes));
     vec3 ink = mix(uInkDay, uInkNight, m);
     vec3 halo = mix(uHaloDay, uHaloNight, m);
     float ah = t.g * ${HALO.toFixed(2)} * (1.0 - t.r);
@@ -101,6 +105,21 @@ function runsOf(el) {
     }
   }
   return runs;
+}
+
+/**
+ * An element's box, grown to take in its text where that runs out of it (a
+ * line longer than the poem runs out leftwards, see .poem-lines in style.css).
+ */
+function boundsOf(el) {
+  const a = el.getBoundingClientRect();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const b = range.getBoundingClientRect();
+  if (!b.width || !a.width) return a;
+  const left = Math.min(a.left, b.left);
+  const top = Math.min(a.top, b.top);
+  return { left, top, width: Math.max(a.right, b.right) - left, height: Math.max(a.bottom, b.bottom) - top };
 }
 
 class Part {
@@ -177,7 +196,7 @@ class Part {
 
   /** Where the part is this frame (css px), as opaque as it is; false when it can't be seen. */
   place(ratio) {
-    const box = this.el.getBoundingClientRect();
+    const box = this.solid ? this.el.getBoundingClientRect() : boundsOf(this.el);
     const opacity = parseFloat(getComputedStyle(this.reveal).opacity);
     if (!box.width || !box.height || opacity < 0.004) return false;
     const pad = this.solid ? 0 : PAD;
@@ -223,6 +242,7 @@ export class PoemInk {
   render(renderer, night) {
     const ratio = renderer.getPixelRatio();
     const size = renderer.getSize(new THREE.Vector2());
+    renderer.getDrawingBufferSize(SHARED.uViewRes.value);
     let any = false;
     for (const { page, poem, parts } of this.pages) {
       // (the page shown, or fading out; its poem not put aside for the panel, nor hidden on a phone)

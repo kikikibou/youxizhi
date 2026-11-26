@@ -769,7 +769,11 @@ html.poem-ink .poem-rule {
   line-height: 1.6;
   letter-spacing: 0.02em;
 }
+/* (one line: a longer one runs out leftwards, like the poem's own lines) */
 .poem-small {
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
   font-family: 'Oswald', 'Noto Sans SC Variable', sans-serif;
   font-size: 13px;
   font-weight: 500; /* (Chinese at 400 read thin against the scene) */

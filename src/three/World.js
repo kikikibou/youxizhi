@@ -67,15 +67,18 @@ const finalShader = {
     ${MASK_GLSL}
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
+      // (the 3D is drawn at its own resolution, which "auto" may set below
+      // the canvas's: the reveal mask and the light source are in its pixels)
+      vec2 px = vUv * uMaskRes;
       vec4 scene = texture2D(tScene, vUv);
       vec3 c = scene.rgb;
       // (alpha below 1 marks a lit sign's letters: less glow lands on them)
       if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb * mix(0.25, 1.0, clamp(scene.a, 0.0, 1.0));
       if (uMix > 0.5) {
-        float k = beamCoverage(gl_FragCoord.xy);
+        float k = beamCoverage(px);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
-      c += uSunColor * uSun * exp(-length(gl_FragCoord.xy - uSunPos) / uSunR);
+      c += uSunColor * uSun * exp(-length(px - uSunPos) / uSunR);
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -138,7 +141,7 @@ export class World {
       ceilingAt: 0,
       log: [],
     };
-    r.setPixelRatio(this.pixelRatio);
+    r.setPixelRatio(this.canvasRatio);
     r.info.autoReset = false; // counted per frame (all passes) for the debug panel
     this.gpu = new GpuTimer(r);
     r.setSize(window.innerWidth, window.innerHeight, false);
@@ -263,6 +266,22 @@ export class World {
   }
   get minPixelRatio() {
     return Math.min(this.dpr, this.lowPower ? 0.8 : 1);
+  }
+  /**
+   * The canvas's own pixel ratio. The 3D is drawn at pixelRatio (which
+   * "auto" turns down when the GPU can't keep up) and scaled up in the final
+   * pass, but the canvas stays at the screen's (up to 2), so what is drawn
+   * over the finished frame (the poems, poemink.js) stays sharp. (Phones,
+   * which don't show the poems, keep the canvas at the 3D's.)
+   */
+  get canvasRatio() {
+    return this.lowPower ? this.pixelRatio : this.maxPixelRatio;
+  }
+
+  /** The 3D's own size in pixels (its render targets', the mask's), into v. */
+  renderSize(v) {
+    this.renderer.getSize(v);
+    return v.set(Math.floor(v.x * this.pixelRatio), Math.floor(v.y * this.pixelRatio));
   }
 
   /* ------------------------------------------------------------------ */
@@ -476,7 +495,7 @@ export class World {
 
   buildPost() {
     const r = this.renderer;
-    const size = r.getDrawingBufferSize(new THREE.Vector2());
+    const size = this.renderSize(new THREE.Vector2());
     this.msaaSamples = this.lowPower ? 2 : 4;
     const samples = this.msaaSamples;
     this.sceneRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
@@ -783,7 +802,7 @@ export class World {
     this.camera.updateProjectionMatrix();
     this.fitClusters();
     this.renderer.setSize(w, h, false);
-    const size = this.renderer.getDrawingBufferSize(this._size);
+    const size = this.renderSize(this._size);
     this.sceneRT.setSize(size.x, size.y);
     this.otherRT.setSize(size.x, size.y);
     this.maskRT.setSize(size.x, size.y);
@@ -812,7 +831,7 @@ export class World {
 
   setPixelRatio(pr) {
     this.pixelRatio = pr;
-    this.renderer.setPixelRatio(pr);
+    this.renderer.setPixelRatio(this.canvasRatio);
     this.resize(false);
     this.perf.settleUntil = performance.now() + 1500; // judge the new size afresh
     this.perf.slow = 0;
@@ -968,7 +987,7 @@ export class World {
    * render), and the on-screen position/size of its glowing light source.
    */
   updateReveal(site) {
-    const size = this.renderer.getDrawingBufferSize(this._size);
+    const size = this.renderSize(this._size);
     const cam = this.camera;
     if (site.device.screenBox) site.device.screenBox(size, site.box);
     else this.maskBox(site, size);
