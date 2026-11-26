@@ -529,6 +529,26 @@ describe('第二阶段（§6）', () => {
     expect(free.size).toBe(2); // 不指定时两个词都可能当大国的词
   });
 
+  it('要猜词的人知道要猜的词有几个字：第二阶段的国家玩家、抢第二名的人', () => {
+    const s = new Sim({ n: 7, seed: 25, pair: { id: 't', wordA: '花旦', wordB: '天鹅湖', link: 'x', hints: ['y'], bigWord: 'B' } });
+    s.toPhase2();
+    const big = s.of('big')[0];
+    const small = s.of('small')[0];
+    const blank = s.of('blank', false)[0];
+    const len = (id: string) => (viewFor(s.g, id, s.t).step as { targetLen?: number | null }).targetLen;
+    expect(len(big.id)).toBe(2); // 大国玩家猜小国的词「花旦」
+    expect(len(small.id)).toBe(3); // 小国玩家猜大国的词「天鹅湖」
+    expect(len(blank.id)).toBeNull();
+    // 轮到一个小国玩家时他猜中 → 大国（存活）和白板抢答小国的词
+    const turn = () => s.step as Extract<GameState['step'], { k: 'turn' }>;
+    for (let i = 0; i < 10 && s.p(turn().order[turn().idx]).faction !== 'small'; i++) s.wait(T(s).turn);
+    s.do(turn().order[turn().idx], { a: 'guess', text: '天鹅湖' });
+    expect(s.step).toMatchObject({ k: 'race', purpose: 'second' });
+    expect(len(big.id)).toBe(2);
+    expect(len(blank.id)).toBe(2);
+    expect(len(small.id)).toBeNull();
+  });
+
   it('救济猜中大国词：白板第一', () => {
     const s = new Sim({ n: 7, seed: 26 });
     s.toPhase2();

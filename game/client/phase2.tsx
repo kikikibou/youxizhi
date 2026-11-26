@@ -155,11 +155,46 @@ function Cloth({ top = 478, children }: { top?: number; children: ComponentChild
 }
 
 /** 旗面上的一行手写栏（大字 + 光标 + 字数）。 */
-function FlagInput({ label, value, setValue, max, size = 26, placeholder, onEnter, disabled }: { label: string; value: string; setValue: (v: string) => void; max: number; size?: number; placeholder?: string; onEnter: () => void; disabled?: boolean }) {
+/**
+ * 旗面上的一行手写栏。slots：要猜的词有几个字——标签后面写出来，再画一排小格子，写一个字涂一格。
+ */
+function FlagInput({
+  label,
+  value,
+  setValue,
+  max,
+  size = 26,
+  placeholder,
+  onEnter,
+  disabled,
+  slots,
+}: {
+  label: string;
+  value: string;
+  setValue: (v: string) => void;
+  max: number;
+  size?: number;
+  placeholder?: string;
+  onEnter: () => void;
+  disabled?: boolean;
+  slots?: number | null;
+}) {
   const len = Array.from(value.trim()).length;
   return (
     <label class="b-p-write">
-      <small>{label}</small>
+      <small>
+        {label}
+        {slots ? (
+          <>
+            <b class="b-p-len">{slots} 个字</b>
+            <i class="b-p-slots" aria-hidden="true">
+              {Array.from({ length: slots }, (_, k) => (
+                <i key={k} class={k < len ? 'is-on' : ''} />
+              ))}
+            </i>
+          </>
+        ) : null}
+      </small>
       <span>
         <input
           value={value}
@@ -276,7 +311,7 @@ function TurnPanel({ g, s, onTarget }: { g: G; s: Turn; onTarget: (t: 'big' | 's
         {s.reasking ? <p class="b-p-warn">上一个问题无效。可以重问一次，或者改为猜词。</p> : null}
         {mode === 'guess' ? (
           <>
-            <FlagInput label="对方国家的词是" value={text} setValue={setText} max={20} onEnter={go} placeholder="写一个词" />
+            <FlagInput label="对方国家的词是" value={text} setValue={setText} max={20} onEnter={go} placeholder="写一个词" slots={s.targetLen} />
             <div class="b-p-row">
               {wrong.length ? <span>猜错过的</span> : null}
               {wrong.map((w) => (
@@ -371,7 +406,7 @@ function ReliefPanel({ g, s }: { g: G; s: Relief }) {
           {ask ? '第一轮没人猜中。白板阵营可以先问裁判一个问题，再猜一次大国的词。你们共用这一面旗，谁先交都算。' : '现在猜一次大国的词。猜中了白板拿第一。'}
         </p>
         {s.reasking ? <p class="b-p-warn">上一个问题无效，可以重问一次。</p> : null}
-        <FlagInput label={ask ? '问裁判一个是非题（大家都看得到）' : `大国的词是${g.v.me.blank?.bigLen ? `（${g.v.me.blank.bigLen} 个字）` : ''}`} value={text} setValue={setText} max={max} size={ask ? 19 : 24} onEnter={go} />
+        <FlagInput label={ask ? '问裁判一个是非题（大家都看得到）' : '大国的词是'} value={text} setValue={setText} max={max} size={ask ? 19 : 24} onEnter={go} slots={ask ? null : (s.targetLen ?? g.v.me.blank?.bigLen)} />
       </Cloth>
       <div class="b-p-two">
         <Btn onClick={go} disabled={!okText(text, max)}>
@@ -396,8 +431,6 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
   };
   const hints = v.hints;
   const second = s.purpose === 'second' && v.result?.first;
-  // 白板要猜的是大国的词时（抢第一，或大国拿了第一后抢第二），提醒一下字数
-  const bigLen = v.me.blank?.bigLen && (s.purpose === 'first' || v.result?.first === 'big') ? v.me.blank.bigLen : 0;
   return (
     <>
       <Flag top={462} bottom={716} />
@@ -441,7 +474,16 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
         </ol>
         {s.canGuess ? (
           <>
-            <FlagInput label={`${second ? '抢第二名 · 要猜的词是' : v.me.blank ? '抢答 · 大国的词是' : '抢答 · 对方国家的词是'}${bigLen ? `（${bigLen} 个字）` : ''}`} value={text} setValue={setText} max={20} size={22} onEnter={go} disabled={cooling || !!s.myPending} />
+            <FlagInput
+              label={second ? '抢第二名 · 要猜的词是' : v.me.blank ? '抢答 · 大国的词是' : '抢答 · 对方国家的词是'}
+              value={text}
+              setValue={setText}
+              max={20}
+              size={22}
+              onEnter={go}
+              disabled={cooling || !!s.myPending}
+              slots={s.targetLen}
+            />
             <p class="b-p-small" style={{ marginTop: '6px' }}>
               {s.myPending ? `「${s.myPending}」裁判判定中…` : cooling ? (
                 <>
@@ -499,7 +541,7 @@ function BigPanel({ g, s }: { g: G; s: Big }) {
           </p>
         ) : s.canGuess ? (
           <>
-            <FlagInput label="小国的词是" value={text} setValue={setText} max={20} size={24} onEnter={go} />
+            <FlagInput label="小国的词是" value={text} setValue={setText} max={20} size={24} onEnter={go} slots={s.targetLen} />
             <p class="b-p-small" style={{ marginTop: '10px' }}>
               哪个大国玩家先交都算{g.chat ? '，可以先在大国频道商量' : ''}
             </p>

@@ -69,8 +69,10 @@ export type StepView =
       canAsk: boolean;
       /** 上一个问题被判无效、正在重问。 */
       reasking: boolean;
+      /** 要猜的词（对方国家的词）有几个字；只有存活的国家玩家有。 */
+      targetLen: number | null;
     }
-  | { k: 'relief'; stage: 'ask' | 'guess'; deadline: number | null; judging: boolean; reasking: boolean; canAct: boolean }
+  | { k: 'relief'; stage: 'ask' | 'guess'; deadline: number | null; judging: boolean; reasking: boolean; canAct: boolean; /** 大国的词有几个字（白板） */ targetLen: number | null }
   | {
       k: 'race';
       purpose: 'first' | 'second';
@@ -79,8 +81,18 @@ export type StepView =
       canGuess: boolean;
       cooldownUntil: number | null;
       myPending: string | null;
+      /** 要猜的那个词有几个字（有猜词权的人才有）。 */
+      targetLen: number | null;
     }
-  | { k: 'bigChance'; deadline: number | null; judging: boolean; canGuess: boolean; submitted: { by: PlayerId; text: string } | null }
+  | {
+      k: 'bigChance';
+      deadline: number | null;
+      judging: boolean;
+      canGuess: boolean;
+      submitted: { by: PlayerId; text: string } | null;
+      /** 小国的词有几个字（大国玩家）。 */
+      targetLen: number | null;
+    }
   | { k: 'over' };
 
 export type LogEntry = EventBody & { at: number };
@@ -205,9 +217,18 @@ function stepView(g: GameState, me: PlayerState, now: number): StepView {
         judging: !!s.pending,
         canAsk: g.rules.phase2Questions,
         reasking: s.reasks > 0,
+        targetLen: me.alive && me.faction !== 'blank' ? wordLength(g.secret[me.faction === 'big' ? 'small' : 'big'].word) : null,
       };
     case 'relief':
-      return { k: 'relief', stage: s.stage, deadline: s.deadline, judging: !!s.pending, reasking: s.reasks > 0, canAct: me.faction === 'blank' };
+      return {
+        k: 'relief',
+        stage: s.stage,
+        deadline: s.deadline,
+        judging: !!s.pending,
+        reasking: s.reasks > 0,
+        canAct: me.faction === 'blank',
+        targetLen: me.faction === 'blank' ? wordLength(g.secret.big.word) : null,
+      };
     case 'race': {
       const mineQ = s.queue.find((q) => q.player === me.id);
       const cd = s.cooldown[me.id];
@@ -219,6 +240,7 @@ function stepView(g: GameState, me: PlayerState, now: number): StepView {
         canGuess: !!s.targets[me.id],
         cooldownUntil: cd && cd > now ? cd : null,
         myPending: mineQ ? mineQ.text : null,
+        targetLen: s.targets[me.id] ? wordLength(g.secret[s.targets[me.id]].word) : null,
       };
     }
     case 'bigChance':
@@ -228,6 +250,7 @@ function stepView(g: GameState, me: PlayerState, now: number): StepView {
         judging: !!s.pending,
         canGuess: me.faction === 'big' && me.alive && !s.by,
         submitted: s.by && s.text ? { by: s.by, text: s.text } : null,
+        targetLen: me.faction === 'big' ? wordLength(g.secret.small.word) : null,
       };
     case 'over':
       return { k: 'over' };

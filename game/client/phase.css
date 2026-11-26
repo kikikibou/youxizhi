@@ -59,6 +59,31 @@
   color: var(--muted);
 }
 
+/* 要猜的词有几个字：一排小格子，写一个字涂一格 */
+.b-p-len {
+  margin-left: 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.b-p-slots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: -1px;
+}
+
+.b-p-slots i {
+  width: 10px;
+  height: 10px;
+  border: 1.1px solid var(--ink);
+  background: #fffdf6;
+}
+
+.b-p-slots i.is-on {
+  background: var(--ink);
+}
+
 .b-p-write span {
   display: flex;
   align-items: flex-end;
