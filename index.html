@@ -28,13 +28,18 @@
 
     <div class="ui">
       <header class="topbar">
-        <a class="brand" href="#/home" data-nav="home">
-          <span class="brand-box" aria-hidden="true"><i>游</i></span>
-          <span class="brand-text">
+        <div class="brand">
+          <!-- The polaroid also holds the picture quality (画质): app.js deals its prints -->
+          <button class="brand-box" id="quality-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="quality" aria-label="画质" title="画质"><i aria-hidden="true">游</i></button>
+          <a class="brand-text" href="#/home" data-nav="home">
             <b>游戏之致西柚</b>
             <small>JEU DE PAMPLEMOUSSE</small>
-          </span>
-        </a>
+          </a>
+          <div class="quality" id="quality" role="radiogroup" aria-label="画质" inert>
+            <div class="q-prints"></div>
+            <p class="q-slip"><b class="q-name"></b><span class="q-note"></span><small class="q-foot"></small></p>
+          </div>
+        </div>
         <p class="credits">
           Debate · Quiz · Games · <span class="redact" role="img" aria-label="（涂黑）"></span><br />
           Imagine the clouds dripping.<br />

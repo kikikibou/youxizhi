@@ -48,9 +48,9 @@ export class GpuTimer {
   }
 }
 
-/** Defaults for the quality switches (the debug panel can change them). */
+/** Defaults for the quality switches (the debug panel can change them; scale, the 画质 menu too). */
 export const QUALITY_DEFAULTS = {
-  scale: 'auto', // 'auto' or a fraction of the screen's native resolution
+  scale: 'auto', // 'auto' or a fraction of the highest resolution (the screen's own, up to 2× — World.maxPixelRatio)
   // 'auto': on a fast display (120 / 144 Hz…) every n-th refresh, near 60 a
   // second, evenly paced (rendering at the full rate the GPU fell behind and
   // the motion stuttered); 0 = as fast as the display refreshes; or a number
@@ -63,3 +63,27 @@ export const QUALITY_DEFAULTS = {
   ribbonShadow: false, // ribbon shadows force a shadow redraw every frame
   grain: true, // paper grain and vignette
 };
+
+/**
+ * The quality switches changed on this device (by the 画质 menu or the debug
+ * panel), kept per address: only what differs from the defaults.
+ */
+const STORE = 'youxizhi-quality';
+export function loadQuality() {
+  try {
+    const q = JSON.parse(localStorage.getItem(STORE) || '{}');
+    return q && typeof q === 'object' ? q : {};
+  } catch {
+    return {};
+  }
+}
+export function saveQuality(q) {
+  const changed = {};
+  for (const k of Object.keys(QUALITY_DEFAULTS)) if (q[k] !== QUALITY_DEFAULTS[k]) changed[k] = q[k];
+  try {
+    if (Object.keys(changed).length) localStorage.setItem(STORE, JSON.stringify(changed));
+    else localStorage.removeItem(STORE);
+  } catch {
+    /* storage unavailable */
+  }
+}

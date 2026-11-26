@@ -5,6 +5,7 @@ import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
 import { PoemInk } from './poemink.js';
+import { loadQuality, saveQuality } from './three/perf.js';
 
 const TOOLS = { timer: mountTimer, daily: mountDaily };
 const ids = PAGES.map((p) => p.id);
@@ -460,6 +461,7 @@ window.addEventListener(
 
 window.addEventListener('keydown', (e) => {
   if (drawer.isOpen) return;
+  if (e.key === 'Escape' && qEl.classList.contains('is-open')) return openQuality(false);
   if (spot && e.key === 'Escape') return closeSpot();
   if (e.target.closest?.('input, textarea')) return; // (typing, e.g. in a poem's blank)
   // (← → round the pages, ↑ ↓ between a page and its close-ups)
@@ -535,14 +537,106 @@ function frame(now) {
   });
 })();
 
+/* -------------------------------------------------------- picture quality */
+// The polaroid at the top left also holds the picture quality (画质): a click
+// deals four small prints, 自动 / 100 / 75 / 50, each with the page's glyph as
+// sharp as the 3D would be drawn. Only the 3D changes: the lettering stays
+// sharp at any of them. "Auto" (the default) keeps the best picture unless it
+// plainly can't keep up (World.adapt). The choice is kept on this device,
+// with the debug panel's switches (perf.js), and applies from the start.
+const QUALITIES = [
+  { v: 'auto', label: 'AUTO', name: '自动', note: '画面尽量最清晰，持续卡顿时才调低。' },
+  { v: 1, label: '100', name: '最高', note: '始终最清晰；显卡吃力时可能会卡。' },
+  { v: 0.75, label: '75', name: '均衡', note: '稍软一点，换来更流畅。' },
+  { v: 0.5, label: '50', name: '省电', note: '最省力，适合老电脑或用电池时。' },
+];
+const qBtn = $('#quality-btn');
+const qEl = $('#quality');
+qEl.querySelector('.q-prints').innerHTML = QUALITIES.map(
+  (q, i) => `<button class="q-print" type="button" role="radio" aria-checked="false" aria-label="${q.name}${q.v === 'auto' ? '' : ` ${q.label}%`}" style="--i:${i}">
+    <span class="q-photo"><i aria-hidden="true"></i></span><span class="q-label" aria-hidden="true">${q.label}</span></button>`,
+).join('');
+const prints = [...qEl.querySelectorAll('.q-print')];
+let qShown = -1; // (the print the slip speaks of: the one pointed at or focused, else the chosen one)
+let qTimer = 0;
+function syncQuality() {
+  const on = QUALITIES.findIndex((q) => q.v === world.quality.scale); // (-1: pinned elsewhere, in the debug panel)
+  prints.forEach((b, i) => {
+    b.classList.toggle('is-on', i === on);
+    b.setAttribute('aria-checked', String(i === on));
+    b.tabIndex = i === Math.max(0, on) ? 0 : -1;
+    const g = b.querySelector('i');
+    g.textContent = glyphEl.textContent;
+    g.classList.toggle('is-mark', glyphEl.classList.contains('is-mark'));
+  });
+  const pct = Math.round(world.scaleNow * 100);
+  const q = QUALITIES[qShown >= 0 ? qShown : on] || { name: `${pct}%`, note: '在调试面板里固定的分辨率。' };
+  qEl.querySelector('.q-name').textContent = q.name;
+  qEl.querySelector('.q-note').textContent = q.note;
+  qEl.querySelector('.q-foot').textContent = q === QUALITIES[0] && on === 0 ? `现在 ${pct}% · 文字始终清晰` : '只影响 3D 场景，文字始终清晰';
+}
+function openQuality(open) {
+  if (qEl.classList.contains('is-open') === open) return;
+  qEl.classList.toggle('is-open', open);
+  qEl.inert = !open;
+  qBtn.setAttribute('aria-expanded', String(open));
+  clearInterval(qTimer);
+  if (!open) {
+    if (qEl.contains(document.activeElement)) qBtn.focus({ preventScroll: true });
+    return;
+  }
+  qShown = -1;
+  syncQuality();
+  qTimer = setInterval(syncQuality, 500); // (auto's "现在 …%", as it changes)
+  prints.find((b) => b.tabIndex === 0)?.focus({ preventScroll: true });
+}
+function chooseQuality(i) {
+  world.setQuality({ scale: QUALITIES[i].v });
+  saveQuality(world.quality);
+  syncQuality();
+}
+qBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openQuality(!qEl.classList.contains('is-open'));
+});
+prints.forEach((b, i) => {
+  b.addEventListener('click', () => chooseQuality(i));
+  const speak = (k) => () => {
+    qShown = k;
+    syncQuality();
+  };
+  b.addEventListener('pointerenter', speak(i));
+  b.addEventListener('pointerleave', speak(-1));
+  b.addEventListener('focus', speak(i));
+  b.addEventListener('blur', speak(-1));
+});
+qEl.addEventListener('keydown', (e) => {
+  // (a radio group: the arrows choose; keys here don't change pages or leave a close-up)
+  e.stopPropagation();
+  const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+  const i = prints.indexOf(document.activeElement);
+  if (d && i >= 0) {
+    e.preventDefault();
+    const n = (i + d + prints.length) % prints.length;
+    chooseQuality(n);
+    prints[n].focus();
+  } else if (e.key === 'Escape') openQuality(false);
+});
+// (tabbing out of it, or a click anywhere else, puts the prints away)
+qEl.addEventListener('focusout', (e) => {
+  const to = e.relatedTarget;
+  if (to && !qEl.contains(to) && to !== qBtn) openQuality(false);
+});
+document.addEventListener('click', (e) => {
+  if (!qEl.contains(e.target)) openQuality(false);
+});
+for (const ev of ['wheel', 'touchstart', 'touchend']) qEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
+
+const savedQuality = loadQuality();
+if (Object.keys(savedQuality).length) world.setQuality(savedQuality);
+
 /* ------------------------------------------------------------- debug panel */
 // Frame rate, resolution and quality switches (debug mode, see above). What
 // is chosen there is kept on this device (per address) and applies with the
 // panel hidden too.
-try {
-  const saved = JSON.parse(localStorage.getItem('youxizhi-quality') || '{}');
-  if (saved && Object.keys(saved).length) world.setQuality(saved);
-} catch {
-  /* storage unavailable */
-}
 if (debugOn) import('./debug.js').then((m) => m.mountDebug(world));

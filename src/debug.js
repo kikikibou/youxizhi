@@ -3,9 +3,7 @@
  * Loaded only when the site is opened with ?debug (see app.js); the choices
  * are remembered on this device so a reload keeps them. ` (backquote) folds it.
  */
-import { QUALITY_DEFAULTS } from './three/perf.js';
-
-const STORE = 'youxizhi-quality';
+import { QUALITY_DEFAULTS, loadQuality, saveQuality } from './three/perf.js';
 
 const CSS = `
 .dbg { position: fixed; left: 12px; bottom: 72px; z-index: 60; width: 272px; max-width: calc(100vw - 24px);
@@ -39,11 +37,14 @@ const CSS = `
 .dbg-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: -1px; }
 `;
 
+// (shares of the highest resolution, World.maxPixelRatio; the 画质 menu
+// at the top left offers 自动 / 100 / 75 / 50)
 const SCALES = [
   ['auto', '自动'],
   [1, '100%'],
   [0.85, '85%'],
-  [0.7, '70%'],
+  [0.75, '75%'],
+  [0.6, '60%'],
   [0.5, '50%'],
 ];
 const CAPS = [
@@ -62,27 +63,12 @@ const TOGGLES = [
   ['grain', '颗粒/暗角'],
 ];
 
-function load() {
-  try {
-    return JSON.parse(localStorage.getItem(STORE) || '{}');
-  } catch {
-    return {};
-  }
-}
-function save(q) {
-  try {
-    localStorage.setItem(STORE, JSON.stringify(q));
-  } catch {
-    /* storage unavailable */
-  }
-}
-
 export function mountDebug(world) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
 
-  const saved = load();
+  const saved = loadQuality();
   if (Object.keys(saved).length) world.setQuality(saved);
 
   const el = document.createElement('div');
@@ -139,10 +125,7 @@ export function mountDebug(world) {
 
   function set(patch) {
     world.setQuality(patch);
-    const q = world.quality;
-    const changed = {};
-    for (const k of Object.keys(QUALITY_DEFAULTS)) if (q[k] !== QUALITY_DEFAULTS[k]) changed[k] = q[k];
-    save(changed);
+    saveQuality(world.quality);
     sync();
   }
 
@@ -166,12 +149,8 @@ export function mountDebug(world) {
   });
 
   el.querySelector('[data-act="reset"]').addEventListener('click', () => {
-    try {
-      localStorage.removeItem(STORE);
-    } catch {
-      /* ignore */
-    }
     world.setQuality({ ...QUALITY_DEFAULTS });
+    saveQuality(world.quality);
     sync();
   });
 
@@ -181,7 +160,7 @@ export function mountDebug(world) {
     return [
       `FPS ${p.fps.toFixed(1)}，平均帧 ${p.frameMs.toFixed(1)} ms，最慢 ${p.worstMs.toFixed(1)} ms`,
       `GPU ${p.gpuMs == null ? '无法计时' : p.gpuMs.toFixed(1) + ' ms'}，显示器约 ${Math.round(p.refreshHz)} Hz`,
-      `像素比 ${world.pixelRatio.toFixed(2)}（屏幕 ${world.dpr}），3D ${size.x}×${size.y}`,
+      `分辨率 ${Math.round(world.scaleNow * 100)}%，像素比 ${world.pixelRatio.toFixed(2)}（屏幕 ${world.dpr}），3D ${size.x}×${size.y}`,
       `绘制 ${p.calls} 次，${(p.triangles / 1e6).toFixed(2)} M 三角形`,
       `设置 ${JSON.stringify(world.quality)}`,
       `浏览器 ${navigator.userAgent}`,
@@ -241,8 +220,8 @@ export function mountDebug(world) {
     const p = world.perf;
     const size = world.renderSize(world._size);
     fpsEl.innerHTML = `${p.fps ? p.fps.toFixed(0) : '--'}<small>fps</small>`;
-    subEl.textContent = `${p.frameMs.toFixed(1)} ms · ${Math.round((world.pixelRatio / world.dpr) * 100)}%`;
-    const pct = Math.round((world.pixelRatio / world.dpr) * 100);
+    const pct = Math.round(world.scaleNow * 100); // (of the highest: the screen's own, up to 2×)
+    subEl.textContent = `${p.frameMs.toFixed(1)} ms · ${pct}%`;
     const gpu = p.gpuMs != null ? `<b>${p.gpuMs.toFixed(1)}</b> ms` : world.gpu.available ? '…' : '此浏览器无法计时';
     statsEl.innerHTML = [
       `帧 <b>${p.frameMs.toFixed(1)}</b> ms，最慢 <b>${p.worstMs.toFixed(1)}</b> ms`,
@@ -252,6 +231,7 @@ export function mountDebug(world) {
     ]
       .map((line) => `<div>${line}</div>`)
       .join('');
+    sync(); // (the 画质 menu may have changed it)
     logEl.innerHTML = p.log.length ? p.log.map((l) => `<div>${l.t.toFixed(1)}s ${l.msg}</div>`).join('') : '<div style="opacity:.6">（分辨率变化会记在这里）</div>';
     if (!el.classList.contains('is-folded')) draw();
   }

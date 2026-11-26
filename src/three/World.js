@@ -119,8 +119,9 @@ export class World {
       preserveDrawingBuffer: import.meta.env.DEV,
     }));
     // Resolution: in "auto" mode the pixel ratio follows the GPU's measured
-    // frame time, down when it can't keep up and back up when it has room
-    // (see trackFrame). The debug panel can pin it instead (see debug.js).
+    // frame time, down when it plainly can't keep up and back up when it has
+    // room (see trackFrame, adapt). The 画质 menu (the polaroid at the top
+    // left, app.js) or the debug panel can pin it instead.
     this.dpr = window.devicePixelRatio || 1;
     this.pixelRatio = this.autoStartRatio;
     this.quality = { ...QUALITY_DEFAULTS };
@@ -917,14 +918,22 @@ export class World {
     this.perf.fast = 0;
   }
 
-  /** Apply quality.scale: 'auto' keeps the adaptive ratio, a number pins it. */
+  /**
+   * Apply quality.scale: 'auto' keeps the adaptive ratio, a number pins it,
+   * as a share of the highest (maxPixelRatio: the screen's own, up to 2).
+   */
   applyScale() {
     const s = this.quality.scale;
-    const pr = s === 'auto' ? THREE.MathUtils.clamp(this.pixelRatio, this.minPixelRatio, this.maxPixelRatio) : this.dpr * s;
+    const pr = s === 'auto' ? THREE.MathUtils.clamp(this.pixelRatio, this.minPixelRatio, this.maxPixelRatio) : this.maxPixelRatio * s;
     this.setPixelRatio(pr);
   }
 
-  /** Change quality switches (see QUALITY_DEFAULTS); used by the debug panel. */
+  /** How sharp the 3D is drawn now, as a share of the highest (for the 画质 menu, the debug panel). */
+  get scaleNow() {
+    return this.pixelRatio / this.maxPixelRatio;
+  }
+
+  /** Change quality switches (see QUALITY_DEFAULTS); used by the 画质 menu and the debug panel. */
   setQuality(patch = {}) {
     const q = Object.assign(this.quality, patch);
     if ('scale' in patch) {
@@ -1242,8 +1251,8 @@ export class World {
    * adapts the resolution. With a GPU timer the decision uses the GPU's own
    * time (a slow moment on the main thread, e.g. while the page is still
    * loading, no longer drops the resolution for good), and it steps back up
-   * when there is room. Without one it steps down after two slow seconds in
-   * a row, and tries a step up after ten good ones (see adapt).
+   * when there is room. Without one it steps down after three slow seconds
+   * in a row, and tries a step up after ten good ones (see adapt).
    */
   trackFrame(ms) {
     const p = this.perf;
@@ -1289,9 +1298,18 @@ export class World {
     if (this.quality.scale === 'auto' && now > p.settleUntil) this.adapt(median, gpuAvg, now, !!this.flight);
   }
 
+  /**
+   * "auto": the best picture unless it plainly can't keep up. Down only after
+   * three seconds in a row of a real slowdown (under ~45 frames a second on
+   * average, and with a GPU timer the GPU itself well over a frame's time, so
+   * a busy main thread doesn't cost resolution), and then by a small step;
+   * back up as soon as the next step up, by its estimated cost, still leaves
+   * room.
+   */
   adapt(median, gpu, now, flying = false) {
     const p = this.perf;
     const budget = 1000 / Math.min(60, this.fpsTarget || 60); // ms per frame we aim for
+    const mean = p.frameMs;
     // Don't climb straight back to a ratio that was too slow a moment ago.
     const top = p.ceiling && now - p.ceilingAt < 20000 ? Math.min(this.maxPixelRatio, p.ceiling * 0.95) : this.maxPixelRatio;
     const tooSlow = () => {
@@ -1304,11 +1322,11 @@ export class World {
       // GPU time grows roughly with the number of pixels (ratio squared):
       // back up a step when the step's cost, so estimated, still leaves room.
       const step = Math.min(1.15, top / this.pixelRatio);
-      p.slow = gpu > budget * 0.95 ? p.slow + 1 : 0;
-      p.fast = step > 1.01 && gpu * step * step < budget * 0.8 ? p.fast + 1 : 0;
-      if (p.slow >= 2) {
-        next = this.pixelRatio * THREE.MathUtils.clamp(Math.sqrt((budget * 0.75) / gpu), 0.7, 0.92);
-        why = `GPU 每帧 ${gpu.toFixed(1)} ms，偏慢`;
+      p.slow = gpu > budget * 1.15 && mean > budget * 1.33 ? p.slow + 1 : 0;
+      p.fast = step > 1.01 && gpu * step * step < budget * 0.85 ? p.fast + 1 : 0;
+      if (p.slow >= 3) {
+        next = this.pixelRatio * THREE.MathUtils.clamp(Math.sqrt((budget * 0.9) / gpu), 0.8, 0.93);
+        why = `GPU 每帧 ${gpu.toFixed(1)} ms，平均 ${(1000 / mean).toFixed(0)} fps，偏慢`;
         tooSlow();
       } else if (p.fast >= 3) {
         next = this.pixelRatio * step;
@@ -1319,11 +1337,11 @@ export class World {
       // display's own rate it can't tell how much room is left: after ten
       // good seconds in a row, try a step up (a slow one comes back down and
       // isn't tried again for a while).
-      p.slow = median > Math.max(21, budget * 1.25) ? p.slow + 1 : 0;
-      p.fast = median < budget * 1.12 ? p.fast + 1 : 0;
-      if (p.slow >= 2) {
-        next = this.pixelRatio * 0.85;
-        why = `帧间隔 ${median.toFixed(1)} ms`;
+      p.slow = mean > Math.max(24, budget * 1.4) ? p.slow + 1 : 0;
+      p.fast = mean < budget * 1.15 ? p.fast + 1 : 0;
+      if (p.slow >= 3) {
+        next = this.pixelRatio * 0.88;
+        why = `平均帧间隔 ${mean.toFixed(1)} ms`;
         tooSlow();
       } else if (p.fast >= 10 && top > this.pixelRatio * 1.03) {
         next = Math.min(top, this.pixelRatio * 1.1);
