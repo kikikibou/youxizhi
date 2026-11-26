@@ -549,6 +549,23 @@ describe('第二阶段（§6）', () => {
     expect(len(small.id)).toBeNull();
   });
 
+  it('轮流发言：按身份提示的顺序每人一段；不是当前发言的人点不了；时间到也轮到下一个；最后一个说完进入投票', () => {
+    const s = new Sim({ n: 7, seed: 31 });
+    s.night();
+    s.clues();
+    const st = () => s.step as Extract<GameState['step'], { k: 'discussion' }>;
+    expect(s.step.k).toBe('discussion');
+    const order = [...st().order];
+    expect(order.length).toBe(7);
+    s.refused(order[1], { a: 'ready' });
+    s.do(order[0], { a: 'ready' });
+    expect(st().idx).toBe(1);
+    s.wait(T(s).discussion);
+    expect(st().idx).toBe(2);
+    for (let i = 2; i < order.length; i++) s.do(order[i], { a: 'ready' });
+    expect(s.step.k).toBe('vote');
+  });
+
   it('救济猜中大国词：白板第一', () => {
     const s = new Sim({ n: 7, seed: 26 });
     s.toPhase2();

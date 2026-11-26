@@ -103,7 +103,7 @@ function stepLine(s: RawStep, name: (id: string) => string): string {
     case 'clue':
       return `从 ${name(s.start)} 开始${DIR[s.dir]}，现在 ${name(s.order[s.idx])}`;
     case 'discussion':
-      return `准备投票 ${s.ready.length} 人`;
+      return `轮流发言，现在 ${name(s.order[s.idx])}（${s.idx + 1} / ${s.order.length}）`;
     case 'vote':
       return `已投 ${Object.keys(s.ballots).length} 人`;
     case 'exit':
@@ -123,7 +123,7 @@ function stepLine(s: RawStep, name: (id: string) => string): string {
 
 /** 现在正在行动的人（图上加脉冲圈）。 */
 function actorOf(s: RawStep): string | null {
-  if (s.k === 'clue' || s.k === 'turn') return s.order[s.idx] ?? null;
+  if (s.k === 'clue' || s.k === 'discussion' || s.k === 'turn') return s.order[s.idx] ?? null;
   if (s.k === 'exit') return s.cur.player;
   if (s.k === 'bigChance') return s.by;
   return null;

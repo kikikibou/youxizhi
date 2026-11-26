@@ -22,11 +22,12 @@ import type { RoomInfo, Snapshot } from './net.ts';
 
 const PAIR: WordPair = {
   id: 'preview-squid-stock',
-  wordA: '鱿鱼',
-  wordB: '股票',
-  senseA: '鱿鱼：海洋动物、食材',
-  senseB: '股票：证券、金融产品',
-  link: '都是可以「炒」的东西',
+  wordA: '雷达',
+  wordB: '射手',
+  bigWord: 'A',
+  senseA: '雷达：用无线电探测目标的装置',
+  senseB: '射手：射箭或射击的人',
+  link: '都是蚊香的品牌',
   hints: ['都和一个动词有关', '这个动词在厨房里也用得上'],
   difficulty: 1,
 };
@@ -40,7 +41,7 @@ const NAMES: [string, string][] = [
   ['f', '米粒'],
   ['g', '七七'],
 ];
-const CLUES = ['海边', '下锅', '涨停', '红色', '翻身', '潮汐', '牛市'];
+const CLUES = ['信号', '弓箭', '夏天', '天线', '靶心', '屏幕', '奥运'];
 const CODE = '3572';
 
 
@@ -89,8 +90,12 @@ export class Sim {
       i++;
     }
   }
+  /** 轮流发言：每个人依次说完。 */
   discuss() {
-    for (const p of this.alive()) this.do(p.id, { a: 'ready' });
+    while (this.step.k === 'discussion') {
+      const s = this.step;
+      this.do(s.order[s.idx], { a: 'ready' });
+    }
   }
   voteAll(target: string) {
     for (const p of this.alive()) this.do(p.id, { a: 'vote', target });
@@ -243,12 +248,12 @@ function phase2() {
 
 export const SCENES: Scene[] = [
   { id: 'home', group: '首页', title: '首页', note: '转动的地球、行李牌写名字、两张票：建房间 / 加入', build: () => ({ kind: 'home' }) },
-  ...['三方，两个词', '夜晚', '白天说词', '投票', '第二阶段', '抢答', '名次'].map(
+  ...['大国小国是什么', '两个词，一个联系', '你拿到了什么', '两个阶段', '第一阶段的一天', '分寸', '白板的能力', '开一局吧'].map(
     (t, k): Scene => ({
       id: `tour-${k + 1}`,
       group: '规则图解',
       title: `图解 ${k + 1} · ${t}`,
-      note: k ? '左右滑或点「下一步」换张；「再放一遍」重播' : '首页「怎么玩」和大厅都能打开；每张进来时按顺序动一遍',
+      note: k ? '文字一段一段出来，图跟着动；轻点画面看下一段，左右滑换页' : '首页「怎么玩」和大厅都能打开；右上角「完整规则」是文字版',
       build: () => ({ kind: 'tour', step: k }),
     }),
   ),
@@ -296,7 +301,7 @@ export const SCENES: Scene[] = [
             members,
             moderatorId: 'm',
             settings: { wordSource: 'custom', judge: 'human' },
-            customPair: { wordA: '鱿鱼', wordB: '股票', link: '都是可以「炒」的东西', hints: ['都和一个动词有关'] },
+            customPair: { wordA: '雷达', wordB: '射手', link: '都是蚊香的品牌', hints: ['它们都是某个东西的品牌'] },
           }),
         ),
       };
@@ -391,16 +396,19 @@ export const SCENES: Scene[] = [
   {
     id: 'discussion',
     group: '第一阶段',
-    title: '讨论',
-    note: '今天的线索 + 准备投票',
+    title: '轮流发言',
+    note: '身份提示说完，按同样的顺序每人发言一段；发言的人点「我说完了」',
     build: () => {
       const s = new Sim();
       s.night('c', 'cw');
       s.clues();
-      const alive = s.alive();
-      s.do(alive[1].id, { a: 'ready' });
-      s.do(alive[2].id, { a: 'ready' });
-      return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')) };
+      for (let i = 0; i < 2 && s.step.k === 'discussion'; i++) {
+        const st = s.step;
+        s.do(st.order[st.idx], { a: 'ready' });
+      }
+      const st = s.step;
+      if (st.k !== 'discussion') throw new Error('没在轮流发言');
+      return { kind: 'room', snap: gameSnap(s, st.order[st.idx]) };
     },
   },
   {
@@ -446,7 +454,7 @@ export const SCENES: Scene[] = [
     note: '白板的身份图：队友、今晚的任务、裁判私下的回答',
     build: () => {
       const { s, b } = blankOut();
-      s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });
+      s.do(b, { a: 'ask', text: '大国的词是一种机器吗' });
       s.verdict('yes');
       s.wait(s.g.rules.timers.exitMinShow);
       if (s.step.k !== 'night') throw new Error(`没到第二夜：${s.step.k}`);
@@ -515,7 +523,7 @@ export const SCENES: Scene[] = [
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
       s.wait(s.g.rules.timers.exitMinShow);
-      s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
+      s.do(idOf(s, 'big'), { a: 'guess', text: '猎人' });
       if (s.g.judge.length) s.verdict('wrong');
       if (s.step.k !== 'over') throw new Error(`没结束：${s.step.k}`);
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')) };
@@ -530,7 +538,7 @@ export const SCENES: Scene[] = [
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
       s.wait(s.g.rules.timers.exitMinShow);
-      s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
+      s.do(idOf(s, 'big'), { a: 'guess', text: '猎人' });
       if (s.g.judge.length) s.verdict('wrong');
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')), revealed: true };
     },
@@ -561,7 +569,7 @@ export const SCENES: Scene[] = [
         const b = idOf(s, 'blank', true, 0);
         const others = s.alive().filter((p) => p.id !== b);
         for (const p of s.alive()) s.do(p.id, { a: 'vote', target: p.id === b ? others[0].id : b });
-        s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });
+        s.do(b, { a: 'ask', text: '大国的词是一种机器吗' });
         s.verdict('yes');
         s.wait(s.g.rules.timers.exitMinShow);
         s.night(s.alive()[2].id, 'ccw');
@@ -578,7 +586,7 @@ export const SCENES: Scene[] = [
     note: '总控图：所有人的身份都在图上，待判定是一张撕下来的单子',
     build: () => {
       const { s, b } = blankOut({ judge: 'human' });
-      s.do(b, { a: 'ask', text: '大国的词是吃的东西吗' });
+      s.do(b, { a: 'ask', text: '大国的词是一种机器吗' });
       const members: MemberView[] = [
         ...NAMES.map(([id, name]) => ({ id, name, online: true, host: id === 'a', score: 0 })),
         { id: 'm', name: '老周', online: true, host: false, score: 0 },

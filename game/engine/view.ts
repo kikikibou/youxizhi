@@ -40,7 +40,7 @@ export type StepView =
       canPick: boolean;
     }
   | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number | null }
-  | { k: 'discussion'; day: number; deadline: number | null; ready: PlayerId[] }
+  | { k: 'discussion'; day: number; order: PlayerId[]; idx: number; deadline: number | null }
   | { k: 'vote'; day: number; deadline: number | null; myVote: PlayerId | null; votedCount: number }
   | {
       k: 'exit';
@@ -192,7 +192,7 @@ function stepView(g: GameState, me: PlayerState, now: number): StepView {
     case 'clue':
       return { k: 'clue', day: s.day, start: s.start, dir: s.dir, order: [...s.order], idx: s.idx, deadline: s.deadline };
     case 'discussion':
-      return { k: 'discussion', day: s.day, deadline: s.deadline, ready: [...s.ready] };
+      return { k: 'discussion', day: s.day, order: [...s.order], idx: s.idx, deadline: s.deadline };
     case 'vote':
       return { k: 'vote', day: s.day, deadline: s.deadline, myVote: s.ballots[me.id] ?? null, votedCount: Object.keys(s.ballots).length };
     case 'exit': {

@@ -4,7 +4,7 @@ export interface WordPair {
   id: string;
   wordA: string;
   wordB: string;
-  /** 义项说明，供裁判按此回答。例：「鱿鱼：海洋动物、食材」 */
+  /** 义项说明，供裁判按此回答。例：「雷达：用无线电探测目标的装置」 */
   senseA?: string;
   senseB?: string;
   /** 猜词时同样判对的别名。 */
@@ -16,7 +16,7 @@ export interface WordPair {
   hints?: string[];
   /**
    * 哪个词固定当大国的词；不填每局随机。白板要猜的是大国的词（还知道它有几个字），
-   * 所以很难凭空想到的那个词（例：天鹅 / 花旦 里的「花旦」）应该只当小国的词。
+   * 所以两个词里很难凭空想到的那个应该只当小国的词。
    */
   bigWord?: 'A' | 'B';
   /** 难度 1–3，是唯一可以展示给玩家的标注。 */

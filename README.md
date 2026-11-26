@@ -87,7 +87,7 @@ npm run dev
 | `game/engine/words.ts` | 词对数据结构和猜词的精确匹配；`SAMPLE_PAIRS` 是规则文档里的 5 组测试词对 |
 | `game/engine/test/` | 逐条规则的测试，和 252 局随机机器人对局（每一步检查有没有泄密） |
 
-| `game/client/` | 手机页面（Preact）：`app.tsx` 外壳，`home.tsx` 首页 / 扫码进房，`lobby.tsx` 大厅，`game.tsx` 对局（`night.tsx` 夜晚、`day.tsx` 发言、`vote.tsx` 投票与出局、`phase2.tsx` 第二阶段、`over.tsx` 结算），`identity.tsx` 按住看词，`tour.tsx` 规则图解（首页「怎么玩」和大厅打开的七张分步动画），`dossier.tsx` 档案，`judge.tsx` 主持人台，`board.tsx` 画板和共用部件 |
+| `game/client/` | 手机页面（Preact）：`app.tsx` 外壳，`home.tsx` 首页 / 扫码进房，`lobby.tsx` 大厅，`game.tsx` 对局（`night.tsx` 夜晚、`day.tsx` 发言、`vote.tsx` 投票与出局、`phase2.tsx` 第二阶段、`over.tsx` 结算），`identity.tsx` 按住看词，`tour.tsx` 规则图解（首页「怎么玩」和大厅打开的八页动画，文字一段一段出来、图跟着动），`rulesdoc.tsx` 文字版完整规则（图解右上角「完整规则」），`dossier.tsx` 档案，`judge.tsx` 主持人台，`board.tsx` 画板和共用部件 |
 | `game/shared/protocol.ts` | 手机和服务器之间的消息格式 |
 | `game/server/` | 房间服务器：Cloudflare Worker + Durable Object（一个房间一个），有自己的 `package.json` |
 | `game/server/src/room.ts` | 房间：成员、密码、房主、设置、累计得分；跑引擎，按人推送视图，用一个 alarm 驱动所有计时 |

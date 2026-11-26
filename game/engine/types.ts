@@ -133,7 +133,8 @@ export interface RaceGuess {
 export type Step =
   | { k: 'night'; day: number; deadline: number | null; picks: Record<PlayerId, NightPick> }
   | { k: 'clue'; day: number; start: PlayerId; dir: Dir; order: PlayerId[]; idx: number; deadline: number | null }
-  | { k: 'discussion'; day: number; deadline: number | null; ready: PlayerId[] }
+  /** 轮流发言：按身份提示的顺序每人说一段，当前发言的人点「说完了」（或时间到）轮到下一个。 */
+  | { k: 'discussion'; day: number; order: PlayerId[]; idx: number; deadline: number | null }
   | { k: 'vote'; day: number; deadline: number | null; ballots: Record<PlayerId, PlayerId> }
   | { k: 'exit'; day: number; queue: PlayerId[]; idx: number; cur: ExitCur }
   | { k: 'turn'; round: 1 | 2; order: PlayerId[]; idx: number; deadline: number | null; pending: string | null; reasks: number }

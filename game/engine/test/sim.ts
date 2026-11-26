@@ -96,8 +96,12 @@ export class Sim {
       this.do(s.order[s.idx], { a: 'clue', text });
     }
   }
+  /** 轮流发言：每个人依次说完。 */
   discuss() {
-    for (const p of this.alive()) this.do(p.id, { a: 'ready' });
+    while (this.step.k === 'discussion') {
+      const s = this.step;
+      this.do(s.order[s.idx], { a: 'ready' });
+    }
   }
   /** 所有存活玩家投给 target（或按 ballots 指定）。 */
   voteAll(target: string, ballots: Record<string, string> = {}) {

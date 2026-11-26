@@ -52,7 +52,7 @@ function botAction(g: GameState, v: PlayerView, r: () => number): Action | null 
     case 'clue':
       return st.order[st.idx] === v.me.id && r() < 0.8 ? { a: 'clue', text: junk() } : null;
     case 'discussion':
-      return v.me.alive && !st.ready.includes(v.me.id) && r() < 0.5 ? { a: 'ready' } : null;
+      return st.order[st.idx] === v.me.id && r() < 0.5 ? { a: 'ready' } : null;
     case 'vote': {
       if (!v.me.alive || st.myVote || r() < 0.2) return null;
       // 偏向投白板，让更多对局走到第二阶段

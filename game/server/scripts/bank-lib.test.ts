@@ -130,7 +130,8 @@ describe('题库导入', () => {
     const rows = (await readSheet(path, '题库')) as Cell[][];
     const r = parseRows(rows, '题目采集表.xlsx');
     expect(r.issues.filter((i) => i.level === 'error')).toEqual([]);
-    expect(r.pairs.map((p) => `${p.id} ${p.wordA}/${p.wordB}`)).toEqual(['0-1 股票/鱿鱼', '0-2 清一色/唐三彩', '0-3 雷达/射手', '0-4 神/狗', '0-5 米/万']);
-    expect(r.pairs.find((p) => p.wordB === '狗')?.aliasesB).toEqual(['犬', '狗狗']);
+    // 模板里只有规则讲解用的「雷达 / 射手」，而且是停用的（不会被抽到）
+    expect(r.pairs).toEqual([]);
+    expect(r.disabled).toBe(1);
   });
 });

@@ -1,9 +1,11 @@
 /**
  * 白天发言：每天是一条地铁线，每个座位一站，按今天说话的顺序排；你说的词就是你这一站的站名。
  * 两段直线中间一个 45° 弯；出局的人还在线上，是一个不停靠的站。底部：车厢里的线路屏（等别人说）、
- * 站名牌（轮到你）、发车牌（自由讨论：下一项投票，人齐就开始）。
+ * 站名牌（轮到你）。身份提示说完后，按同样的顺序再轮一圈发言：线上每站都写着提示，
+ * 红点走到谁谁发言，发言的人点「我说完了」；最后一个说完就投票。
  */
 
+import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { LogEntry, StepView } from '../engine/view.ts';
 import { DIR } from './text.ts';
@@ -113,7 +115,7 @@ function dayData(g: G, start: string, dir: 'cw' | 'ccw', order: string[]): DayDa
   return { day: v.day, color: lineColor(v.day), stations, order, said, dir };
 }
 
-function LineMap({ d, cur, me, ready, signTop }: { d: DayData; cur: number; me: string; ready?: string[]; signTop: number }) {
+function LineMap({ d, cur, me, talking, signTop }: { d: DayData; cur: number; me: string; talking?: number; signTop: number }) {
   const L = new Line(
     d.stations.map((s) => s.id),
     signTop,
@@ -125,6 +127,8 @@ function LineMap({ d, cur, me, ready, signTop }: { d: DayData; cur: number; me: 
   const fsClue = 21 * k;
   const halo = `paint-order: stroke; stroke: ${PAPER}; stroke-linejoin: round`;
   const c = d.color;
+  const talk = talking !== undefined;
+  if (talk) cur = talking;
   let lines;
   if (cur >= n) {
     lines = <path d={poly(L.path)} fill="none" stroke={c} stroke-width="9" stroke-linejoin="round" stroke-linecap="round" />;
@@ -163,7 +167,7 @@ function LineMap({ d, cur, me, ready, signTop }: { d: DayData; cur: number; me: 
           );
         }
         const i = d.order.indexOf(st.id);
-        const said = i < cur;
+        const said = talk || i < cur;
         const now = i === cur && cur < n;
         const isMe = st.id === me;
         const col = said || now ? INK : '#8f8676';
@@ -213,11 +217,10 @@ function LineMap({ d, cur, me, ready, signTop }: { d: DayData; cur: number; me: 
                   <text x={cx} y={y + 7 * k} style={`font-family: var(--serif); font-weight: 900; font-size: ${fsClue}px; fill: ${INK}; ${halo}; stroke-width: 5px`}>
                     「{clue}」
                   </text>
-                  {ready?.includes(st.id) ? (
-                    <g transform={`translate(${(cx + fsClue * (Array.from(clue).length + 1.4) + 8).toFixed(1)} ${y})`}>
-                      <circle r={8 * k} fill={INK} stroke={PAPER} stroke-width="2" />
-                      <path d="M-3.6 0.2 L-1 2.8 L3.8 -2.6" fill="none" stroke={PAPER} stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform={`scale(${k})`} />
-                    </g>
+                  {now && talk ? (
+                    <text x={(cx + fsClue * (Array.from(clue).length + 1.4) + 6).toFixed(1)} y={y + 5} style={`font-size: 13px; font-weight: 700; fill: var(--acc-text); ${halo}; stroke-width: 4px`}>
+                      {isMe ? '轮到你说' : '发言中'}
+                    </text>
                   ) : null}
                 </>
               )
@@ -285,7 +288,7 @@ function Header({ g, title, d }: { g: G; title: string; d: DayData }) {
 }
 
 /** 车厢里的线路屏：现在谁在说，下一站是谁。 */
-function DoorDisplay({ g, d, cur, top }: { g: G; d: DayData; cur: number; top: number }) {
+function DoorDisplay({ g, d, cur, top, talk, action }: { g: G; d: DayData; cur: number; top: number; talk?: boolean; action?: ComponentChildren }) {
   const n = d.order.length;
   const me = g.v.me.id;
   const nxt = cur + 1 < n ? d.order[cur + 1] : null;
@@ -299,16 +302,17 @@ function DoorDisplay({ g, d, cur, top }: { g: G; d: DayData; cur: number; top: n
       <div class="b-d-screen">
         <div class="b-d-row">
           <Roundel day={d.day} ring="#141312" />
-          <span class="b-d-dim">第 {d.day} 天 · 身份提示</span>
+          <span class="b-d-dim">第 {d.day} 天 · {talk ? '轮流发言' : '身份提示'}</span>
           <span class="b-d-count">
             {Math.min(cur + 1, n)} / {n}
           </span>
         </div>
         <p class="b-d-now">
           <span class="b-d-dim">现在</span>
-          <b>{g.name(d.order[cur])}</b>
-          <span>正在想一个和自己的词有关的词</span>
+          <b>{d.order[cur] === me ? '你' : g.name(d.order[cur])}</b>
+          <span>{talk ? (d.order[cur] === me ? '说吧，说完点下面的按钮' : '正在发言') : '正在想一个和自己的词有关的词'}</span>
         </p>
+{action ? null : (
         <svg width={width} height={n > 9 ? 66 : 58} viewBox={`0 0 ${width} ${n > 9 ? 66 : 58}`} aria-hidden="true" style={{ display: 'block' }}>
           <path d={`M12 14 H${width - 12}`} stroke="#4a4640" stroke-width="5" stroke-linecap="round" />
           {cur > 0 ? <path d={`M12 14 H${(12 + gap * Math.min(cur, n - 1)).toFixed(1)}`} stroke={d.color} stroke-width="5" stroke-linecap="round" /> : null}
@@ -341,11 +345,13 @@ function DoorDisplay({ g, d, cur, top }: { g: G; d: DayData; cur: number; top: n
             );
           })}
         </svg>
+        )}
+        {action ?? null}
         <p class="b-d-next">
-          <span class="b-d-tag">下一站</span>
-          <b>{nxt ? g.name(nxt) : '—'}</b>
+          <span class="b-d-tag">{talk ? '下一位' : '下一站'}</span>
+          <b>{nxt ? g.name(nxt) : talk ? '投票' : '—'}</b>
           <span class="b-d-dim">{tail}</span>
-          {s.k === 'clue' && s.deadline !== null ? (
+          {(s.k === 'clue' || s.k === 'discussion') && s.deadline !== null ? (
             <span style={{ marginLeft: 'auto' }}>
               <Timer deadline={s.deadline} offset={g.offset} total={g.total} night />
             </span>
@@ -418,84 +424,34 @@ function StationBoard({ g, d, top, text, setText, submit }: { g: G; d: DayData; 
   );
 }
 
-/** 发车牌：下一项投票，准备好的人亮灯；最下面是昨天的线。 */
-function DepartureBoard({ g, s, top }: { g: G; s: Talk; top: number }) {
-  const alive = g.v.players.filter((p) => p.alive);
-  const total = alive.length;
-  const readyN = s.ready.length;
-  const prevNight = [...g.v.log].reverse().find((e): e is Extract<LogEntry, { t: 'night' }> => e.t === 'night' && e.day === g.v.day - 1);
-  return (
-    <div class="b-d-depart" style={{ top: `${top}px` }}>
-      <div class="b-d-screen">
-        <div class="b-d-grid">
-          <span class="b-d-dim">下一项</span>
-          <b class="b-d-big">投票</b>
-          <span class="b-cond b-d-n">
-            {readyN} / {total}
-          </span>
-          <span class="b-d-dim">准备好</span>
-          <span class="b-d-lamps">
-            {alive.map((p) => (
-              <i key={p.id} class={s.ready.includes(p.id) ? 'is-on' : ''} title={p.name} />
-            ))}
-          </span>
-          <span class="b-d-dim">人到齐就开始</span>
-        </div>
-        <p class="b-d-yest">
-          {prevNight ? (
-            <>
-              <Roundel day={g.v.day - 1} size={18} ring="#141312" />
-              <span>
-                第 {g.v.day - 1} 天：从 {g.name(prevNight.start)} 开始{DIR[prevNight.dir]}
-              </span>
-              <button type="button" class="b-d-link" onClick={g.openFile}>
-                看昨天的词 ›
-              </button>
-            </>
-          ) : (
-            <>
-              <span>这是第一天</span>
-              {s.deadline !== null ? (
-                <span style={{ marginLeft: 'auto' }}>
-                  <Timer deadline={s.deadline} offset={g.offset} total={g.total} label="讨论还有" night />
-                </span>
-              ) : null}
-            </>
-          )}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export function DayScreen({ g, s }: { g: G; s: Clue | Talk }) {
   const { v, conn } = g;
   const [text, setText] = useState('');
   const clueStep = s.k === 'clue' ? s : null;
+  const talk = s.k === 'discussion' ? s : null;
   const nightEntry = [...v.log].reverse().find((e): e is Extract<LogEntry, { t: 'night' }> => e.t === 'night' && e.day === v.day);
   const start = clueStep?.start ?? nightEntry?.start ?? v.players[0].id;
   const dir = clueStep?.dir ?? nightEntry?.dir ?? 'cw';
-  const order = clueStep ? clueStep.order : v.log.filter((e): e is Extract<LogEntry, { t: 'clue' }> => e.t === 'clue' && e.day === v.day).map((c) => c.player);
+  const order = clueStep ? clueStep.order : talk ? talk.order : v.log.filter((e): e is Extract<LogEntry, { t: 'clue' }> => e.t === 'clue' && e.day === v.day).map((c) => c.player);
   const d = dayData(g, start, dir, order.length ? order : v.players.filter((p) => p.alive).map((p) => p.id));
   const crowded = d.stations.length >= 10;
   const signTop = crowded ? 604 : 560;
-  const cur = clueStep ? clueStep.idx : d.order.length;
+  const cur = clueStep ? clueStep.idx : talk ? talk.idx : d.order.length;
   const mine = !!clueStep && clueStep.order[clueStep.idx] === v.me.id;
+  const myTalk = !!talk && talk.order[talk.idx] === v.me.id;
   const max = v.rules.clueMaxLength;
   const submit = () => {
     if (!okText(text, max)) return;
     conn.act({ a: 'clue', text: text.trim() });
     setText('');
   };
-  const talk = s.k === 'discussion' ? s : null;
-  const ready = talk ? talk.ready.includes(v.me.id) : false;
   return (
-    <Stage bg="line" label={clueStep ? '身份提示' : '自由讨论'}>
+    <Stage bg="line" label={clueStep ? '身份提示' : '轮流发言'}>
       <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0 }} dangerouslySetInnerHTML={{ __html: BG_LINES }} />
       <Layer label={`第 ${v.day} 天的线路：${d.order.map(g.name).join('、')}`}>
-        <LineMap d={d} cur={cur} me={v.me.id} ready={talk?.ready} signTop={signTop} />
+        <LineMap d={d} cur={cur} me={v.me.id} talking={talk ? talk.idx : undefined} signTop={signTop} />
       </Layer>
-      <Header g={g} title={clueStep ? '身份提示' : '自由讨论'} d={d} />
+      <Header g={g} title={clueStep ? '身份提示' : '轮流发言'} d={d} />
       {clueStep ? (
         mine ? (
           <>
@@ -511,18 +467,20 @@ export function DayScreen({ g, s }: { g: G; s: Clue | Talk }) {
           <DoorDisplay g={g} d={d} cur={cur} top={signTop + 12} />
         )
       ) : talk ? (
-        <>
-          <DepartureBoard g={g} s={talk} top={signTop + 12} />
-          <div class="b-d-btn" style={{ top: `${crowded ? 772 : 760}px` }}>
-            {v.me.alive ? (
-              <Btn onClick={() => conn.act({ a: 'ready' })} disabled={ready}>
-                {ready ? '已准备，等其他人' : '准备投票'}
-              </Btn>
-            ) : (
-              <p class="b-wait">你已出局，可以参与讨论，但不能投票。</p>
-            )}
-          </div>
-        </>
+        <DoorDisplay
+          g={g}
+          d={d}
+          cur={cur}
+          top={signTop + 12}
+          talk
+          action={
+            myTalk ? (
+              <div class="b-d-talkgo">
+                <Btn onClick={() => conn.act({ a: 'ready' })}>我说完了</Btn>
+              </div>
+            ) : null
+          }
+        />
       ) : null}
     </Stage>
   );

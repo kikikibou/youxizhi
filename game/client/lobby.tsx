@@ -591,9 +591,9 @@ function PairCartouche({
             </p>
             {(
               [
-                ['a', 'wordA', '词 A', '例：股票', 20],
-                ['b', 'wordB', '词 B', '例：鱿鱼', 20],
-                ['link', 'link', '联系', '例：都可以「炒」', 80],
+                ['a', 'wordA', '词 A', '例：雷达', 20],
+                ['b', 'wordB', '词 B', '例：射手', 20],
+                ['link', 'link', '联系', '例：都是蚊香的品牌', 80],
               ] as const
             ).map(([sw, key, label, ph, max]) => (
               <label class="b-lb-pair-row" key={key}>
@@ -653,19 +653,19 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
         <div class="b-lb-cols">
           <label class="b-lb-field">
             <span>词 A 的义项（裁判按这个理解）</span>
-            <input maxLength={40} placeholder="例：证券" {...field('senseA')} />
+            <input maxLength={40} placeholder="例：用无线电探测目标的装置" {...field('senseA')} />
           </label>
           <label class="b-lb-field">
             <span>词 B 的义项</span>
-            <input maxLength={40} placeholder="例：海洋动物、食材" {...field('senseB')} />
+            <input maxLength={40} placeholder="例：射箭或射击的人" {...field('senseB')} />
           </label>
           <label class="b-lb-field">
             <span>A 的别名（顿号隔开，猜到也算对）</span>
-            <input placeholder="例：股份" {...field('aliasesA')} />
+            <input placeholder="例：雷达站" {...field('aliasesA')} />
           </label>
           <label class="b-lb-field">
             <span>B 的别名</span>
-            <input placeholder="例：柔鱼、枪乌贼" {...field('aliasesB')} />
+            <input placeholder="例：弓箭手、射击手" {...field('aliasesB')} />
           </label>
         </div>
         <label class="b-lb-field">
@@ -674,7 +674,7 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
         </label>
         <label class="b-lb-field">
           <span>裁判须知（给 AI 裁判的补充说明，玩家看不到）</span>
-          <textarea rows={2} maxLength={200} placeholder="例：问「能不能炒」答是；「墨鱼」不算鱿鱼" {...field('judgeNote')} />
+          <textarea rows={2} maxLength={200} placeholder="例：按「装置」和「人」理解，不按蚊香品牌回答" {...field('judgeNote')} />
         </label>
         <button type="submit" class="b-btn b-btn--ghost b-lb-wide">
           <span>连同上面的两个词一起保存</span>
@@ -1022,7 +1022,7 @@ function Rules({ conn, room, n, editable }: { conn: RoomConnection; room: RoomVi
           <small class="b-lb-muted">
             {s.untimed
               ? '每一步都等大家操作完；有人走开时，房主可以「跳过等待」。'
-              : `身份提示 ${s.timers.clue / 1000} 秒 / 人 · 自由讨论 ${s.timers.discussion / 1000} 秒 · 投票 ${s.timers.vote / 1000} 秒`}
+              : `身份提示 ${s.timers.clue / 1000} 秒 / 人 · 轮流发言 ${s.timers.discussion / 1000} 秒 / 人 · 投票 ${s.timers.vote / 1000} 秒`}
           </small>
         </Rule>
 

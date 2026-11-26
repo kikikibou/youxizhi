@@ -264,7 +264,7 @@ function linkLayout(link: string): { lines: string[]; fs: number; cx: number } {
 const HALO_PAGE = 'paint-order: stroke; stroke: #fbf3dc; stroke-linejoin: round';
 
 /** 揭晓前：国界中段一个小注记「联系 ？」。fading：揭晓时淡掉。 */
-function LinkTag({ fading }: { fading?: boolean }) {
+export function LinkTag({ fading }: { fading?: boolean }) {
   const x = 170;
   const y = 340;
   return (
@@ -279,7 +279,7 @@ function LinkTag({ fading }: { fading?: boolean }) {
 }
 
 /** 揭晓后：国界接上尺线，两头是两个词，联系写在上面。 */
-function LinkLine({ link, big, small, play }: { link: string; big: string; small: string; play: boolean }) {
+export function LinkLine({ link, big, small, play }: { link: string; big: string; small: string; play: boolean }) {
   const { lines, fs, cx } = linkLayout(link);
   const len = Math.hypot(JX - MIDX, JY - MIDY);
   // 尺线：黑白相间的刻度条，和比例尺一个画法

@@ -116,7 +116,7 @@ export function botAction(v: PlayerView): import('../../engine/types.ts').Action
     case 'clue':
       return st.order[st.idx] === v.me.id ? { a: 'clue', text: pick(JUNK) } : null;
     case 'discussion':
-      return v.me.alive && !st.ready.includes(v.me.id) ? { a: 'ready' } : null;
+      return st.order[st.idx] === v.me.id ? { a: 'ready' } : null;
     case 'vote': {
       if (!v.me.alive || st.myVote) return null;
       // 大家都投座位号最小的另一位存活玩家：每天只出局一人，更容易走到第二阶段

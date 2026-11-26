@@ -361,7 +361,7 @@ function handle(g: GameState, me: PlayerState, action: Action, now: number) {
       if (action.a === 'clue') return clue(g, me, action.text, now);
       break;
     case 'discussion':
-      if (action.a === 'ready') return ready(g, me);
+      if (action.a === 'ready') return talkDone(g, me, now);
       break;
     case 'vote':
       if (action.a === 'vote') return vote(g, me, action.target);
@@ -442,8 +442,8 @@ function settleOnce(g: GameState, now: number): boolean {
       }
       return false;
     case 'discussion':
-      if (due(s.deadline) || alivePlayers(g).every((p) => s.ready.includes(p.id))) {
-        g.step = { k: 'vote', day: s.day, deadline: until(g, now, g.rules.timers.vote), ballots: {} };
+      if (due(s.deadline)) {
+        nextTalk(g, now); // 时间到：轮到下一个
         return true;
       }
       return false;
@@ -598,13 +598,21 @@ function nextClue(g: GameState, now: number) {
   const s = g.step as Extract<Step, { k: 'clue' }>;
   s.idx += 1;
   if (s.idx < s.order.length) s.deadline = until(g, now, g.rules.timers.clue);
-  else g.step = { k: 'discussion', day: s.day, deadline: until(g, now, g.rules.timers.discussion), ready: [] };
+  else g.step = { k: 'discussion', day: s.day, order: [...s.order], idx: 0, deadline: until(g, now, g.rules.timers.discussion) };
 }
 
-function ready(g: GameState, me: PlayerState) {
-  if (!me.alive) reject('出局玩家不参与投票');
+/** 轮流发言：只有正在发言的人能点「说完了」。 */
+function talkDone(g: GameState, me: PlayerState, now: number) {
   const s = g.step as Extract<Step, { k: 'discussion' }>;
-  if (!s.ready.includes(me.id)) s.ready.push(me.id);
+  if (s.order[s.idx] !== me.id) reject('还没轮到你发言');
+  nextTalk(g, now);
+}
+
+function nextTalk(g: GameState, now: number) {
+  const s = g.step as Extract<Step, { k: 'discussion' }>;
+  s.idx += 1;
+  if (s.idx < s.order.length) s.deadline = until(g, now, g.rules.timers.discussion);
+  else g.step = { k: 'vote', day: s.day, deadline: until(g, now, g.rules.timers.vote), ballots: {} };
 }
 
 function vote(g: GameState, me: PlayerState, target: PlayerId) {

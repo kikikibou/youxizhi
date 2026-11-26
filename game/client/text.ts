@@ -28,7 +28,7 @@ export function phaseTitle(v: { day: number; step: { k: StepView['k'] } }): { cn
     case 'clue':
       return { cn: '身份提示', en: `DAY ${d} · CLUES` };
     case 'discussion':
-      return { cn: '自由讨论', en: `DAY ${d} · TALK` };
+      return { cn: '轮流发言', en: `DAY ${d} · TALK` };
     case 'vote':
       return { cn: '投票', en: `DAY ${d} · VOTE` };
     case 'exit':
@@ -158,7 +158,7 @@ export const RULE_INFO = {
   ],
   pace: [
     '不限时：每一步都等当事人操作完再往下走；有人走开了，房主或主持人可以点「跳过等待」，这一步按时间到处理。',
-    '紧凑 / 标准 / 宽松：按倒计时自动推进。时间到了没操作：没给提示记为「没有给提示」，没投票视为投自己。',
+    '紧凑 / 标准 / 宽松：按倒计时自动推进。时间到了没操作：没给提示记为「没有给提示」，轮流发言轮到下一个，没投票视为投自己。',
     '抢答阶段的提示间隔一直按时计。',
   ],
   wordSource: [

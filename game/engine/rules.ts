@@ -84,7 +84,7 @@ export interface Timers {
 export const DEFAULT_TIMERS: Readonly<Timers> = {
   night: 30_000,
   clue: 45_000,
-  discussion: 180_000,
+  discussion: 60_000, // 轮流发言：每人
   vote: 30_000,
   exitChoice: 30_000,
   exitMinShow: 8_000,

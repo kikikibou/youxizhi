@@ -90,7 +90,7 @@ const CROWDED: Scene[] = [
       s.voteAll(b);
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
       s.wait(s.g.rules.timers.exitMinShow);
-      s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
+      s.do(idOf(s, 'big'), { a: 'guess', text: '猎人' });
       if (s.g.judge.length) s.verdict('wrong');
       if (s.step.k !== 'over') throw new Error(`没结束：${s.step.k}`);
       return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')), revealed: true };
