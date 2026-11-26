@@ -26,6 +26,10 @@
  *               may be Chinese or English: ui.js tags them and the CSS sets each
  *               in its own type (English sub in italic serif, English lines in
  *               small caps, Chinese in the Chinese sans).
+ * intro         a paragraph, or several: on a short screen the ones after the
+ *               first fold away behind a 展开 link (see fitPoems in ui.js)
+ * panelTop      (optional) the highest the content panel's top may stand, as a
+ *               share of the window's height, for a title standing above it
  * footer        the strip along the bottom: left { title, stars, items },
  *               center { script (on the top edge), lines (two) },
  *               right { title, badge, items }; items are [label, value] pairs
@@ -118,16 +122,22 @@ export const PAGES = [
     poem: ['Silence is a golden hammer.', 'Speech is a silver bullet.', 'Tell the nails from the werewolves.'],
     poemSmall: '沉默是马斯洛的金槌，雄辩是欧立希的银弹',
     label: {
-      title: '辩论工具箱',
+      title: '辩论',
+      // (the lines call debate an adversarial TRPG: "roll for initiative")
+      sub: 'Roll for rebuttal.',
       mark: 'Toolbox',
-      lines: ['ARGUMENT · STRUCTURE · TIME', 'TOOLS FOR THE PODIUM'],
+      lines: ['开放世界', '角色扮演', '对抗性trpg', '文恨'],
     },
-    intro: '为备赛和比赛准备的小工具。先放上计时器，赛制速查、论点结构器和辩题库会陆续搬进这栋楼。',
+    intro: [
+      '我之所以喜欢辩论，是因为它有一个独一无二的好处：辩论是大学校园里唯一一种不需要特殊道具、不需要专门场地的团队竞技。',
+      '——如果你看到上面这句话之后、本能的第一反应就是在脑海里搜寻反例，那么或许你也会喜欢这项活动。',
+    ],
     cards: [
-      { no: '01', title: '辩论计时器', en: 'Debate Timer', desc: '单方计时 / 自由辩双计时', tool: 'timer', ready: true },
-      { no: '02', title: '赛制速查', en: 'Formats', desc: '常见赛制的环节与时长', ready: false },
-      { no: '03', title: '论点结构器', en: 'Argument Builder', desc: '定义 · 标准 · 论证 · 价值', ready: false },
-      { no: '04', title: '辩题库', en: 'Motion Bank', desc: '按议题分类的辩题', ready: false },
+      { no: '01', title: '攻错', en: 'Touchstone', desc: '竞技辩论AI评委工具', ready: false },
+      // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
+      { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', ready: false },
+      { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑元素的新型赛制', ready: false },
+      { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了包含更多动效之外没有什么提升点的辩论计时器', tool: 'timer', ready: true },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 4, items: [['Straw', '0 g'], ['Steel', '100%'], ['Red Herring', 'trace']] },
@@ -138,6 +148,7 @@ export const PAGES = [
   {
     id: 'puzzle',
     side: 'left', // which side the content panel sits on (away from the beam)
+    panelTop: 0.36, // (AREPO stands above the panel: its top stays below this, × the window's height)
     no: '02',
     nav: '问答',
     glyph: '问',
@@ -178,16 +189,22 @@ export const PAGES = [
     poem: ['Sphinx vs. DJ Jack', 'Q: Why fix my dumb black TV?', 'Wrong puzzle. Forget.'],
     poemSmall: '数字算盘，盘算字数',
     label: {
-      title: '谜题研究所',
+      title: '问答',
+      // (before sleep, instead of it, in it: "sleep on it" is to think it over)
+      sub: 'Sleep on it. Or don’t.',
       mark: 'Enigma',
-      lines: ['LOGIC · NUMBERS · LATERAL', 'ONE A DAY KEEPS THE BOREDOM AWAY'],
+      lines: ['睡前智力题', '睡不着智力题', '睡梦中智力题', '愉快的单机小游戏'],
     },
-    intro: '逻辑推理、数学趣题与横向思维。答案默认折叠，想好了再点开。',
+    intro: [
+      '纯粹的「知识竞答」对我来说有一个问题：它只考验「是否知道」，所以只要我「不知道」，就只剩下无所适从的垃圾时间了。',
+      '相比之下，我更喜欢「智力竞答」——在知识量能提供帮助的前提下，也留出了考验「能不能搞懂」的空间。开动脑筋、驱使策略、让不同知识储备的人都能享受到乐趣，或许这样获得的胜利也别有一番风味。',
+    ],
     cards: [
-      { no: '01', title: '每日一题', en: 'Daily Puzzle', desc: '今天的题：三个贴错的箱子', tool: 'daily', ready: true },
-      { no: '02', title: '逻辑推理', en: 'Logic', desc: '骑士与无赖、帽子问题……', ready: false },
-      { no: '03', title: '数学趣题', en: 'Mathematics', desc: '不需要公式的数学', ready: false },
-      { no: '04', title: '横向思维', en: 'Lateral', desc: '换个角度就有答案', ready: false },
+      { no: '01', title: '人造语言的三国知识问答', en: 'Conlang Kingdoms', desc: '很久以前出的一套题，其实是在这个板块建设起来之前占位的…', ready: false },
+      { no: '02', title: '三园警察', en: 'Mole Patrol', desc: '一个考验反应速度、知识量，与直觉的打地鼠小游戏', ready: false },
+      { no: '03', title: '切半', en: 'Bisect', desc: '一个考验地理知识与常识的小游戏', ready: false },
+      // (until the old ones move in, the stand-in puzzle from the first prototype)
+      { no: '04', title: '每周睡前智力题', en: 'Weekly Bedtime Puzzle', desc: '如果占位的新游戏暂时更新不出来，会在这里用旧作拖延时间', tool: 'daily', ready: true },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 5, items: [['Drunk Bird', '34%'], ['Goats', '⅔'], ['Camels', '17 + 1'], ['Pigeons', 'n + 1']] },
@@ -257,17 +274,20 @@ export const PAGES = [
     ],
     poemSmall: 'Anticlockwise.',
     label: {
-      title: '网页游乐场',
+      title: '消遣',
+      // (party games: an assembly of people, and the line on a flat-pack box)
+      sub: 'Some assembly required.',
       mark: 'Arcade',
-      lines: ['BROWSER · NO INSTALL', 'SMALL GAMES FOR SHARP MINDS'],
+      lines: ['聚会游戏', '独立游戏开发', '其实跟上一页的区分并不明显所以我还在思考'],
     },
-    intro: '打开即玩、不用安装的智力小游戏。这一栋还在施工，先把门牌挂上。',
+    intro: '这里是一些我自己设计的，需要「多人参与」的聚会小游戏。之后也会把一些自己设计的桌游所需要用到的桌游助手也放在这里，欢迎大家尝试。',
     cards: [
       // (href: a page of its own, opened in place of the drawer)
-      { no: '01', title: '大国小国', en: 'Big & Small', desc: '面对面的语言推理，6–12 人各用手机', href: 'dgxg/', ready: true },
-      { no: '02', title: '24 点', en: 'Make 24', desc: '四个数，加减乘除', ready: false },
-      { no: '03', title: '数独', en: 'Sudoku', desc: '每日一盘，难度可选', ready: false },
-      { no: '04', title: '更多', en: 'More', desc: '欢迎来提建议', ready: false },
+      { no: '01', title: '大国小国', en: 'Big & Small', desc: '基于微妙联系的猜词类身份推理游戏', href: 'dgxg/', ready: true },
+      { no: '02', title: '对抗性问答猜人', en: 'Twenty Questions, Versus', desc: '用Yes/No问题来锁定人物的那个经典小游戏，加入了对抗性与策略要素', ready: false },
+      // (纵横: a crossword's two directions)
+      { no: '03', title: '纵横猜词', en: 'Across & Down', desc: '强调战略性的团队对抗猜词游戏', ready: false },
+      { no: '04', title: '死亡游戏', en: 'No Continues', desc: '只能玩一次的合作类闯关游戏，请凑齐队友都在场时再点开', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 4, items: [['Agôn', '1 v 1'], ['Alea', '2d6'], ['Mimicry', 'Lv. 1'], ['Ilinx', '720°']] },
@@ -314,15 +334,20 @@ export const PAGES = [
     poem: ['Sorry, Master:', 'your safe word needs 12+ characters,', 'upper and lower case, a number,', 'and a special symbol.'],
     poemSmall: '甜的 · 从强者出来',
     label: {
-      title: '关于这条街',
+      title: '其他',
+      // (whatever you guess about the hobby at the far end, it will be denied)
+      sub: 'Any resemblance is purely coincidental.',
       mark: 'Signal',
-      lines: ['WHO · WHY · HOW TO REACH', 'NOTES FROM THE STREET CORNER'],
+      lines: ['除了上面三个大类之外', '另一个同样构成了我的爱好'],
     },
-    intro: '这里写你的自我介绍：你是谁、为什么喜欢辩论和问答、怎样联系你。（占位文字，等你来替换）',
+    intro: [
+      '这个码头通向另一个未知的建筑。基于理所应当的理由，我把剩下的一个爱好放在了那里。就当是自我意识过剩吧，我留下了这个路标，来证明自己的兴趣比这里还要更广泛一点点。',
+      '即使你找到了那边的作品集，也请不要来找我确认。无论你猜得对或是不对，反正我都会无条件地否认的。*Salut.*',
+    ],
     cards: [
-      { no: '01', title: '关于我', en: 'Profile', desc: '辩手 / 出题人 / 写代码的人', ready: false },
-      { no: '02', title: '联系方式', en: 'Contact', desc: '邮箱与社交账号', ready: false },
-      { no: '03', title: '更新日志', en: 'Changelog', desc: '这条街每一次扩建', ready: false },
+      { no: '01', title: '关于我', en: 'Profile', desc: '一些简单的自我展示欲', ready: false },
+      { no: '02', title: '联系方式', en: 'Contact', desc: '更多简单的自我展示欲', ready: false },
+      { no: '03', title: '更新日记', en: 'Dev Diary', desc: '已经实现的自我展示欲', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 5, items: [['Honey', '1 lion'], ['Wine', '0%'], ['Locks', '7'], ['Rope', 'new']] },

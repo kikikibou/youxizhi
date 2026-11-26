@@ -22,7 +22,7 @@ function cardHtml(c, i) {
       <button class="card" type="button" ${action} ${ready ? '' : 'disabled'}>
         <span class="card-no">${esc(c.no)}</span>
         <span class="card-main">
-          <span class="card-title">${esc(c.title)}<i>${esc(c.en)}</i></span>
+          <span class="card-title">${esc(c.title)} <i>${esc(c.en)}</i></span>
           <span class="card-desc">${esc(c.desc)}</span>
         </span>
         <span class="card-tag ${ready ? 'is-ready' : ''}">${tag}</span>
@@ -33,10 +33,15 @@ function cardHtml(c, i) {
 /**
  * On a short screen a page's poem (top right) and its content panel can
  * meet when both sit on the right. Then the panel first gives back some of
- * its gap above the footer (--panel-gap, down to PANEL_GAP_MIN), and only if
- * that isn't enough does the poem step aside, so it never covers the panel's copy.
+ * its gap above the footer (--panel-gap, down to PANEL_GAP_MIN); if that
+ * isn't enough it stops below the poem and its sheet scrolls (.panel.is-held
+ * in style.css), and only when that would leave it shorter than PANEL_MIN
+ * does the poem step aside, so it never covers the panel's copy.
+ * A panel never reaches up into the top bar either: past it, it is held too.
  */
 const PANEL_GAP_MIN = 23;
+const PANEL_MIN = 300;
+const TOP_CLEAR = 14; // (px below the top bar)
 // (where the panel stands with the strip open: while it is folded the panel
 // is moved down by `translate`, perhaps part way, see --fold-drop)
 function openRect(panel) {
@@ -46,28 +51,90 @@ function openRect(panel) {
   return { left: r.left, right: r.right, top: r.top - dy, bottom: r.bottom - dy };
 }
 function fitPoems() {
+  const bar = document.querySelector('.topbar');
+  const top = bar ? bar.getBoundingClientRect().bottom + TOP_CLEAR : 0;
   for (const page of document.querySelectorAll('.page')) {
     const poem = page.querySelector('.poem');
     const panel = page.querySelector('.panel');
     if (!poem || !panel) continue;
     page.style.removeProperty('--panel-gap');
+    panel.style.removeProperty('max-height');
+    panel.classList.remove('is-held', 'is-folded', 'can-fold');
     const a = poem.getBoundingClientRect();
     let b = openRect(panel);
     const side = a.width > 0 && a.left < b.right && b.left < a.right;
+    // (a page whose title stands above its panel keeps the panel below it: panelTop in pages.js)
+    const title = panel.dataset.top ? parseFloat(panel.dataset.top) * window.innerHeight : 0;
+    const open = panel.classList.contains('is-open'); // (the visitor unfolded the intro)
+    // First, where the panel would reach past the top bar, the title or a
+    // poem beside it, its intro folds after the first paragraph (a 展开
+    // link unfolds it, and then it may cover the title).
+    if (b.top < Math.max(top, title, side ? a.bottom + 6 : 0) && panel.querySelector('.intro-more')) {
+      panel.classList.add('can-fold');
+      if (!open) {
+        panel.classList.add('is-folded');
+        b = openRect(panel);
+      }
+    }
     const short = a.bottom + 6 - b.top; // (px the panel would have to come down)
+    let crowded = false;
+    let limit = open ? top : Math.max(top, title); // (the highest the panel's top may stand)
     if (side && short > 0) {
       const gap = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-gap')) || PANEL_GAP_MIN;
       page.style.setProperty('--panel-gap', `${Math.max(PANEL_GAP_MIN, gap - Math.ceil(short))}px`);
       b = openRect(panel);
+      if (a.bottom + 6 > b.top) {
+        if (b.bottom - (a.bottom + 6) >= PANEL_MIN) limit = Math.max(limit, a.bottom + 6);
+        else crowded = true;
+      }
     }
-    page.classList.toggle('is-crowded', side && a.bottom + 6 > b.top);
+    // (a few px over are let be, rather than scrolling a sheet that far)
+    if (b.top < limit - 12) {
+      panel.style.maxHeight = `${Math.floor(b.bottom - limit)}px`;
+      panel.classList.add('is-held');
+    }
+    page.classList.toggle('is-crowded', crowded);
   }
 }
-/** A ticket's small lines run together on one line, or stack when that doesn't fit. */
+/**
+ * A ticket's small lines run together on one line; when that doesn't fit
+ * they wrap between items into as few rows as will do, as evenly as they can
+ * (4 items: 2 + 2 rather than 3 + 1). A separator where a row ends becomes
+ * the break (i.is-break in style.css).
+ */
 function fitTickets() {
   for (const el of document.querySelectorAll('.ticket-lines')) {
-    el.classList.remove('is-stacked');
-    if (el.scrollWidth > el.clientWidth + 1) el.classList.add('is-stacked');
+    const items = [...el.querySelectorAll('span')];
+    const seps = [...el.querySelectorAll('i')];
+    seps.forEach((s) => s.classList.remove('is-break'));
+    const room = el.clientWidth + 1;
+    const w = items.map((n) => n.getBoundingClientRect().width);
+    const sep = seps.length ? seps[0].getBoundingClientRect().width : 0;
+    let best = null;
+    // (every way of breaking between items: n is at most a handful)
+    for (let mask = 0; mask < 1 << seps.length; mask++) {
+      let rows = 1, widest = 0, row = w[0];
+      for (let k = 1; k < items.length; k++) {
+        if (mask & (1 << (k - 1))) {
+          widest = Math.max(widest, row);
+          rows++;
+          row = w[k];
+        } else row += sep + w[k];
+      }
+      widest = Math.max(widest, row);
+      const fits = widest <= room;
+      // (fitting first; then fewer rows, then the narrowest widest row; when
+      // nothing fits, the narrowest)
+      const better =
+        !best ||
+        (fits !== best.fits
+          ? fits
+          : fits
+            ? rows < best.rows || (rows === best.rows && widest < best.widest - 0.5)
+            : widest < best.widest - 0.5);
+      if (better) best = { mask, fits, rows, widest };
+    }
+    seps.forEach((s, k) => s.classList.toggle('is-break', !!(best.mask & (1 << k))));
   }
 }
 const panelSizes = new ResizeObserver(() => fitPoems());
@@ -108,10 +175,10 @@ export function renderPages(pages, el) {
         <div class="poem-lines reveal" style="--d:2" lang="${lang(p.poem.join(''))}">${p.poem.map((l) => `<span>${esc(l)}</span>`).join('')}</div>
         <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
       </div>
-      <div class="panel">
+      <div class="panel"${p.panelTop ? ` data-top="${p.panelTop}"` : ''}>
         ${ticketHtml(p)}
         <div class="sheet reveal" style="--d:4">
-          ${[].concat(p.intro).map((t) => `<p class="intro">${emph(t)}</p>`).join('')}
+          ${introHtml(p.intro)}
           <ul class="cards">${p.cards.map(cardHtml).join('')}</ul>
         </div>
       </div>
@@ -119,8 +186,33 @@ export function renderPages(pages, el) {
     )
     .join('');
   el.querySelectorAll('.poem, .panel').forEach((n) => panelSizes.observe(n));
-  el.querySelectorAll('.ticket-lines span').forEach((n) => ticketSizes.observe(n));
+  // (the items, for when the fonts arrive; the line itself, for when the
+  // room it has changes, e.g. as the stub's digits arrive in their face)
+  el.querySelectorAll('.ticket-lines, .ticket-lines span').forEach((n) => ticketSizes.observe(n));
   el.querySelectorAll('.blank').forEach(wireBlank);
+  for (const btn of el.querySelectorAll('.intro-toggle')) {
+    btn.addEventListener('click', () => {
+      btn.closest('.panel').classList.toggle('is-open', 'more' in btn.dataset);
+      fitPoems();
+    });
+  }
+}
+
+/**
+ * A page's intro, one paragraph each. When the panel is short of room the
+ * paragraphs after the first fold away behind a 展开 link at the end of
+ * the first, and 收起 at the end of the last folds them again (see fitPoems).
+ */
+function introHtml(intro) {
+  const ps = [].concat(intro);
+  const more = ' <button class="intro-toggle" type="button" data-more>展开 ▾</button>';
+  const less = ' <button class="intro-toggle" type="button" data-less>收起 ▴</button>';
+  return ps
+    .map((t, k) => {
+      const last = k === ps.length - 1;
+      return `<p class="intro${k ? ' intro-more' : ''}">${emph(t)}${k === 0 && !last ? more : ''}${k && last ? less : ''}</p>`;
+    })
+    .join('');
 }
 
 /**

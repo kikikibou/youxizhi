@@ -786,6 +786,10 @@ html.poem-ink .poem-rule {
      shade stops short of */
   bottom: calc(var(--foot, 115px) + var(--panel-gap));
   width: min(400px, 92vw);
+  /* (a column, so that when the panel is held short, below the top bar or
+     a poem beside it, the sheet gives way and scrolls: see fitPoems() in ui.js) */
+  display: flex;
+  flex-direction: column;
   color: var(--paper-ink);
   /* down into the room the footer strip leaves when it folds, with it (see ui.js) */
   translate: 0 var(--fold-drop, 0px);
@@ -799,6 +803,7 @@ html.poem-ink .poem-rule {
 /* v2: the flag (.brush) is now a ticket: a stub, a perforation, and the face. */
 .ticket {
   display: flex;
+  flex: none; /* (the sheet below it is what gives way, see .panel) */
   align-items: stretch;
   margin: 0 -10px 12px; /* 10px wider than the sheet on both sides */
   color: #fff;
@@ -919,12 +924,12 @@ html.poem-ink .poem-rule {
 .ticket-lines i {
   font-style: normal;
 }
-/* (too long for one line: one line each; see fitTickets() in ui.js) */
-.ticket-lines.is-stacked i {
-  display: none;
-}
-.ticket-lines.is-stacked span {
+/* (too long for one line: the separator where a row ends breaks it; see
+   fitTickets() in ui.js) */
+.ticket-lines i.is-break {
   display: block;
+  height: 0;
+  overflow: hidden;
 }
 
 .sheet {
@@ -933,7 +938,20 @@ html.poem-ink .poem-rule {
      forces the browser to re-blur it every frame (and hitches when it animates). */
   border-top: 3px solid var(--orange-ink); /* v2: matches the ticket above it */
   padding: 16px 18px 8px;
+  min-height: 0;
   transition: background 1.2s var(--ease), color 1.2s var(--ease);
+}
+/* Held short (see .panel): the sheet scrolls, and the wheel scrolls it here
+   instead of turning the page (see app.js). Its cards only fade in, as
+   rising from below they would make it scroll for a moment. */
+.panel.is-held .sheet {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--paper-ink) 35%, transparent) transparent;
+}
+.panel.is-held .sheet .reveal {
+  transform: none;
 }
 .intro {
   margin: 0 0 8px;
@@ -941,6 +959,31 @@ html.poem-ink .poem-rule {
   line-height: 1.7;
   color: var(--paper-ink);
   opacity: 0.88;
+}
+/* The later paragraphs fold away when the panel is short of room (see
+   fitPoems() in ui.js): 展开 at the end of the first, 收起 at the end of the last. */
+.panel.is-folded .intro-more {
+  display: none;
+}
+.intro-toggle {
+  display: none;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--orange-ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.intro-toggle:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.panel.is-folded .intro-toggle[data-more],
+.panel.can-fold.is-open .intro-toggle[data-less] {
+  display: inline;
 }
 /* *words* in pages.js: in italic serif, like the cards' English names */
 .intro em {
@@ -993,9 +1036,14 @@ html[data-theme='night'] .card:hover:not([disabled]) {
 .card-title {
   font-weight: 700;
   font-size: 15px;
+  word-spacing: 2px;
 }
+/* (after a space rather than a margin: when a long title pushes the English
+   name onto a line of its own, it moves down whole and starts flush left) */
 .card-title i {
-  margin-left: 6px;
+  display: inline-block;
+  white-space: nowrap;
+  word-spacing: normal;
   font-family: var(--serif);
   font-style: italic;
   font-weight: 400;
