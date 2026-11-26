@@ -24,8 +24,11 @@ const one = (id) => [{ id }];
 export const ROUNDS = [
   {
     id: 'a',
-    name: '基础篇',
+    name: '基础版',
+    short: '基础',
     en: 'Part I',
+    seal: '壹',
+    blurb: '适合刚刚开始接触这套题的玩家，难度适中。',
     questions: [
       { no: '0', slots: one('a0'), text: '「Poujsi: Oxi Hlew」中，唯一没有在街机游戏「天地 Ez」里作为可操作角色登场的是？' },
       { no: '1', slots: one('a1'), text: 'Dasi te 在大呼「Dasi Yik 敢 Vocox！Dasi Yik 敢 Vocox！Dasi Yik 敢 Vocox！」后 Uocox 的蜀国 Poujsi？' },
@@ -46,8 +49,11 @@ export const ROUNDS = [
   },
   {
     id: 'b',
-    name: '进阶篇',
+    name: '进阶版',
+    short: '进阶',
     en: 'Part II',
+    seal: '贰',
+    blurb: '需要完成基础版才有可能破解，包含了更多误导性与冷门知识。',
     questions: [
       { no: '1', slots: one('b1'), text: 'Dasi te 有着漂亮的长 Hwx、因为 Mea 而改换姓名、在对抗 Kvrmis 的军队时通过制造敌军的 Zohye 而获胜的人物？' },
       { no: '2', slots: one('b2'), text: 'Dasi te「功臣: Klrdtn Ybi」之一的 Gor、在诸葛亮之前唯一 cas「Roa 庙 Uotx」wf「Poa 庙 Uotx」、并曾用 Unfqi 的比喻来说服其他 Poujsi 继续 Hye 东吴的人物？' },

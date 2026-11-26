@@ -7,11 +7,12 @@
  *   check(a)  = SHA-256("check|salt|slot|a") — what the page looks up
  *   wrap(a)   = SHA-256("wrap|salt|slot|a")  — unlocks the slot's key K
  *   K         = SHA-256("content|salt|slot|first accepted answer")
- * The note shown once a slot is solved is sealed with K (AES-GCM), and the
- * dictionary with SHA-256 of every slot's K in order. K only depends on the
- * first accepted answer, so editing the notes and rebuilding keeps players'
- * saved progress. This keeps answers out of plain sight; it does not stop
- * someone from trying names against the hashes on purpose.
+ * The notes and the dictionary are sealed together (AES-GCM) with SHA-256 of
+ * every slot's K in order, so they open only once everything is solved. K
+ * only depends on the first accepted answer, so editing the notes and
+ * rebuilding keeps players' saved progress. This keeps answers out of plain
+ * sight; it does not stop someone from trying names against the hashes on
+ * purpose.
  */
 const enc = new TextEncoder();
 const dec = new TextDecoder();

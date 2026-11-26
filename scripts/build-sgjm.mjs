@@ -37,6 +37,7 @@ function parseSlot(id) {
 
 const slots = {};
 const keys = [];
+const notes = {};
 let names = 0;
 for (const id of SLOT_IDS) {
   const { norms, note } = parseSlot(id);
@@ -44,10 +45,13 @@ for (const id of SLOT_IDS) {
   keys.push(key);
   const checks = {};
   for (const norm of norms) checks[await checkOf(id, norm)] = await seal(await wrapKeyOf(id, norm), key);
-  slots[id] = { checks, note: await seal(key, note) };
+  slots[id] = { checks };
+  notes[id] = note;
   names += norms.length;
 }
-const dictionary = await seal(await dictionaryKeyOf(keys), (blocks.get('词典') ?? []).join('\n').trim());
+// The notes and the dictionary open together, once every slot is solved.
+const dictionary = (blocks.get('词典') ?? []).join('\n').trim();
+const final = await seal(await dictionaryKeyOf(keys), JSON.stringify({ notes, dictionary }));
 
 const extra = [...blocks.keys()].filter((k) => k !== '词典' && !SLOT_IDS.includes(k));
 if (extra.length) console.warn(`答案表里这些编号没有对应的题目，已忽略：${extra.join('、')}`);
@@ -59,7 +63,7 @@ writeFileSync(
 export const SLOTS = {
 ${SLOT_IDS.map((id) => `  ${id}: ${JSON.stringify(slots[id])},`).join('\n')}
 };
-export const DICTIONARY = ${JSON.stringify(dictionary)};
+export const FINAL = ${JSON.stringify(final)};
 `,
 );
 console.log(`sgjm: ${SLOT_IDS.length} 格，${names} 种写法，已写入 src/sgjm/answers.generated.js`);
