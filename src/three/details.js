@@ -383,6 +383,13 @@ function debate(b, k, site, R) {
   const ga = GARDENS.a.y0;
   b.box('concrete', [-19.1, ga, -6.6], [GARDENS.a.x1 - 0.1, ga + 0.25, -3.5]);
   for (const [x, z] of [[14.6, -2.4], [21, -2.4], [9.6, -8.5], [9.6, -12]]) g.topiary(x, z, { y: GARDENS.b.y0, r: 0.45, stem: 0.4 });
+  // Tower A's roof, round the helipad (HELIPAD in buildings.js): a planted
+  // bed along the left edge and two clipped balls in pots at the stair hut's
+  // door. (Seen from above only; a sequence of its own again.)
+  const R3 = rng(20261126);
+  const h = kit(meshes(b, R3), pieces(b, R3), R3);
+  h.bed(b, -19.85, -18.85, -9.9, -6.7, { y: 38, flowerChance: 0.3 });
+  for (const x of [-19.35, -17.55]) h.topiary(x, -11.85, { y: 38, r: 0.3, stem: 0.32 });
 }
 
 /* ---------------------------------------------------------------- puzzle */

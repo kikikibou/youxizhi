@@ -568,8 +568,10 @@ export class World {
   }
 
   async buildTypography() {
-    const all = this.sites.flatMap(({ page: { scene: sc } }) => [
+    const grounds = (page) => page.cards.flatMap((c) => c.spot?.ground?.items || []);
+    const all = this.sites.flatMap(({ page, page: { scene: sc } }) => [
       ...sc.texts,
+      ...grounds(page),
       { t: sc.cluster.title, f: 'display' },
       { t: sc.cluster.of || '', f: isCJK(sc.cluster.of) ? 'cn' : 'display' },
       { t: sc.cluster.cn, f: 'cn' },
@@ -589,6 +591,24 @@ export class World {
         block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
         site.group.add(block.mesh);
         site.texts.push(block);
+      }
+      // Lettering laid flat on the ground round a card's close-up (its
+      // spot.ground in pages.js: a group placed and turned on the ground,
+      // each item at [across, away] in it), shown only while the camera is
+      // there. (On a screen held upright, its `portrait` placing, without
+      // the items marked portrait: false; see update.)
+      site.grounds = [];
+      for (const card of site.page.cards) {
+        const g = card.spot?.ground;
+        if (!g) continue;
+        const group = new THREE.Group();
+        const blocks = g.items.map((it) => {
+          const block = new TextBlock({ ...it, p: [it.at[0], 0, -it.at[1]], r: [-Math.PI / 2, 0, it.turn || 0] }, aniso);
+          group.add(block.mesh);
+          return block;
+        });
+        site.group.add(group);
+        site.grounds.push({ spot: card.spot, ground: g, group, blocks, shown: 0, tall: false });
       }
     }
     this.fitClusters();
@@ -691,7 +711,7 @@ export class World {
     // middle point stands near the start, a little above the end)
     const mid = from.pos.clone().lerp(to.pos, 0.3);
     mid.y = to.pos.y + 4;
-    this.closeUp = { dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
+    this.closeUp = { spot, dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
     return this.fly(from, to, mid, duration);
   }
 
@@ -1265,6 +1285,20 @@ export class World {
         const o = THREE.MathUtils.clamp(site.activity * 1.6 - k * 0.12, 0, 1);
         t.update(this.night, o);
       });
+      // (a close-up's ground lettering: in as the camera rises to it, out as it leaves)
+      for (const g of site.grounds || []) {
+        const on = this.closeUp?.spot === g.spot ? 1 : 0;
+        g.shown = damp(g.shown, on, on ? 1.1 : 3.5, dt);
+        const tall = this.camera.aspect < 0.9 && g.ground.portrait;
+        const v = tall || g.ground;
+        g.group.position.set(v.p[0], 0.05, v.p[1]);
+        g.group.rotation.y = v.r || 0;
+        g.group.scale.setScalar(v.scale || 1);
+        g.blocks.forEach((t, k) => {
+          const hide = tall && g.ground.items[k].portrait === false;
+          t.update(this.night, hide ? 0 : THREE.MathUtils.clamp(g.shown * 1.8 - k * 0.12, 0, 1));
+        });
+      }
     });
     this.updatePost(this.night);
     WIND.value = this.time;

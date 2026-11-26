@@ -324,6 +324,7 @@ function dropSpot() {
   spotEl.setAttribute('aria-hidden', 'true');
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
   document.body.classList.remove('is-spot');
+  takeoff.classList.remove('is-on'); // (if it was on its way out)
 }
 
 /** 返回: fly back down to the page. */
@@ -410,11 +411,24 @@ function takeBackSpot() {
   return c?.spot ? c : null;
 }
 
-function step(dir) {
-  if (drawer.isOpen || spot) return;
+/** The next page round (dir ±1). keys: ← →, which leave a close-up too (the wheel and a swipe stay put there). */
+function step(dir, keys = false) {
+  if (drawer.isOpen || (spot && !keys)) return;
   if (performance.now() - lastNav < 1400) return;
   const next = (current + dir + ids.length) % ids.length;
   location.hash = `#/${ids[next]}`;
+}
+
+/** ↑ / ↓: from a page up to its cards' close-ups (their spot in pages.js) in card order, and back down. */
+function climb(dir) {
+  if (drawer.isOpen || performance.now() - lastNav < 900) return;
+  const ups = PAGES[current].cards.filter((c) => c.spot && c.ready);
+  const next = (spot ? ups.indexOf(spot.c) : -1) + dir;
+  if (next < -1 || next >= ups.length) return;
+  lastNav = performance.now();
+  if (next === -1) return closeSpot();
+  if (spot) dropSpot();
+  openSpot(current, ups[next]);
 }
 
 window.addEventListener(
@@ -431,8 +445,11 @@ window.addEventListener('keydown', (e) => {
   if (drawer.isOpen) return;
   if (spot && e.key === 'Escape') return closeSpot();
   if (e.target.closest?.('input, textarea')) return; // (typing, e.g. in a poem's blank)
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') step(1);
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') step(-1);
+  // (← → round the pages, ↑ ↓ between a page and its close-ups)
+  if (e.key === 'ArrowRight') step(1, true);
+  if (e.key === 'ArrowLeft') step(-1, true);
+  if (e.key === 'ArrowUp') climb(1);
+  if (e.key === 'ArrowDown') climb(-1);
 });
 
 // Touch swipe on phones.

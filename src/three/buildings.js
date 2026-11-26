@@ -109,13 +109,6 @@ export class Builder {
     return this.push(key, geometry);
   }
 
-  /** A flat polygon lying at height y, its corners [x, z] (paint on a floor). */
-  flat(key, points, y) {
-    const g = new THREE.ShapeGeometry(new THREE.Shape(points.map(([x, z]) => new THREE.Vector2(x, -z))));
-    g.rotateX(-Math.PI / 2);
-    return this.geo(key, g, 0, y, 0);
-  }
-
   /** A flat ring lying at height y round (cx, cz). */
   ring(key, cx, cz, y, r0, r1, segments = 64) {
     const g = new THREE.RingGeometry(r0, r1, segments);
@@ -255,66 +248,103 @@ export const GARDENS = {
 
 // The helipad on the affirmative tower's roof: 攻错's card flies the camera up
 // here before it leaves for debatestone.com (its `spot` in pages.js). From
-// the plaza it stays out of sight behind the crown; from above it is that
-// site's first plate laid on a roof: the black touchstone in a gold ring,
-// with gold rays painted out across the roof round it.
-export const HELIPAD = { x: -11.6, z: -10.2, y: 39.25, r: 4.4 };
+// the plaza it stays out of sight behind the crown. The roof round it is a
+// working one, drawn finely for the view from above (paving, a stair hut,
+// a safety net, floodlights, a windsock); only the pad itself is in that
+// site's colours: the black touchstone, a gold ring and dial, a bone H.
+export const HELIPAD = { x: -11.5, z: -10.3, y: 39.25, r: 4 };
 
-/** `poly` ([x, z] corners, convex) cut down to the rectangle x0..x1 × z0..z1. */
-function clipRect(poly, [x0, z0, x1, z1]) {
-  for (const [ax, v, keepAbove] of [[0, x0, true], [0, x1, false], [1, z0, true], [1, z1, false]]) {
-    const inside = (p) => (keepAbove ? p[ax] >= v : p[ax] <= v);
-    const out = [];
-    poly.forEach((p, i) => {
-      const q = poly[(i + 1) % poly.length];
-      if (inside(p)) out.push(p);
-      if (inside(p) !== inside(q)) {
-        const t = (v - p[ax]) / (q[ax] - p[ax]);
-        out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
-      }
-    });
-    poly = out;
-    if (!poly.length) break;
-  }
-  return poly;
-}
+/** Signed difference between two angles, in -π..π. */
+const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
-/** HELIPAD, on tower A's roof (A: the tower's box, see debate()). */
+/** HELIPAD and the roof round it, on tower A (A: the tower's box, see debate()). */
 function helipad(b, A) {
   const { x: cx, z: cz, y, r } = HELIPAD;
   const roof = A.top;
-  // Gold rays painted across the roof from under the deck, wide and narrow
-  // in turn, out to the roof's edges.
-  const edge = [A.x0 + 0.1, A.z0 + 0.1, A.x1 - 0.1, A.z1 + 0.5];
   const at = (a, d) => [cx + Math.cos(a) * d, cz + Math.sin(a) * d];
-  for (let k = 0; k < 20; k++) {
-    const a = (k / 20) * Math.PI * 2 + 0.09;
-    const half = k % 2 ? 0.026 : 0.062;
-    const ray = clipRect([at(a - half, r - 0.4), at(a + half, r - 0.4), at(a + half, 40), at(a - half, 40)], edge);
-    if (ray.length >= 3) b.flat('gold', ray, roof + 0.02);
-  }
+  const STEPS = Math.PI; // the steps come up on the left (-x)
+  // Paving joints across the roof, a hair proud of it.
+  for (let x = A.x0 + 1.4; x < A.x1 - 0.5; x += 1.4) b.box('whiteShade', [x - 0.025, roof, A.z0 + 0.25], [x + 0.025, roof + 0.012, A.z1 + 0.35]);
+  for (let z = A.z0 + 1.4; z < A.z1 + 0.3; z += 1.4) b.box('whiteShade', [A.x0 + 0.25, roof, z - 0.025], [A.x1 - 0.25, roof + 0.012, z + 0.025]);
+
   // The deck on short legs over a low plant room: a white slab with the
-  // black stone laid on it, a gold touchdown ring, a fine gold rim, a bone H
-  // (upright as seen from the plaza side, where the camera comes up).
-  b.box('whiteShade', [cx - 2.6, roof, cz - 2.4], [cx + 2.6, y - 0.4, cz + 2.4]);
+  // black stone laid on it.
+  b.box('whiteShade', [cx - 2.4, roof, cz - 2.2], [cx + 2.4, y - 0.4, cz + 2.2]);
   for (let k = 0; k < 8; k++) {
-    const [lx, lz] = at(((k + 0.5) / 8) * Math.PI * 2, r - 0.8);
-    b.box('metal', [lx - 0.12, roof, lz - 0.12], [lx + 0.12, y - 0.38, lz + 0.12]);
+    const [lx, lz] = at(((k + 0.5) / 8) * Math.PI * 2, r - 0.7);
+    b.box('metal', [lx - 0.11, roof, lz - 0.11], [lx + 0.11, y - 0.38, lz + 0.11]);
   }
-  b.cyl('white', cx, cz, y - 0.4, y - 0.04, r, 48);
-  b.cyl('stone', cx, cz, y - 0.12, y, r - 0.22, 48);
-  b.ring('gold', cx, cz, y + 0.012, 2.75, 3.15);
-  b.ring('gold', cx, cz, y + 0.012, r - 0.5, r - 0.42);
-  const [hw, hh, t] = [0.8, 1.2, 0.19];
+  b.cyl('white', cx, cz, y - 0.4, y - 0.04, r, 64);
+  b.cyl('stone', cx, cz, y - 0.12, y, r - 0.2, 64);
+  // Its markings, in gold and bone: the touchdown ring, a dial of ticks
+  // round it (every fifth a long one), a fine rim, and the H (upright as
+  // seen from the plaza side, where the camera comes up).
+  b.ring('gold', cx, cz, y + 0.012, 2.5, 2.84);
+  for (let k = 0; k < 60; k++) {
+    const a = (k / 60) * Math.PI * 2;
+    const long = k % 5 === 0;
+    const [d0, d1] = [3.0, long ? 3.38 : 3.2];
+    const [mx, mz] = at(a, (d0 + d1) / 2);
+    b.boxRot('gold', [mx, y + 0.006, mz], [d1 - d0, 0.012, long ? 0.075 : 0.04], [0, -a, 0]);
+  }
+  b.ring('gold', cx, cz, y + 0.012, r - 0.42, r - 0.36);
+  const [hw, hh, t] = [0.7, 1.08, 0.17];
   for (const s of [-1, 1]) b.box('bone', [cx + s * hw - t, y, cz - hh], [cx + s * hw + t, y + 0.01, cz + hh]);
   b.box('bone', [cx - hw + t, y, cz - t], [cx + hw - t, y + 0.01, cz + t]);
-  // Rim lights (lit at night), and three steps up from the roof on the left.
+  // Rim lights (lit at night).
   for (let k = 0; k < 16; k++) {
-    const [lx, lz] = at((k / 16) * Math.PI * 2, r - 0.12);
-    b.cyl('padLight', lx, lz, y - 0.04, y + 0.07, 0.07, 8);
+    const [lx, lz] = at((k / 16) * Math.PI * 2, r - 0.1);
+    b.cyl('padLight', lx, lz, y - 0.04, y + 0.07, 0.065, 8);
   }
-  for (let s = 1; s <= 3; s++) b.box('white', [cx - r - s * 0.38, roof, cz - 0.6], [cx - r - (s - 1) * 0.38 + 0.05, roof + 1.21 - s * 0.3, cz + 0.6]);
-  // A windsock in the back corner: accent and white bands, tapering
+  // A safety net round the deck, a little below its top: thin ribs sloping
+  // out and up, an outer rim and two fine rings between; open at the steps.
+  const [n0, n1, ny0, ny1] = [r, r + 0.72, y - 0.32, y - 0.14];
+  const gap = 0.2; // (rad, either side of the steps)
+  const slope = Math.atan2(ny1 - ny0, n1 - n0);
+  for (let k = 0; k < 56; k++) {
+    const a = (k / 56) * Math.PI * 2;
+    if (Math.abs(angDiff(a, STEPS)) < gap) continue;
+    const [mx, mz] = at(a, (n0 + n1) / 2);
+    b.boxRot('metal', [mx, (ny0 + ny1) / 2, mz], [n1 - n0, 0.03, 0.03], [0, -a, slope]);
+  }
+  const rim = (d, h, tube) => {
+    const g = new THREE.TorusGeometry(d, tube, 5, 96, Math.PI * 2 - gap * 2);
+    g.rotateX(Math.PI / 2);
+    g.rotateY(-(STEPS + gap));
+    b.geo('metal', g, cx, h, cz);
+  };
+  rim(n1, ny1, 0.04);
+  for (const f of [0.36, 0.68]) rim(n0 + (n1 - n0) * f, ny0 + (ny1 - ny0) * f, 0.014);
+  // Four steps up from the roof on the left, a handrail either side.
+  const sx = cx - r;
+  for (let k = 1; k <= 4; k++) b.box('white', [sx - 0.3 * k - 0.02, roof, cz - 0.55], [sx - 0.3 * (k - 1) + 0.05, y - 0.25 * k, cz + 0.55]);
+  const [rx0, ry0, rx1, ry1] = [sx - 1.22, roof + 1.15, sx + 0.05, y + 0.9];
+  for (const s of [-1, 1]) {
+    const z = cz + s * 0.6;
+    for (const [px, py] of [[rx0, roof], [rx1, y - 0.04]]) b.box('metal', [px - 0.03, py, z - 0.03], [px + 0.03, py + 0.95, z + 0.03]);
+    const len = Math.hypot(rx1 - rx0, ry1 - ry0);
+    b.boxRot('metal', [(rx0 + rx1) / 2, (ry0 + ry1) / 2, z], [len, 0.05, 0.05], [0, 0, Math.atan2(ry1 - ry0, rx1 - rx0)]);
+  }
+  // The stair hut in the back left corner, its door towards the steps, a
+  // light over it; a fire-hose cabinet beside it, stepping stones between.
+  const [hx0, hx1, hz0, hz1, hh2] = [-19.7, -17.2, -14.7, -12.2, 2.7];
+  b.box('white', [hx0, roof, hz0], [hx1, roof + hh2, hz1]);
+  b.box('whiteShade', [hx0 - 0.15, roof + hh2, hz0 - 0.15], [hx1 + 0.15, roof + hh2 + 0.22, hz1 + 0.15]);
+  b.box('glassDark', [-18.85, roof, hz1 - 0.02], [-18.05, roof + 2.1, hz1 + 0.04]);
+  b.box('metal', [-18.2, roof + 1.0, hz1 + 0.04], [-18.13, roof + 1.12, hz1 + 0.1]);
+  b.box('strip', [-19.0, roof + 2.25, hz1], [-17.9, roof + 2.32, hz1 + 0.14]);
+  b.box('metal', [-19.25, roof + hh2 + 0.22, -14.2], [-18.65, roof + hh2 + 0.62, -13.6]);
+  b.box('orange', [-17.1, roof, -12.0], [-16.55, roof + 0.95, -11.74]);
+  for (const [px, pz] of [[-18.45, -11.72], [-18.0, -11.02], [-17.35, -10.4]]) b.box('concrete', [px - 0.34, roof, pz - 0.24], [px + 0.34, roof + 0.035, pz + 0.24]);
+  // Two floodlights on posts, aimed at the pad.
+  for (const [fx, fz] of [[-16.1, -14.5], [-6.95, -6.1]]) {
+    b.cyl('metal', fx, fz, roof, roof + 1.5, 0.05, 8);
+    const a = Math.atan2(cz - fz, cx - fx);
+    const [ux, uz] = [Math.cos(a), Math.sin(a)];
+    b.boxRot('metal', [fx + ux * 0.1, roof + 1.58, fz + uz * 0.1], [0.3, 0.22, 0.36], [0, -a, -0.35]);
+    b.boxRot('padLight', [fx + ux * 0.26, roof + 1.53, fz + uz * 0.26], [0.03, 0.17, 0.28], [0, -a, -0.35]);
+  }
+  // A windsock in the back right corner: accent and white bands, tapering
   // downwind (towards the front left) and drooping a little.
   const [wx, wz, wy] = [-7.3, -13.9, roof + 4.2];
   b.cyl('metal', wx, wz, roof, wy + 0.1, 0.06, 8);

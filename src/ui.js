@@ -77,6 +77,7 @@ export function passHtml(c) {
         <div class="pass-actions">
           <a class="pass-board" href="${esc(c.href)}">登机 <span aria-hidden="true">→</span></a>
           <button class="pass-back" type="button">返回</button>
+          <span class="pass-keys" aria-hidden="true">↓ / ESC</span>
         </div>
       </div>
       <div class="pass-stub">

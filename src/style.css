@@ -1846,10 +1846,11 @@ body.is-spot .bottom {
   --bone: #ece4d2;
   position: absolute;
   left: clamp(18px, 4vw, 70px);
-  top: 50%;
+  /* (low on the left, where the page's panel was: the lettering on the
+     ground over the roof keeps the upper half) */
+  bottom: clamp(24px, 8vh, 80px);
   display: flex;
   width: min(590px, calc(100vw - 36px));
-  translate: 0 -42%;
   /* (hidden, not just clear, until it opens: its buttons mustn't catch the
      clicks meant for the page's cards underneath) */
   visibility: hidden;
@@ -1998,6 +1999,21 @@ html[data-theme='night'] .pass-head {
 .pass-back:hover {
   border-color: var(--paper-ink);
 }
+/* (with a keyboard to hand: ↓ or Esc does what 返回 does) */
+.pass-keys {
+  display: none;
+  margin-left: auto;
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  opacity: 0.45;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pass-keys {
+    display: inline;
+  }
+}
 .pass-stub {
   position: relative;
   flex: none;
@@ -2109,10 +2125,8 @@ html[data-theme='night'] .pass-head {
 @media (max-width: 860px) {
   .pass {
     left: 12px;
-    top: auto;
     bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     width: calc(100vw - 24px);
-    translate: none;
   }
   .pass-main {
     padding: 12px 14px 13px;

@@ -151,10 +151,33 @@ export const PAGES = [
         spot: {
           view: { pos: [-13.5, 60, 3], target: [-17.2, 38.5, -9.6], fov: 44 },
           portrait: { pos: [-11.4, 55, -1.5], target: [-11.5, 35.2, -5.2], fov: 50 },
-          dive: [-11.6, 39.25, -10.2],
+          dive: [-11.5, 39.25, -10.3],
+          // Over the roof, the ground behind the tower as a poster: Touchstone,
+          // the clown of As You Like It (V. iv), on the seven degrees of the
+          // lie, all avoidable "with an If". (p: [x, z] on the ground, r: turned
+          // to face the camera; items at [across, away] in metres)
+          ground: {
+            p: [-30.2, -57.4],
+            r: 0.29,
+            portrait: { p: [-12.5, -53.5], r: 0.02, scale: 0.6 }, // (the list and the script would fall behind the roof)
+            items: [
+              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 10, at: [0, 0.2], c: 'orange' },
+              {
+                t: 'I. THE RETORT COURTEOUS\nII. THE QUIP MODEST\nIII. THE REPLY CHURLISH\nIV. THE REPROOF VALIANT\nV. THE COUNTERCHECK QUARRELSOME\nVI. THE LIE WITH CIRCUMSTANCE\nVII. THE LIE DIRECT',
+                f: 'caps',
+                s: 1.3,
+                at: [-41, -8.2],
+                anchor: 'left',
+                c: 'ink',
+                portrait: false,
+              },
+              { t: 'We quarrel in print, by the book.', f: 'script', s: 5.2, at: [24, -4.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
+              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.15, at: [39, -8.4], anchor: 'right', c: 'ink', portrait: false },
+            ],
+          },
           pass: {
             flight: 'TS 001',
-            text: '贴进一场比赛的内容，挑一位评委——白纸裁、心证裁、交锋裁……——拿回一份判词：胜负与分票、个人 MVP、场上发生了什么，以及给双方的改进建议。',
+            text: '使用先进大语言模型，精心调试过的竞技辩论AI评委工具——针对模辩反馈、赛后复盘、娱乐比赛等不同需求，设计有8个判准、评判方式各异的AI评委。简单上传自己的比赛转录稿后，便可以获得来自AI评委的点评与建议。',
             fields: [['GATE', 'H'], ['SEAT', '正方 / 反方'], ['JUDGES', '8 位任选']],
             motto: 'Saxa loquuntur.', // (攻错's own motto: the stones speak)
           },
