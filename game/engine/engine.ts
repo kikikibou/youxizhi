@@ -203,7 +203,9 @@ export function createGame(input: NewGame): GameState {
   const p = input.pair;
   const A: WordEntry = { word: p.wordA, sense: p.senseA ?? '', aliases: p.aliasesA ?? [] };
   const B: WordEntry = { word: p.wordB, sense: p.senseB ?? '', aliases: p.aliasesB ?? [] };
-  const aIsBig = rand(g) < 0.5;
+  // 先照常抽一次（同一个种子的随机序列不变），题目指定了大国词就按指定的来
+  const drawn = rand(g) < 0.5;
+  const aIsBig = p.bigWord === 'A' ? true : p.bigWord === 'B' ? false : drawn;
   g.secret = {
     pairId: p.id,
     big: aIsBig ? A : B,

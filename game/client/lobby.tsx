@@ -495,6 +495,8 @@ type PairForm = {
   link: string;
   hints: string;
   judgeNote: string;
+  /** '' 每局随机，'A' / 'B' 固定当大国的词 */
+  bigWord: string;
 };
 
 function initialPair(p: CustomPair | null): PairForm {
@@ -508,6 +510,7 @@ function initialPair(p: CustomPair | null): PairForm {
     link: p?.link ?? '',
     hints: p?.hints?.join('\n') ?? '',
     judgeNote: p?.judgeNote ?? '',
+    bigWord: p?.bigWord ?? '',
   };
 }
 
@@ -517,7 +520,11 @@ function submitPair(conn: RoomConnection, f: PairForm) {
       .split(/[,，、\n]/)
       .map((x) => x.trim())
       .filter(Boolean);
-  conn.send({ t: 'customPair', pair: { ...f, aliasesA: list(f.aliasesA), aliasesB: list(f.aliasesB), hints: list(f.hints) } });
+  const { bigWord, ...rest } = f;
+  conn.send({
+    t: 'customPair',
+    pair: { ...rest, aliasesA: list(f.aliasesA), aliasesB: list(f.aliasesB), hints: list(f.hints), ...(bigWord === 'A' || bigWord === 'B' ? { bigWord } : {}) },
+  });
 }
 
 function PairSwatch({ k }: { k: 'a' | 'b' | 'link' }) {
@@ -598,7 +605,7 @@ function PairCartouche({
               </label>
             ))}
             <button type="button" class="b-lb-link b-lb-pair-more" aria-expanded={detailsOpen} onClick={openDetails}>
-              {detailsOpen ? '义项、别名、更多提示在下面 ↓' : '＋ 义项、别名、更多提示（可选）'}
+              {detailsOpen ? '大国词、义项、别名、提示在下面 ↓' : '＋ 大国词、义项、别名、提示（可选）'}
             </button>
             <button type="submit" class="b-btn b-lb-pair-go" disabled={!f.wordA.trim() || !f.wordB.trim() || !f.link.trim()}>
               <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
@@ -635,6 +642,14 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
           submitPair(conn, f);
         }}
       >
+        <label class="b-lb-field">
+          <span>哪个词当大国的词（白板要猜它，还会知道它有几个字；很难凭空想到的词别当大国的词）</span>
+          <select value={f.bigWord} onChange={(e) => set('bigWord', e.currentTarget.value)}>
+            <option value="">每局随机</option>
+            <option value="A">词 A{f.wordA.trim() ? `：${f.wordA.trim()}` : ''}</option>
+            <option value="B">词 B{f.wordB.trim() ? `：${f.wordB.trim()}` : ''}</option>
+          </select>
+        </label>
         <div class="b-lb-cols">
           <label class="b-lb-field">
             <span>词 A 的义项（裁判按这个理解）</span>

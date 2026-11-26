@@ -26,6 +26,7 @@ const HEADERS: Record<string, string> = {
   难度: 'difficulty',
   词A: 'wordA',
   词B: 'wordB',
+  大国词: 'bigWord',
   联系: 'link',
   提示1: 'hint1',
   提示2: 'hint2',
@@ -139,6 +140,18 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
     if (!link) err(line, '联系必填（抢答时提示放完最后才公布，结算时揭晓）');
     else if (len(link) > 80) err(line, `联系最多 80 字（现在 ${len(link)} 字）`);
 
+    // 大国词：填词A或词B本身（也认 A / B / 词A / 词B），留空每局随机
+    const bigRaw = get('bigWord');
+    let bigWord: 'A' | 'B' | undefined;
+    if (bigRaw) {
+      const n = normalizeWord(bigRaw);
+      if (wordA && n === normalizeWord(wordA)) bigWord = 'A';
+      else if (wordB && n === normalizeWord(wordB)) bigWord = 'B';
+      else if (['a', '词a'].includes(n)) bigWord = 'A';
+      else if (['b', '词b'].includes(n)) bigWord = 'B';
+      else err(line, `「大国词」要填这一行的词A或词B（现在是「${bigRaw}」）`);
+    }
+
     const dRaw = get('difficulty');
     const d = Number(dRaw);
     if (dRaw && ![1, 2, 3].includes(d)) err(line, `难度只能是 1、2、3（现在是「${dRaw}」）`);
@@ -187,6 +200,7 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
     }
     const pair: ParseResult['pairs'][number] = { id, wordA, wordB, link, bank, _row: line, _file: file };
     if (dRaw) pair.difficulty = d as 1 | 2 | 3;
+    if (bigWord) pair.bigWord = bigWord;
     if (hints.length) pair.hints = hints;
     if (senseA) pair.senseA = senseA;
     if (senseB) pair.senseB = senseB;

@@ -136,5 +136,6 @@ export function cleanCustomPair(input: unknown): CustomPair | string {
   if (hints.length) pair.hints = hints;
   const judgeNote = text(p.judgeNote, 200);
   if (judgeNote) pair.judgeNote = judgeNote;
+  if (p.bigWord === 'A' || p.bigWord === 'B') pair.bigWord = p.bigWord;
   return pair;
 }

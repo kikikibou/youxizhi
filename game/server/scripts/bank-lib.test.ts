@@ -114,6 +114,16 @@ describe('题库导入', () => {
     expect(r.pairs[0]).toMatchObject({ bank: '家常菜', link: '都能炒', hints: ['一个动词', '厨房里也用'] });
   });
 
+  it('大国词：填词本身或 A / B，留空每局随机；填了别的词报错', () => {
+    const head: Cell[] = ['★词A', '★词B', '大国词', '★联系'];
+    const r = parseRows(
+      [head, ['花旦', '天鹅', '天鹅', '都能接在「四小」后面'], ['鱿鱼', '股票', 'A', '都能炒'], ['神', '狗', '', '倒过来'], ['米', '万', '面', '旗']],
+      'x.xlsx',
+    );
+    expect(r.pairs.map((p) => p.bigWord)).toEqual(['B', 'A', undefined]);
+    expect(r.issues).toEqual([expect.objectContaining({ row: 5, level: 'error', message: expect.stringContaining('大国词') })]);
+  });
+
   it('模板文件本身可以直接导入', async () => {
     const path = fileURLToPath(new URL('../../题目采集表.xlsx', import.meta.url));
     const rows = (await readSheet(path, '题库')) as Cell[][];

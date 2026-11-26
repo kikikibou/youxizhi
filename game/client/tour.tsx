@@ -88,15 +88,25 @@ function ArtSides() {
                 {c.word}
               </text>
             ) : (
-              <text x={c.x} y="222" text-anchor="middle" style={serif(13, 700, MUTED)}>
-                没有词
-              </text>
+              <g>
+                <text x={c.x} y="213" text-anchor="middle" style={serif(11, 700, MUTED)}>
+                  没有词
+                </text>
+                <rect x={c.x - 15} y="219" width="13" height="13" fill="#ffffff" stroke={INK} stroke-width="1" />
+                <rect x={c.x + 2} y="219" width="13" height="13" fill="#ffffff" stroke={INK} stroke-width="1" />
+              </g>
             )}
           </g>
         </g>
       ))}
       <text class="t-in" x="20" y="188" style={`font-size: 10.5px; fill: ${MUTED}; animation-delay: 1s`}>
         每人拿到的词
+      </text>
+      <text class="t-in" x="318" y="256" text-anchor="middle" style={`font-size: 10.5px; fill: ${MUTED}; animation-delay: 1.8s`}>
+        只知道大国的词
+      </text>
+      <text class="t-in" x="318" y="270" text-anchor="middle" style={`font-size: 10.5px; fill: ${MUTED}; animation-delay: 1.8s`}>
+        有 2 个字
       </text>
       <path class="t-draw" style={at(2.0)} pathLength="1" d="M72 240 V268 H195 V240" fill="none" stroke={INK} stroke-width="1.4" />
       <g class="t-up" style={at(2.5)}>
@@ -602,7 +612,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: '三方，两个词',
-    lines: ['大国人最多，小国少一些，各拿一个词，两个词之间有个微妙的联系。', '白板没有词，要混在里面装作有词。', '你（图里的小满）只看得到自己的词「鱿鱼」，不知道自己是大国还是小国，也不知道谁是白板。'],
+    lines: ['大国人最多，小国少一些，各拿一个词，两个词之间有个微妙的联系。', '白板没有词，但知道大国的词有几个字，要混在里面装作有词。', '你（图里的小满）只看得到自己的词「鱿鱼」，不知道自己是大国还是小国，也不知道谁是白板。'],
     art: () => <ArtSides />,
   },
   {

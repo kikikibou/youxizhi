@@ -10,10 +10,15 @@ export interface WordPair {
   /** 猜词时同样判对的别名。 */
   aliasesA?: string[];
   aliasesB?: string[];
-  /** 联系的一句话表述，作为第一条提示公布。 */
+  /** 联系的一句话表述：抢答时提示放完最后才公布，结算时揭晓。 */
   link: string;
-  /** 联系之后的分级提示，越往后越直白。 */
+  /** 抢答时依次公布的提示，越往后越直白（联系排在它们后面）。 */
   hints?: string[];
+  /**
+   * 哪个词固定当大国的词；不填每局随机。白板要猜的是大国的词（还知道它有几个字），
+   * 所以很难凭空想到的那个词（例：天鹅 / 花旦 里的「花旦」）应该只当小国的词。
+   */
+  bigWord?: 'A' | 'B';
   /** 难度 1–3，是唯一可以展示给玩家的标注。 */
   difficulty?: 1 | 2 | 3;
   /** 属于哪个题库（房主可以勾选用哪几个）。 */
@@ -42,6 +47,11 @@ export function normalizeWord(s: string): string {
     .toLowerCase()
     .replace(/[\s　]+/g, '')
     .replace(/[「」『』“”‘’"'《》〈〉()（）\[\]【】.,，。、!！?？:：;；~～·…—\-_]/g, '');
+}
+
+/** 一个词有几个字（不算空格）。白板在看身份时就知道大国的词有几个字。 */
+export function wordLength(word: string): number {
+  return Array.from(word.replace(/\s+/g, '')).length;
 }
 
 /** 猜测是否和目标词或别名表完全一致（规范化之后）。 */

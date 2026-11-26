@@ -592,6 +592,7 @@
 }
 
 .b-lb-field input,
+.b-lb-field select,
 .b-lb-field textarea {
   width: 100%;
   padding: 3px 2px;

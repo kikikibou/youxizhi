@@ -42,6 +42,8 @@ export interface CustomPair {
   hints?: string[];
   /** 给裁判的补充说明（玩家看不到）。 */
   judgeNote?: string;
+  /** 哪个词固定当大国的词；不填每局随机。 */
+  bigWord?: 'A' | 'B';
 }
 
 export type ClientMsg =

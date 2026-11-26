@@ -371,7 +371,7 @@ function ReliefPanel({ g, s }: { g: G; s: Relief }) {
           {ask ? '第一轮没人猜中。白板阵营可以先问裁判一个问题，再猜一次大国的词。你们共用这一面旗，谁先交都算。' : '现在猜一次大国的词。猜中了白板拿第一。'}
         </p>
         {s.reasking ? <p class="b-p-warn">上一个问题无效，可以重问一次。</p> : null}
-        <FlagInput label={ask ? '问裁判一个是非题（大家都看得到）' : '大国的词是'} value={text} setValue={setText} max={max} size={ask ? 19 : 24} onEnter={go} />
+        <FlagInput label={ask ? '问裁判一个是非题（大家都看得到）' : `大国的词是${g.v.me.blank?.bigLen ? `（${g.v.me.blank.bigLen} 个字）` : ''}`} value={text} setValue={setText} max={max} size={ask ? 19 : 24} onEnter={go} />
       </Cloth>
       <div class="b-p-two">
         <Btn onClick={go} disabled={!okText(text, max)}>
@@ -396,6 +396,8 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
   };
   const hints = v.hints;
   const second = s.purpose === 'second' && v.result?.first;
+  // 白板要猜的是大国的词时（抢第一，或大国拿了第一后抢第二），提醒一下字数
+  const bigLen = v.me.blank?.bigLen && (s.purpose === 'first' || v.result?.first === 'big') ? v.me.blank.bigLen : 0;
   return (
     <>
       <Flag top={462} bottom={716} />
@@ -439,7 +441,7 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
         </ol>
         {s.canGuess ? (
           <>
-            <FlagInput label={second ? '抢第二名 · 要猜的词是' : '抢答 · 对方国家的词是'} value={text} setValue={setText} max={20} size={22} onEnter={go} disabled={cooling || !!s.myPending} />
+            <FlagInput label={`${second ? '抢第二名 · 要猜的词是' : v.me.blank ? '抢答 · 大国的词是' : '抢答 · 对方国家的词是'}${bigLen ? `（${bigLen} 个字）` : ''}`} value={text} setValue={setText} max={20} size={22} onEnter={go} disabled={cooling || !!s.myPending} />
             <p class="b-p-small" style={{ marginTop: '6px' }}>
               {s.myPending ? `「${s.myPending}」裁判判定中…` : cooling ? (
                 <>

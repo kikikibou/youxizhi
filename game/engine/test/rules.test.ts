@@ -515,6 +515,20 @@ describe('第二阶段（§6）', () => {
     expect(s.g.result?.how).toBe('draw');
   });
 
+  it('题目指定了大国词：每局都是它当大国的词；白板的视图里有大国词的字数，国家玩家没有', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = new Sim({ n: 7, seed, pair: { id: 't', wordA: '花旦', wordB: '天鹅', link: '都能接在「四小」后面', bigWord: 'B' } });
+      expect(s.g.secret.big.word).toBe('天鹅');
+      expect(s.g.secret.small.word).toBe('花旦');
+      const blank = s.of('blank')[0];
+      const nation = s.of('big')[0];
+      expect(viewFor(s.g, blank.id, s.t).me.blank?.bigLen).toBe(2);
+      expect(viewFor(s.g, nation.id, s.t).me.blank).toBeNull();
+    }
+    const free = new Set([1, 2, 3, 4, 5, 6, 7, 8].map((seed) => new Sim({ n: 7, seed, pair: { id: 't', wordA: '花旦', wordB: '天鹅', link: 'x' } }).g.secret.big.word));
+    expect(free.size).toBe(2); // 不指定时两个词都可能当大国的词
+  });
+
   it('救济猜中大国词：白板第一', () => {
     const s = new Sim({ n: 7, seed: 26 });
     s.toPhase2();

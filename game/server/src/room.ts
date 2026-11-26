@@ -483,6 +483,7 @@ export class Room extends DurableObject<Env> {
           link: custom.link,
           hints: custom.hints,
           judgeNote: custom.judgeNote,
+          bigWord: custom.bigWord,
         }
       : this.choosePair(random)!;
     this.game = createGame({

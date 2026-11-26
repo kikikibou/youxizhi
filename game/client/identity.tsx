@@ -171,11 +171,14 @@ function Inside({ v, code, comp }: Info) {
   let countY: number;
   if (blank) {
     const cy = (fy0 + fy1) / 2;
+    const len = blank.bigLen ?? 0;
+    const bs = Math.max(9, Math.min(20, Math.floor(190 / Math.max(1, len)) - 4));
+    const bx0 = 175 - (len * (bs + 4) - 4) / 2;
     const night = v.step.k === 'night' ? v.step : null;
     const answers = v.log.filter((e): e is Extract<typeof e, { t: 'answer' }> => e.t === 'answer');
     const rows: { k: string; v: ComponentChildren; ans?: string }[] = [
       { k: '要做的', v: ROLE_DUTY[blank.role] },
-      { k: '目标', v: '猜中大国的词' },
+      { k: '目标', v: len ? `猜中大国的词（${len} 个字）` : '猜中大国的词' },
     ];
     if (night?.decides.length) {
       rows.push({
@@ -191,12 +194,22 @@ function Inside({ v, code, comp }: Info) {
         <rect x={fx0} y={fy0} width={fx1 - fx0} height={fy1 - fy0} fill="#fdfaf2" />
         <path d={grid.join(' ')} fill="none" stroke="#b9b09d" stroke-width="0.5" stroke-dasharray="2 3" />
         <rect x="66" y={cy - 62} width="218" height="124" fill="none" stroke="#a59b88" stroke-width="1" stroke-dasharray="6 4" />
-        <text x="179" y={cy + 6} text-anchor="middle" style="font-family: var(--serif); font-weight: 900; font-size: 32px; letter-spacing: 0.24em; fill: #1e1b17">
+        <text x="179" y={cy - 18} text-anchor="middle" style="font-family: var(--serif); font-weight: 900; font-size: 32px; letter-spacing: 0.24em; fill: #1e1b17">
           {role}
         </text>
-        <text x="175" y={cy + 34} text-anchor="middle" style={`font-size: 11px; fill: ${MUTED}`}>
-          你没有词，这一幅什么都没画
+        <text x="175" y={cy + 4} text-anchor="middle" style={`font-size: 11px; fill: ${MUTED}`}>
+          你没有词，但知道大国的词有几个字
         </text>
+        {len ? (
+          <g>
+            {Array.from({ length: len }, (_, k) => (
+              <rect key={k} x={bx0 + k * (bs + 4)} y={cy + 14} width={bs} height={bs} fill="#ffffff" stroke={INK} stroke-width="1.2" />
+            ))}
+            <text x="175" y={cy + 14 + bs + 17} text-anchor="middle" style="font-family: var(--serif); font-weight: 900; font-size: 13px; fill: #1e1b17">
+              大国的词 · {len} 个字
+            </text>
+          </g>
+        ) : null}
         <path d={`M16 ${ry} H334`} stroke={INK} stroke-width="1.4" />
         {rows.map((row, k) => {
           const top = ry + k * 36;

@@ -469,7 +469,7 @@ function Secret({ v }: { v: PlayerView }) {
         <b>{ROLE[b.role]}</b>
       </Line>
       <Line k={3} span={2} class="b-fl-text">
-        {ROLE_DUTY[b.role]}。目标是猜中大国的词。
+        {ROLE_DUTY[b.role]}。目标是猜中大国的词{b.bigLen ? `（${b.bigLen} 个字）` : ''}。
       </Line>
       <Heading k={k1}>队友</Heading>
       {b.teammates.length ? (

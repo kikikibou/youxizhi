@@ -5,6 +5,7 @@
  */
 
 import { hintSequence, nightDeciders } from './engine.ts';
+import { wordLength } from './words.ts';
 import type { BlankRole, Faction } from './rules.ts';
 import type { Dir, EventBody, GameEvent, GameState, PlayerId, PlayerState, Result, WordSide } from './types.ts';
 
@@ -23,7 +24,8 @@ export interface MeView {
   /** 国家玩家看到自己的词；白板阵营为 null。大国、小国看到的结构完全一样（§3.1）。 */
   word: string | null;
   /** 只有白板阵营有。 */
-  blank: { role: BlankRole; teammates: { id: PlayerId; role: BlankRole | null }[] } | null;
+  /** bigLen：大国的词有几个字（白板一开始就知道，不然很难猜）。 */
+  blank: { role: BlankRole; teammates: { id: PlayerId; role: BlankRole | null }[]; bigLen: number } | null;
 }
 
 export type StepView =
@@ -316,7 +318,7 @@ export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerVi
       seat: me.seat,
       alive: me.alive,
       word: me.faction === 'blank' ? null : g.secret[me.faction].word,
-      blank: me.faction === 'blank' ? { role: me.role!, teammates: teammates(g, me) } : null,
+      blank: me.faction === 'blank' ? { role: me.role!, teammates: teammates(g, me), bigLen: wordLength(g.secret.big.word) } : null,
     },
     players: g.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive })),
     day: g.day,

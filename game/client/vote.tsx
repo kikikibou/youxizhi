@@ -484,7 +484,7 @@ function ExitMine({ g, s }: { g: G; s: Exit }) {
           <input
             value={text}
             autoFocus
-            placeholder={sel === 'guess' ? '大国的词是……' : '一个是非题，例：大国的词是动物吗'}
+            placeholder={sel === 'guess' ? `大国的词是……${g.v.me.blank?.bigLen ? `（${g.v.me.blank.bigLen} 个字）` : ''}` : '一个是非题，例：大国的词是动物吗'}
             aria-label={sel === 'guess' ? '猜大国的词' : '问裁判'}
             onInput={(e) => setText(e.currentTarget.value)}
             onKeyDown={(e) => {
@@ -494,7 +494,7 @@ function ExitMine({ g, s }: { g: G; s: Exit }) {
               }
             }}
           />
-          <span>{sel === 'guess' ? '只能猜一次 · 大家都看得到' : '问题公开 · 回答下个夜晚只给白板'}</span>
+          <span>{sel === 'guess' ? `只能猜一次${g.v.me.blank?.bigLen ? ` · 大国的词 ${g.v.me.blank.bigLen} 个字` : ''} · 大家都看得到` : '问题公开 · 回答下个夜晚只给白板'}</span>
         </label>
         {reask ? <p class="b-v-mine-note">裁判认为上一个问题不是有效的是非问题，可以重问一次，或者放弃。</p> : null}
         <div class="b-v-go">
