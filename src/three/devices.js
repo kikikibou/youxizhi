@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Lamp } from './props.js';
+import { TEXT_LAYER } from './typography.js';
 
 /**
  * "Reveal devices": each page has one shape through which the scene is shown
@@ -211,6 +212,7 @@ export class SplitDevice extends Device {
     );
     this.line.frustumCulled = false;
     this.line.renderOrder = 8;
+    this.line.layers.set(TEXT_LAYER); // (over the titles, which are drawn sharp in a pass of their own)
     this.group.add(this.line);
 
     this.glow = { pos: this.p.clone(), radius: 1.4, day: 0.25, night: 0.95 };

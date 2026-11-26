@@ -18,6 +18,21 @@ export const MASK = {
   uMaskRes: { value: new THREE.Vector2(1, 1) },
 };
 
+/**
+ * Lettering drawn sharp (the titles, the lettering on the ground): in a pass
+ * of its own at the canvas's full resolution, after the scene, which "auto"
+ * may draw coarser (World.renderText). Its blocks are on TEXT_LAYER; each
+ * fragment tests itself against the scene's depth (tDepth, in the 3D's own
+ * pixels) to stay hidden behind what stands in front of it.
+ */
+export const TEXT_LAYER = 3;
+export const CRISP = {
+  tDepth: { value: null },
+  uViewRes: { value: new THREE.Vector2(1, 1) },
+  uNear: { value: 0.3 },
+  uFar: { value: 2000 },
+};
+
 export const MASK_GLSL = /* glsl */ `
   uniform sampler2D tMask;
   uniform vec2 uMaskRes;
@@ -165,8 +180,22 @@ const frag = /* glsl */ `
   uniform vec3 uTagCol;
   varying vec2 vUv;
   ${MASK_GLSL}
+  #ifdef CRISP
+  uniform sampler2D tDepth;
+  uniform vec2 uViewRes;
+  uniform float uNear;
+  uniform float uFar;
+  float distanceAt(float depth) { return (uNear * uFar) / (uFar - (uFar - uNear) * depth); }
+  #endif
   void main() {
+    #ifdef CRISP
+    // (behind what the scene drew here, by more than a hair: hidden)
+    vec2 sp = gl_FragCoord.xy / uViewRes;
+    if (distanceAt(gl_FragCoord.z) > distanceAt(texture2D(tDepth, sp).r) * 1.01 + 0.15) discard;
+    float cov = beamCoverage(sp * uMaskRes);
+    #else
     float cov = beamCoverage(gl_FragCoord.xy);
+    #endif
     float a = texture2D(map, vUv).a;
     // (premultiplied: the letters cover what is behind them, the halo adds light)
     vec3 c = mix(uOut, uIn, cov) * a;
@@ -280,6 +309,7 @@ export class TextBlock {
         uTagCol: { value: new THREE.Color() },
         tMask: MASK.tMask,
         uMaskRes: MASK.uMaskRes,
+        ...CRISP,
       },
       transparent: true,
       premultipliedAlpha: true,
@@ -324,6 +354,14 @@ export class TextBlock {
     this.mesh.position.set(...spec.p);
     if (spec.r) this.mesh.rotation.set(...spec.r);
     this.mesh.renderOrder = 6;
+  }
+
+  /** Drawn sharp, in the lettering's own pass (see CRISP). */
+  crisp() {
+    this.material.defines = { CRISP: '' };
+    this.material.needsUpdate = true;
+    this.mesh.layers.set(TEXT_LAYER);
+    return this;
   }
 
   update(night, opacity) {

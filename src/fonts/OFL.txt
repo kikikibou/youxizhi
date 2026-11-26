@@ -3,6 +3,27 @@ Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFo
 
 It is licensed under the SIL Open Font License, Version 1.1, below.
 
+loader/*.woff2 (built by scripts/loader-faces.py): subsets of the fonts
+below, renamed "Loader ..." as Modified Versions (some of them have Reserved
+Font Names, which the subsets don't use):
+  fatface.woff2      from Abril Fatface. Copyright (c) 2011, TypeTogether
+                     (www.type-together.com), with Reserved Font Names
+                     "Abril" and "Abril Fatface"
+  blackletter.woff2  from UnifrakturMaguntia. Copyright (c) 2010 j. 'mach'
+                     wust with Reserved Font Name UnifrakturMaguntia.
+                     Copyright (c) 2009 Peter Wiegel.
+  neon.woff2         from Monoton. Copyright (c) 2011 by vernon adams.
+  mono.woff2         from Space Mono. Copyright 2016 The Space Mono Project
+                     Authors (https://github.com/googlefonts/spacemono)
+  inscription.woff2  from Cinzel Decorative. Copyright (c) 2012 Natanael Gama
+                     (info@ndiscovered.com), with Reserved Font Name 'Cinzel'
+  rounded.woff2      from Fredoka. Copyright 2016 The Fredoka Project Authors
+                     (https://github.com/hafontia/Fredoka-One)
+  shade.woff2        from Bungee Shade. Copyright 2023 The Bungee Project
+                     Authors (https://github.com/djrrb/Bungee)
+
+They are licensed under the SIL Open Font License, Version 1.1, below.
+
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
 http://scripts.sil.org/OFL

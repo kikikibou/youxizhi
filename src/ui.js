@@ -234,7 +234,7 @@ export function renderPages(pages, el) {
       <div class="poem">
         <div class="poem-eyebrow reveal" style="--d:1">${eyebrowHtml(p.eyebrow)}</div>
         <div class="poem-lines reveal" style="--d:2" lang="${lang(p.poem.join(''))}">${p.poem.map((l) => `<span>${esc(l)}</span>`).join('')}</div>
-        <div class="poem-small reveal" style="--d:3">${esc(p.poemSmall)}</div>
+        <div class="poem-small reveal" style="--d:3"><span>${esc(p.poemSmall)}</span></div>
       </div>
       <div class="panel"${p.panelTop ? ` data-top="${p.panelTop}"` : ''}>
         ${ticketHtml(p)}

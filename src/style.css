@@ -89,12 +89,19 @@ a {
   gap: 18px;
   justify-items: center;
 }
+/* (its face changes while loading, see loaderFaces in main.js: a box of its
+   own height, so the bar and the passphrase below stay put) */
 .loader-word {
+  --size: clamp(48px, 9vw, 120px);
+  display: grid;
+  place-items: center;
+  height: calc(var(--size) * 1.2);
   font-family: var(--display);
-  font-size: clamp(48px, 9vw, 120px);
+  font-size: calc(var(--size) * var(--face, 1));
   letter-spacing: 0.02em;
   color: var(--orange);
   line-height: 1;
+  white-space: nowrap;
 }
 .loader-bar {
   width: 180px;
@@ -769,16 +776,20 @@ html.poem-ink .poem-rule {
   line-height: 1.6;
   letter-spacing: 0.02em;
 }
-/* (one line: a longer one runs out leftwards, like the poem's own lines) */
+/* (one line: a longer one runs out leftwards, like the poem's own lines;
+   the line is a span in the row, so its text keeps an inline baseline,
+   which poemink.js measures) */
 .poem-small {
   display: flex;
   justify-content: flex-end;
-  white-space: nowrap;
   font-family: 'Oswald', 'Noto Sans SC Variable', sans-serif;
   font-size: 13px;
   font-weight: 500; /* (Chinese at 400 read thin against the scene) */
   line-height: 1.3;
   letter-spacing: 0.04em;
+}
+.poem-small > span {
+  white-space: nowrap;
 }
 
 /* Content panel */
@@ -2093,15 +2104,16 @@ html[data-theme='night'] .pass-head {
   transition-delay: 0.08s;
 }
 
-/* Leaving for the card's site: the screen goes to that site's dark, its
-   motto in gold (debatestone.com opens on a dark stage too). */
+/* Leaving for the card's site: the screen goes to the black that site opens
+   on (debatestone.com's first frame is a black veil), its motto comes up in
+   gold and goes again, and the site follows on the same black. */
 .takeoff {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: grid;
   place-items: center;
-  background: #14110d;
+  background: #000;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.9s ease-out;
@@ -2122,7 +2134,11 @@ html[data-theme='night'] .pass-head {
 }
 .takeoff.is-on .takeoff-motto {
   opacity: 1;
-  transition: opacity 0.8s ease 1.2s;
+  transition: opacity 0.6s ease 1s;
+}
+.takeoff.is-on.is-quiet .takeoff-motto {
+  opacity: 0;
+  transition: opacity 0.6s ease;
 }
 
 /* Phones: the pass along the bottom, the stub narrower. */

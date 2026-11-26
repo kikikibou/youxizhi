@@ -10,7 +10,7 @@ import { createGround, createTree, Lamp, Ribbon, PaperPlane } from './props.js';
 import { LampDevice, BeaconDevice, SplitDevice, SlideDevice, RibbonDevice, MASK_LAYER, PUNCH_LAYER } from './devices.js';
 import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
-import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL } from './typography.js';
+import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL, TEXT_LAYER, CRISP } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
 import { buildDetails, WIND, rng } from './details.js';
 
@@ -38,6 +38,7 @@ const finalShader = {
     tScene: { value: null },
     tOther: { value: null },
     tBloom: { value: null },
+    tText: { value: null },
     tMask: MASK.tMask,
     uMaskRes: MASK.uMaskRes,
     uBloom: { value: 0 },
@@ -55,6 +56,7 @@ const finalShader = {
     uniform sampler2D tScene;
     uniform sampler2D tOther;
     uniform sampler2D tBloom;
+    uniform sampler2D tText;
     uniform float uBloom;
     uniform float uMix;
     uniform vec2 uSunPos;
@@ -78,6 +80,9 @@ const finalShader = {
         float k = beamCoverage(px);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
       }
+      // The lettering, drawn sharp in its own pass (premultiplied: renderText).
+      vec4 t = texture2D(tText, vUv);
+      c = c * (1.0 - t.a) + t.rgb;
       c += uSunColor * uSun * exp(-length(px - uSunPos) / uSunR);
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
@@ -498,7 +503,8 @@ export class World {
     const size = this.renderSize(new THREE.Vector2());
     this.msaaSamples = this.lowPower ? 2 : 4;
     const samples = this.msaaSamples;
-    this.sceneRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
+    // (its depth is kept: the sharp lettering tests itself against it, see CRISP)
+    this.sceneRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples, depthTexture: new THREE.DepthTexture(size.x, size.y) });
     // The other time of day, rendered separately and swapped in inside the reveal.
     this.otherRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples });
     // Reveal mask: white where the opposite time shows (drawn from MASK_LAYER).
@@ -508,6 +514,33 @@ export class World {
       rt.resolveDepthBuffer = false;
       rt.resolveStencilBuffer = false;
     }
+    this.sceneRT.resolveDepthBuffer = true;
+    // The sharp lettering, at the canvas's own resolution (renderText), and
+    // the scene with it laid in, at the 3D's, for the bloom to glow from.
+    const full = r.getDrawingBufferSize(new THREE.Vector2());
+    this.textRT = new THREE.WebGLRenderTarget(full.x, full.y, { type: THREE.HalfFloatType, depthBuffer: false });
+    this.bloomSrcRT = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
+    this.bloomSrc = new FullScreenQuad(
+      new THREE.ShaderMaterial({
+        uniforms: { tScene: { value: this.sceneRT.texture }, tText: { value: this.textRT.texture } },
+        vertexShader: finalShader.vertexShader,
+        fragmentShader: /* glsl */ `
+          uniform sampler2D tScene;
+          uniform sampler2D tText;
+          varying vec2 vUv;
+          void main() {
+            vec4 s = texture2D(tScene, vUv);
+            vec4 t = texture2D(tText, vUv);
+            gl_FragColor = vec4(s.rgb * (1.0 - t.a) + t.rgb, s.a);
+          }`,
+        depthTest: false,
+        depthWrite: false,
+      }),
+    );
+    CRISP.tDepth.value = this.sceneRT.depthTexture;
+    CRISP.uViewRes.value.copy(full);
+    CRISP.uNear.value = this.camera.near;
+    CRISP.uFar.value = this.camera.far;
     MASK.tMask.value = this.maskRT.texture;
     MASK.uMaskRes.value.copy(size);
     this.bloom = new UnrealBloomPass(size.clone(), 0.15, 0.45, 0.95);
@@ -519,6 +552,7 @@ export class World {
     u.tScene.value = this.sceneRT.texture;
     u.tOther.value = this.otherRT.texture;
     u.tBloom.value = this.bloom.renderTargetsHorizontal[0].texture;
+    u.tText.value = this.textRT.texture;
   }
 
   /**
@@ -575,15 +609,40 @@ export class World {
     r.setRenderTarget(this.sceneRT);
     r.clear();
     r.render(this.scene, this.camera);
+    this.renderText();
     const u = this.final.material.uniforms;
     const bloom = forceBloom || (this.bloom.enabled && this.quality.bloom);
-    if (bloom) this.renderBloom(this.sceneRT.texture);
+    if (bloom) {
+      r.setRenderTarget(this.bloomSrcRT);
+      this.bloomSrc.render(r);
+      this.renderBloom(this.bloomSrcRT.texture);
+    }
     u.uBloom.value = bloom ? 1 : 0;
     u.toneMappingExposure.value = r.toneMappingExposure;
     r.setRenderTarget(null);
     this.final.render(r);
     // Drawn over the finished frame, e.g. the poems' letters (poemink.js).
     for (const o of this.overlays) o.render(r, this.night);
+  }
+
+  /**
+   * The lettering that should stay sharp (TEXT_LAYER: the titles, the
+   * lettering on the ground, the split's line) into textRT, at the canvas's
+   * full resolution however coarse "auto" draws the scene; laid over it in
+   * the final pass. (Facade signs stay in the scene, under the beams.)
+   */
+  renderText() {
+    const r = this.renderer;
+    r.getClearColor(this._clear);
+    const alpha = r.getClearAlpha();
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.textRT);
+    r.clear();
+    const layers = this.camera.layers.mask;
+    this.camera.layers.set(TEXT_LAYER);
+    r.render(this.scene, this.camera);
+    this.camera.layers.mask = layers;
+    r.setClearColor(this._clear, alpha);
   }
 
   async buildTypography() {
@@ -602,6 +661,7 @@ export class World {
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
     for (const site of this.sites) {
       const cluster = buildCluster(site.page.scene.cluster, aniso);
+      cluster.blocks.forEach((b) => b.crisp());
       site.group.add(cluster.group);
       site.cluster = cluster.group;
       site.texts.push(...cluster.blocks);
@@ -622,7 +682,7 @@ export class World {
         if (!g) continue;
         const group = new THREE.Group();
         const blocks = g.items.map((it) => {
-          const block = new TextBlock({ ...it, p: [it.at[0], 0, -it.at[1]], r: [-Math.PI / 2, 0, it.turn || 0] }, aniso);
+          const block = new TextBlock({ ...it, p: [it.at[0], 0, -it.at[1]], r: [-Math.PI / 2, 0, it.turn || 0] }, aniso).crisp();
           if (it.under) block.mesh.renderOrder = 5; // (a watermark, beneath the rest)
           group.add(block.mesh);
           return block;
@@ -807,7 +867,10 @@ export class World {
     this.otherRT.setSize(size.x, size.y);
     this.maskRT.setSize(size.x, size.y);
     this.bloom.setSize(size.x, size.y);
+    this.bloomSrcRT.setSize(size.x, size.y);
     MASK.uMaskRes.value.copy(size);
+    const full = this.renderer.getDrawingBufferSize(CRISP.uViewRes.value);
+    this.textRT.setSize(full.x, full.y);
   }
 
   /**

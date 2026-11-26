@@ -324,7 +324,7 @@ function dropSpot() {
   spotEl.setAttribute('aria-hidden', 'true');
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
   document.body.classList.remove('is-spot');
-  takeoff.classList.remove('is-on'); // (if it was on its way out)
+  takeoff.classList.remove('is-on', 'is-quiet'); // (if it was on its way out)
 }
 
 /** 返回: fly back down to the page. */
@@ -359,9 +359,12 @@ function board() {
     if (spot?.c !== c) return;
     world.dive();
     takeoff.classList.add('is-on');
+    // (black by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
+    // only black is left, and the site opens on black)
+    setTimeout(() => spot?.c === c && takeoff.classList.add('is-quiet'), 2200);
     setTimeout(() => {
       if (spot?.c === c) location.assign(c.href);
-    }, 2100);
+    }, 2900);
   }, 380);
 }
 
@@ -384,7 +387,7 @@ document.addEventListener('click', (e) => {
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   takeBackSpot();
-  takeoff.classList.remove('is-on');
+  takeoff.classList.remove('is-on', 'is-quiet');
   if (!spot) return;
   world.flyToSpot(spot.c.spot, 1.6).then(() => {
     if (!spot) return;
