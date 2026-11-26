@@ -409,7 +409,7 @@
 
 /*
  * 揭晓：海岸上的名字先淡掉，每个人从座位走回自己的阵营（一个接一个出发），
- * 木筏先漂过来；人到得差不多了，两卷横幅从中间往两边滚开，滚到头收起来、露出燕尾；最后名次剖面从海平面长出来。
+ * 木筏先漂过来；人到得差不多了，国界往北接上尺线、写出联系；最后名次剖面从海平面长出来。
  */
 .b-o-old {
   animation: b-o-out 0.25s ease-in both;
@@ -448,8 +448,66 @@
   }
 }
 
-.b-o-banner.is-play .b-o-band {
-  animation: b-o-unroll 0.72s ease-in-out 1.18s both;
+.b-o-untie {
+  animation: b-o-out 0.25s ease-in 0.5s both;
+}
+
+@keyframes b-o-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 联系：一道光沿国界往北跑 → 测站点亮起 → 尺线从这里往两边伸出去 → 两头的词 → 联系从中间显出来 */
+.b-o-trace {
+  animation: b-o-trace 0.42s ease-in 0.85s both;
+}
+
+@keyframes b-o-trace {
+  0% {
+    stroke-dashoffset: 22px;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: calc(-1 * var(--len));
+    opacity: 0;
+  }
+}
+
+.b-o-link.is-play .b-o-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: b-o-node 0.3s cubic-bezier(0.3, 1.6, 0.5, 1) 1.2s both;
+}
+
+@keyframes b-o-node {
+  from {
+    transform: scale(0);
+  }
+}
+
+.b-o-link.is-play .b-o-rule {
+  animation: b-o-rule 0.55s cubic-bezier(0.3, 0.6, 0.2, 1) 1.3s both;
+}
+
+@keyframes b-o-rule {
+  from {
+    clip-path: inset(0 var(--r) 0 var(--l));
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.b-o-link.is-play .b-o-ends {
+  animation: b-o-in 0.3s ease-out 1.75s both;
+}
+
+.b-o-link.is-play .b-o-words {
+  animation: b-o-unroll 0.6s ease-in-out 1.7s both;
 }
 
 @keyframes b-o-unroll {
@@ -461,63 +519,13 @@
   }
 }
 
-/* 两卷从国界中段升到岛上方（前 35%），再往两边滚开 */
-.b-o-roll {
-  animation-duration: 1.1s, 0.2s;
-  animation-timing-function: ease-in-out, ease-in;
-  animation-delay: 0.8s, 1.95s;
-  animation-fill-mode: both, forwards;
-}
-
-.b-o-roll.is-l {
-  animation-name: b-o-roll-l, b-o-out;
-}
-
-.b-o-roll.is-r {
-  animation-name: b-o-roll-r, b-o-out;
-}
-
-@keyframes b-o-roll-l {
-  0% {
-    transform: translate(137px, 151px);
-  }
-  35% {
-    transform: translate(142px, 0);
-  }
-  100% {
-    transform: none;
-  }
-}
-
-@keyframes b-o-roll-r {
-  0% {
-    transform: translate(-147px, 151px);
-  }
-  35% {
-    transform: translate(-142px, 0);
-  }
-  100% {
-    transform: none;
-  }
-}
-
-.b-o-untie {
-  animation: b-o-out 0.25s ease-in 0.5s both;
-}
-
-.b-o-banner.is-play .b-o-tails {
-  animation: b-o-in 0.3s ease-out 1.9s both;
-}
-
-@keyframes b-o-in {
-  from {
-    opacity: 0;
-  }
+.b-o-link.is-play .b-o-kick {
+  animation: b-o-in 0.3s ease-out 2.1s both;
 }
 
 .b-o-land {
-  transform-origin: 0 630px;
-  animation: b-o-land 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 1.95s both;
+  transform-origin: 0 634px;
+  animation: b-o-land 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 2.25s both;
 }
 
 @keyframes b-o-land {
@@ -527,7 +535,7 @@
 }
 
 .b-o-tags {
-  animation: b-o-in 0.4s ease-out 2.45s both;
+  animation: b-o-in 0.4s ease-out 2.75s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -536,9 +544,11 @@
   .b-o-walk,
   .b-o-walk .b-o-nm,
   .b-o-raft,
-  .b-o-banner.is-play .b-o-band,
-  .b-o-roll,
-  .b-o-banner.is-play .b-o-tails,
+  .b-o-link.is-play .b-o-node,
+  .b-o-link.is-play .b-o-rule,
+  .b-o-link.is-play .b-o-ends,
+  .b-o-link.is-play .b-o-words,
+  .b-o-link.is-play .b-o-kick,
   .b-o-land,
   .b-o-tags {
     animation: none;
@@ -546,7 +556,7 @@
 
   .b-o-old,
   .b-o-untie,
-  .b-o-roll {
+  .b-o-trace {
     opacity: 0;
   }
 }

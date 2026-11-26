@@ -25,8 +25,9 @@ export interface Secret {
   pairId: string;
   big: WordEntry;
   small: WordEntry;
+  /** 两个词之间的联系：指向性很强，抢答时放在所有提示之后才公布，否则要到结算才揭晓。 */
   link: string;
-  /** 联系之后的提示。提示序号 0 是联系本身，1.. 是这里的第 0.. 条。 */
+  /** 抢答时按顺序公布的提示（不含联系）。公布顺序：这里的第 0、1… 条，最后才是联系本身。 */
   hints: string[];
   difficulty: number | null;
   /** 内部：联系类型、给裁判的说明。只给裁判和主持人，不进玩家视图。 */
@@ -88,7 +89,7 @@ export type EventBody =
   | { t: 'relief'; action: 'ask'; text: string; verdict: QuestionVerdict }
   | { t: 'relief'; action: 'guess'; text: string; verdict: GuessVerdict }
   | { t: 'relief'; action: 'skipAsk' | 'giveUp' }
-  | { t: 'hint'; index: number; text: string }
+  | { t: 'hint'; index: number; text: string; /** 这一条就是联系（最后一条） */ link?: boolean }
   | { t: 'raceGuess'; player: PlayerId; text: string; verdict: GuessVerdict }
   | { t: 'bigChance'; player: PlayerId; text: string; verdict: GuessVerdict }
   | { t: 'bigChance'; action: 'timeout' | 'nobody' }

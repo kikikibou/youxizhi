@@ -115,7 +115,8 @@ function checkView(g: GameState, v: PlayerView, where: string) {
       if (me.faction !== side && !g.revealed[side] && ownJson.includes(w)) fail(`看到了不该看到的词「${w}」`);
     }
     // 联系和提示：公布前看不到
-    if (g.hintsShown === 0 && json.includes(g.secret.link)) fail('联系提前出现');
+    // 联系只在抢答把提示全部放完之后（最后一条）或结算时才出现
+    if (g.step.k !== 'over' && g.hintsShown < g.secret.hints.length + 1 && json.includes(g.secret.link)) fail('联系提前出现');
     // 白板出局提问的回答只给白板阵营
     if (me.faction !== 'blank' && v.log.some((e) => e.t === 'answer')) fail('国家玩家看到了出局提问的回答');
     // 白板队友：只能按互认方式看到

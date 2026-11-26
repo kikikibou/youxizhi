@@ -472,7 +472,7 @@ export const SCENES: Scene[] = [
     id: 'race',
     group: '第二阶段',
     title: '抢答',
-    note: '公布联系和提示，随时抢答',
+    note: '提示一条条立在国界上，最后一块界碑才是联系；随时抢答',
     build: () => {
       const s = phase2();
       for (let i = 0; i < 40 && s.step.k !== 'race'; i++) {

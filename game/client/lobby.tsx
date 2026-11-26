@@ -653,7 +653,7 @@ function PairDetails({ f, set, conn }: { f: PairForm; set: (k: keyof PairForm, v
           </label>
         </div>
         <label class="b-lb-field">
-          <span>更多提示（每行一条，越往后越直白）</span>
+          <span>提示（抢答时按顺序公布，每行一条，越往后越直白；放完最后才公布联系）</span>
           <textarea rows={3} {...field('hints')} />
         </label>
         <label class="b-lb-field">

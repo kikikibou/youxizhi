@@ -4,7 +4,7 @@
  * 新加的内部字段默认不会漏出去。
  */
 
-import { nightDeciders } from './engine.ts';
+import { hintSequence, nightDeciders } from './engine.ts';
 import type { BlankRole, Faction } from './rules.ts';
 import type { Dir, EventBody, GameEvent, GameState, PlayerId, PlayerState, Result, WordSide } from './types.ts';
 
@@ -91,8 +91,10 @@ export interface PlayerView {
   phase: 1 | 2 | 'over';
   step: StepView;
   log: LogEntry[];
-  /** 已公布的提示（序号 0 是联系）。 */
+  /** 已公布的提示（按公布顺序；最后一条是联系，只有提示全部放完才会出现）。 */
   hints: string[];
+  /** 这组词一共有几条提示（含最后的联系）；hints.length === hintTotal 时最后一条就是联系。 */
+  hintTotal: number;
   /** 已公开的词。 */
   revealed: Partial<Record<WordSide, string>>;
   difficulty: number | null;
@@ -299,8 +301,8 @@ export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerVi
     log.push(rest as LogEntry);
   }
 
-  const hints: string[] = [];
-  for (let i = 0; i < g.hintsShown; i++) hints.push(i === 0 ? g.secret.link : g.secret.hints[i - 1]);
+  const seq = hintSequence(g);
+  const hints = seq.slice(0, g.hintsShown);
 
   const revealed: PlayerView['revealed'] = {};
   if (g.revealed.big) revealed.big = g.secret.big.word;
@@ -322,6 +324,7 @@ export function viewFor(g: GameState, playerId: PlayerId, now: number): PlayerVi
     step: stepView(g, me, now),
     log,
     hints,
+    hintTotal: seq.length,
     revealed,
     difficulty: g.secret.difficulty,
     rules: {

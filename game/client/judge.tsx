@@ -330,7 +330,7 @@ function Ticket({ r, j, human, conn, offset, name, no, top }: { r: Pending; j: J
 
 function legendRows(j: JudgeView) {
   const note = j.secret.judgeNote ? Math.ceil(textWidth(j.secret.judgeNote, 11.5) / 250) : 0;
-  const hints = j.secret.hints.length;
+  const hints = j.secret.hints.length + 1;
   return { note, hints, h: 52 + 3 * 32 + (note ? note * 18 + 14 : 0) + 16 + hints * 26 + 36 };
 }
 
@@ -384,20 +384,24 @@ function Legend({ j, top }: { j: JudgeView; top: number }) {
         </p>
       ) : null}
       <ol class="b-jd-lg-hints">
-        {j.secret.hints.map((hint, i) => {
-          const done = i + 1 < j.hintsShown;
+        {[...j.secret.hints, j.secret.link].map((hint, i, all) => {
+          const done = i < j.hintsShown;
+          const link = i === all.length - 1;
           return (
             <li key={i} class={done ? 'is-done' : ''}>
               <svg width="18" height="20" viewBox="-9 -10 18 20" aria-hidden="true">
-                {stone(0, 0, i + 2, done)}
+                {stone(0, 0, i + 1, done)}
               </svg>
-              <span>{hint}</span>
+              <span>
+                {link ? '联系：' : ''}
+                {hint}
+              </span>
               <em>{done ? '已公布' : '未公布'}</em>
             </li>
           );
         })}
       </ol>
-      <p class="b-jd-lg-foot">已公布 {j.hintsShown} 条提示（联系算第一条）。提示只在抢答时一分钟一条地公布。</p>
+      <p class="b-jd-lg-foot">已公布 {j.hintsShown} 条。抢答时按间隔一条条公布，提示放完最后一块才是联系。</p>
     </section>
   );
 }
@@ -503,7 +507,9 @@ export function JudgeScreen({ conn, snap, onLeave }: { conn: RoomConnection; sna
   const human = j.judgeMode === 'human';
   const over = s.k === 'over' && !!j.result;
   const canHint = s.k === 'race' && s.nextHintAt !== null;
-  const nextHint = j.hintsShown === 0 ? j.secret.link : j.secret.hints[j.hintsShown - 1];
+  const seq = [...j.secret.hints, j.secret.link];
+  const nextHint = seq[j.hintsShown];
+  const nextIsLink = j.hintsShown === seq.length - 1;
   const first = j.pending[0];
   const mark = first ? (first.kind === 'guess' ? first.target : (first.target ?? 'big')) : null;
 
@@ -564,7 +570,7 @@ export function JudgeScreen({ conn, snap, onLeave }: { conn: RoomConnection; sna
           <span>
             <b>现在立第 {j.hintsShown + 1} 块界碑</b>
             <small>
-              提前公布{j.hintsShown === 0 ? '联系' : ''}：{nextHint}
+              提前公布{nextIsLink ? '联系' : `提示 ${j.hintsShown + 1}`}：{nextHint}
             </small>
           </span>
         </button>

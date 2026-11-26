@@ -1,6 +1,6 @@
 /**
  * 第二阶段：圆桌岛分成大国、小国两块，国界未定，两国的名牌空着。公开的提问像纸条一样钉在被问的那块地上；
- * 抢答时提示像界碑一样沿国界一块块立起来，第 1 块是联系。操作区是一面插在黑白测量杆上的旗
+ * 抢答时提示像界碑一样沿国界一块块立起来，最后一块是联系。操作区是一面插在黑白测量杆上的旗
  * （白板阵营救济时是一面白旗）。
  */
 
@@ -45,7 +45,8 @@ function PhaseMap({ g, s, mark }: { g: G; s: P2Step; mark?: 'big' | 'small' | nu
   }
   const hints = v.hints;
   const race = s.k === 'race';
-  const total = Math.max(hints.length + (race && s.nextHintAt ? 1 : 0), 5);
+  // 旧服务器没有 hintTotal 时按「还有一条」算
+  const total = Math.max(v.hintTotal ?? hints.length + 1, hints.length);
   const order = s.k === 'turn' ? s.order : [];
   const actor = s.k === 'turn' ? s.actor : null;
   const lastAct = new Map<string, string>();
@@ -76,9 +77,10 @@ function PhaseMap({ g, s, mark }: { g: G; s: P2Step; mark?: 'big' | 'small' | nu
             return <Stone x={p.x} y={p.y} n={k + 1} state={st} />;
           })
         : null}
-      {hints.length
+      {race || hints.length >= total
         ? (() => {
-            const p = markerAt(0, total);
+            // 最后一块界碑是联系（提示放完才立）
+            const p = markerAt(total - 1, total);
             return (
               <text x={p.x + 12} y={p.y + 4} style="font-size: 9.5px; letter-spacing: 0.15em; fill: #5d564c; paint-order: stroke; stroke: #fbf3dc; stroke-width: 4px; stroke-linejoin: round">
                 联系
@@ -415,7 +417,7 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
                   </text>
                 </svg>
                 <span class={isNew ? 'is-new' : ''}>
-                  {i === 0 ? <small>联系</small> : null}
+                  {i === (v.hintTotal ?? 0) - 1 ? <small>联系</small> : null}
                   {h}
                 </span>
                 {isNew ? <em>刚公布</em> : null}
@@ -430,7 +432,7 @@ function RacePanel({ g, s }: { g: G; s: Race }) {
                   {hints.length + 1}
                 </text>
               </svg>
-              <Timer deadline={s.nextHintAt} offset={g.offset} total={g.total} label="下一条" />
+              <Timer deadline={s.nextHintAt} offset={g.offset} total={g.total} label={hints.length === (v.hintTotal ?? 0) - 1 ? '下一条是联系' : '下一条'} />
             </li>
           ) : null}
           {!hints.length && !s.nextHintAt ? <li class="is-todo">第一条提示还没公布</li> : null}

@@ -107,10 +107,17 @@ describe('题库导入', () => {
     ]);
   });
 
+  it('新列名：所属题库、提示1–4（提示按编号排，联系不在提示里）', () => {
+    const head: Cell[] = ['所属题库', '启用', '★词A', '★词B', '★联系', '提示1（最含糊）', '提示2', '提示3', '提示4'];
+    const r = parseRows([head, ['家常菜', '', '鱿鱼', '股票', '都能炒', '一个动词', '厨房里也用', '', '']], 'x.xlsx');
+    expect(r.issues).toEqual([]);
+    expect(r.pairs[0]).toMatchObject({ bank: '家常菜', link: '都能炒', hints: ['一个动词', '厨房里也用'] });
+  });
+
   it('模板文件本身可以直接导入', async () => {
-    const path = fileURLToPath(new URL('../../题库模板.xlsx', import.meta.url));
+    const path = fileURLToPath(new URL('../../题目采集表.xlsx', import.meta.url));
     const rows = (await readSheet(path, '题库')) as Cell[][];
-    const r = parseRows(rows, '题库模板.xlsx');
+    const r = parseRows(rows, '题目采集表.xlsx');
     expect(r.issues.filter((i) => i.level === 'error')).toEqual([]);
     expect(r.pairs.map((p) => `${p.wordA}/${p.wordB}`)).toEqual(['鱿鱼/股票', '清一色/唐三彩', '雷达/射手', '神/狗', '米/万']);
     expect(r.pairs.find((p) => p.wordB === '狗')?.aliasesB).toEqual(['犬', '狗狗']);

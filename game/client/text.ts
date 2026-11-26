@@ -105,7 +105,7 @@ export function describe(e: LogEntry, name: (id: string) => string): { text: str
       if (e.action === 'guess') return { text: `白板阵营猜大国词「${e.text}」——${VERDICT[e.verdict]}`, tone: e.verdict === 'correct' ? 'good' : 'bad' };
       return { text: e.action === 'skipAsk' ? '白板阵营没有提问' : '白板阵营没有猜词' };
     case 'hint':
-      return { text: e.index === 0 ? `提示一（联系）：${e.text}` : `提示${'一二三四五六七八九十'[e.index] ?? e.index + 1}：${e.text}`, tone: 'big' };
+      return { text: e.link ? `最后一条，公布联系：${e.text}` : `提示${'一二三四五六七八九十'[e.index] ?? e.index + 1}：${e.text}`, tone: 'big' };
     case 'raceGuess':
       return { text: `${name(e.player)} 抢答「${e.text}」——${VERDICT[e.verdict]}`, tone: e.verdict === 'correct' ? 'good' : 'bad' };
     case 'bigChance':
@@ -132,7 +132,8 @@ export function resultLine(r: { first: Faction | null; second: Faction[]; third:
 export const HOW_TO = [
   ['三个阵营', '大国、小国各拿一个词，两个词之间有一个微妙的联系（例：股票 / 鱿鱼，都能「炒」）。白板没有词。你只知道自己的词，不知道自己是大国还是小国。'],
   ['第一阶段', '每天每人说一个词当身份提示，然后自由讨论、投票。目标是把白板全部投出去。说得太模糊会被当成白板，说得太准会在第二阶段被对方猜中。'],
-  ['第二阶段', '白板清空后，存活的国家玩家轮流猜对方国家的词（也可以改为向裁判提问），先猜中的阵营第一。'],
+  ['第二阶段', '白板清空后，存活的国家玩家轮流猜对方国家的词（也可以改为向裁判提问），先猜中的阵营第一。两轮都没人猜中就进入抢答：每隔一段时间公布一条提示，提示放完，最后才公布两个词之间的联系。'],
+  ['第二名', '某国拿到第一后，另一国和白板抢答第一名国家的词，先猜中的第二；白板拿到第一时，大国有一次机会猜小国的词。'],
   ['白板', '目标是猜中大国词。出局时可以猜一次或问裁判一个问题；也可以什么都不做，装成被误投的国家玩家。'],
 ] as const;
 

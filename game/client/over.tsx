@@ -1,7 +1,7 @@
 /**
- * 结算：圆桌岛变成一张历史疆域图，两国写上了词。揭晓前，岛上方挂着一卷卷起来的横幅，联系写在里面；
+ * 结算：圆桌岛变成一张历史疆域图，两国写上了词。揭晓前，国界中段挂着一个小注记「联系 ？」；
  * 大家一起按住按钮揭晓：先是每个人从海岸上的座位走回自己的阵营（大国、小国各回各的国土，
- * 白板阵营没有国家，上了海上的一块白木筏），然后横幅从中间往两边展开，上面写着联系。
+ * 白板阵营没有国家，上了海上挂白旗的木筏），然后国界往北接上一条横跨全岛的尺线，联系写在尺线上。
  * 名次是印在图纸上的一条地质剖面：每一方一座山，山越高名次越前，这一方的人写在山下的岩层里。
  */
 
@@ -11,7 +11,7 @@ import { factionScore } from '../engine/engine.ts';
 import type { Faction } from '../engine/rules.ts';
 import { ROLE } from './text.ts';
 import { P2 } from './art.ts';
-import { AtlasSheet, BX0, BX1, BY0, BY1, Border, Caption, Coast, Dot, MeRing, Plate, SeatLabel, Territories, placeSeats } from './atlas.tsx';
+import { AtlasSheet, BX0, BX1, BY0, BY1, Border, Caption, Coast, Dot, MIDX, MIDY, MeRing, Plate, SeatLabel, Territories, placeSeats } from './atlas.tsx';
 import { BIG, Btn, INK, Layer, MUTED, PAGE, SMALL, Stage, TitleBlock, textWidth } from './board.tsx';
 import { flags } from './flags.ts';
 import { Chips, type G } from './game.tsx';
@@ -206,140 +206,139 @@ function Raft({ rows, rowH, play }: { rows: number; rowH: number; play: boolean 
   );
 }
 
-/* ================================================================ 横幅 */
+/* ================================================================ 联系：国界通向的那条线 */
 
-const BNY = 197;
-const BAND_W = 300;
+/*
+ * 「两国共用的那段国界，就是两个词之间的联系」：国界一路往北走到海岸，在那里接上一条横跨全岛的尺线，
+ * 尺线两头写着两个词（左边大国的词、右边小国的词），联系像地图注记一样写在尺线上方。
+ * 揭晓时：一道光沿国界往北跑，到海岸亮起一个测站点，尺线从这里往两边伸出去，两头的词出现，
+ * 最后联系从中间往两边显出来。揭晓前只在国界中段挂一个小注记「联系 ？」。
+ */
 
-/** 横幅上的字：一行放得下（字不小于 15）就一行；否则拆两行，只在不拆开英文单词、不把括号标点甩到行首行尾的地方断。 */
-function linkLayout(link: string): { lines: string[]; fs: number } {
-  const text = link.trim();
-  const room = 236;
-  const one = room / Math.max(1, textWidth(text, 1));
-  if (one >= 15) return { lines: [text], fs: Math.min(23, Math.floor(one)) };
-  const chars = Array.from(text);
-  // 浏览器会分词的话，只在词和词之间断（「比赛」不会被拆开）
-  let words: Set<number> | null = null;
-  if (typeof Intl.Segmenter === 'function') {
-    words = new Set();
-    let at = 0;
-    for (const sg of new Intl.Segmenter('zh', { granularity: 'word' }).segment(text)) words.add((at += Array.from(sg.segment).length));
-  }
-  let best: string[] = [];
-  let bestW = Infinity;
-  let bestScore = Infinity;
-  for (const strict of [true, false]) {
-    for (let i = 1; i < chars.length; i++) {
-      const a = chars[i - 1];
-      const b = chars[i];
-      if (/[A-Za-z0-9]/.test(a) && /[A-Za-z0-9]/.test(b)) continue;
-      if (/[（「『(“《]/.test(a)) continue;
-      if (/[，。、；：！？）」』)”》,.;:!?/]/.test(b)) continue;
-      if (strict && words && !words.has(i)) continue;
-      const l1 = chars.slice(0, i).join('').trimEnd();
-      const l2 = chars.slice(i).join('').trimStart();
-      const w = Math.max(textWidth(l1, 1), textWidth(l2, 1));
-      // 逗号、空格后面断最自然，宽一点也优先
-      const score = /[，。、；：,;\s]/.test(a) ? w * 0.85 : w;
-      if (l1 && l2 && score < bestScore) {
-        bestScore = score;
-        bestW = w;
-        best = [l1, l2];
-      }
+const JX = BX0; // 国界北端，在海岸上
+const JY = BY0;
+const LX0 = 36;
+const LX1 = 354;
+
+/** 按词折行（浏览器会分词的话不拆开词，英文单词也不拆）；行首不放收尾的标点，行尾不放开头的括号。 */
+function wrapText(text: string, fs: number, maxW: number): string[] {
+  const segs: string[] =
+    typeof Intl.Segmenter === 'function'
+      ? Array.from(new Intl.Segmenter('zh', { granularity: 'word' }).segment(text), (s) => s.segment)
+      : (text.match(/[A-Za-z0-9]+|./gu) ?? []);
+  const lines: string[] = [];
+  let cur = '';
+  for (const seg of segs) {
+    const closing = /^[，。、；：！？）」』)”》,.;:!?]/.test(seg);
+    if (!cur || closing || textWidth(cur + seg, fs) <= maxW) {
+      cur += seg;
+      continue;
     }
-    if (best.length) break;
+    let carry = '';
+    const m = cur.match(/[（「『(“《]+$/);
+    if (m) {
+      carry = m[0];
+      cur = cur.slice(0, -carry.length);
+    }
+    lines.push(cur.trimEnd());
+    cur = (carry + seg).trimStart();
   }
-  if (!best.length) {
-    const mid = Math.ceil(chars.length / 2);
-    best = [chars.slice(0, mid).join(''), chars.slice(mid).join('')];
-    bestW = Math.max(textWidth(best[0], 1), textWidth(best[1], 1));
-  }
-  return { lines: best, fs: Math.max(11, Math.min(18, Math.floor(room / bestW))) };
+  if (cur) lines.push(cur.trimEnd());
+  return lines;
 }
 
-/** 揭晓前横幅卷着、捆好，搁在国界的中段上（联系就在两国之间）；揭晓时升到岛的上方再展开。 */
-const ROLLED_X = 190;
-const ROLLED_Y = 348;
+/** 联系怎么排：一行放得下（字不小于 15）就一行；否则在窄一点的宽度里折成两三行（右上角有白板的木筏）。 */
+function linkLayout(link: string): { lines: string[]; fs: number; cx: number } {
+  const text = link.trim();
+  const one = 286 / Math.max(1, textWidth(text, 1));
+  if (one >= 15) return { lines: [text], fs: Math.min(24, Math.floor(one)), cx: 207 };
+  // 往上长的字不能碰到左上角的图名框（下沿 139）
+  for (const fs of [18, 17, 16, 15, 14, 13]) {
+    const lines = wrapText(text, fs, 204);
+    const top = JY - 10 - (lines.length - 1) * (fs + 5) - fs * 0.85;
+    if (lines.length <= 3 && top >= 145) return { lines, fs, cx: 180 };
+  }
+  return { lines: wrapText(text, 12, 204), fs: 12, cx: 180 };
+}
 
-/** 卷着的横幅：两卷挨在一起，用绳子捆着，挂一张小签。tieOnly：揭晓时只剩绳子和签（两卷已经交给展开的横幅），淡掉。 */
-function Rolled({ tieOnly }: { tieOnly?: boolean }) {
+const HALO_PAGE = 'paint-order: stroke; stroke: #fbf3dc; stroke-linejoin: round';
+
+/** 揭晓前：国界中段一个小注记「联系 ？」。fading：揭晓时淡掉。 */
+function LinkTag({ fading }: { fading?: boolean }) {
+  const x = 170;
+  const y = 340;
   return (
-    <g transform={`translate(${ROLLED_X} ${ROLLED_Y})`} class={tieOnly ? 'b-o-untie' : undefined}>
-      {tieOnly ? null : (
-        <>
-          <rect x="-15" y="-23" width="34" height="54" fill={INK} opacity="0.15" />
-          <Roll x={-8} h={42} />
-          <Roll x={8} h={42} />
-        </>
-      )}
-      <path d="M-18 -4 H18 M-18 4 H18" stroke={INK} stroke-width="1.4" />
-      <path d="M-16 4 L-35 14" stroke={INK} stroke-width="0.9" />
-      <g transform="translate(-82 8) rotate(-4)">
-        <rect width="52" height="20" fill={PAGE} stroke={INK} stroke-width="0.9" />
-        <circle cx="46" cy="7" r="2.2" fill={PAGE} stroke={INK} stroke-width="0.8" />
-        <text x="22" y="14.5" text-anchor="middle" style={`font-family: var(--serif); font-weight: 900; font-size: 11.5px; letter-spacing: 0.15em; fill: ${INK}`}>
-          联系 ?
+    <g class={fading ? 'b-o-untie' : undefined}>
+      <path d={`M${MIDX} ${MIDY} L${x + 8} ${y - 6}`} stroke={INK} stroke-width="0.9" />
+      <circle cx={MIDX} cy={MIDY} r="3.6" fill="#fbf6e8" stroke={INK} stroke-width="1.3" />
+      <text x={x + 4} y={y + 6} text-anchor="end" style={`font-family: var(--serif); font-weight: 900; font-size: 13px; letter-spacing: 0.12em; fill: ${INK}; ${HALO_PAGE}; stroke-width: 5px`}>
+        联系 ？
+      </text>
+    </g>
+  );
+}
+
+/** 揭晓后：国界接上尺线，两头是两个词，联系写在上面。 */
+function LinkLine({ link, big, small, play }: { link: string; big: string; small: string; play: boolean }) {
+  const { lines, fs, cx } = linkLayout(link);
+  const len = Math.hypot(JX - MIDX, JY - MIDY);
+  // 尺线：黑白相间的刻度条，和比例尺一个画法
+  const seg = 12;
+  const blocks: string[] = [];
+  for (let x = LX0, k = 0; x < LX1; x += seg, k++) if (k % 2 === 0) blocks.push(`M${x} ${JY - 1.8} h${Math.min(seg, LX1 - x)} v3.6 h${-Math.min(seg, LX1 - x)} Z`);
+  const endW = (w: string) => Math.max(10, Math.min(13, Math.floor(96 / Math.max(1, textWidth(w, 1)))));
+  return (
+    <g class={play ? 'b-o-link is-play' : 'b-o-link'}>
+      {play ? (
+        <path
+          class="b-o-trace"
+          d={`M${MIDX} ${MIDY} L${JX} ${JY}`}
+          stroke={INK}
+          stroke-width="3.4"
+          stroke-linecap="round"
+          stroke-dasharray={`22 ${Math.ceil(len) + 60}`}
+          style={{ '--len': `${Math.ceil(len)}px` }}
+        />
+      ) : null}
+      <g class="b-o-rule" style={{ '--l': `${(JX - LX0 + 6).toFixed(1)}px`, '--r': `${(LX1 - JX + 6).toFixed(1)}px` }}>
+        <path d={`M${LX0} ${JY} H${LX1}`} stroke="#fbf6e8" stroke-width="9" stroke-linecap="round" />
+        <rect x={LX0} y={JY - 1.8} width={LX1 - LX0} height="3.6" fill="#fbf6e8" stroke={INK} stroke-width="0.9" />
+        <path d={blocks.join(' ')} fill={INK} />
+        <path d={`M${LX0} ${JY - 7} V${JY + 7} M${LX1} ${JY - 7} V${JY + 7}`} stroke={INK} stroke-width="1.6" />
+      </g>
+      <g class="b-o-node">
+        <circle cx={JX} cy={JY} r="6.5" fill="#fbf6e8" stroke={INK} stroke-width="1.4" />
+        <circle cx={JX} cy={JY} r="2" fill={INK} />
+      </g>
+      <g class="b-o-ends">
+        <text x={LX0} y={JY + 20} style={`font-family: var(--serif); font-weight: 900; font-size: ${endW(big)}px; fill: ${INK}; ${HALO_PAGE}; stroke-width: 4px`}>
+          {clip(big, 7)}
+        </text>
+        <text x={LX1} y={JY + 20} text-anchor="end" style={`font-family: var(--serif); font-weight: 900; font-size: ${endW(small)}px; fill: ${INK}; ${HALO_PAGE}; stroke-width: 4px`}>
+          {clip(small, 7)}
         </text>
       </g>
-    </g>
-  );
-}
-
-function Roll({ x, h, cls }: { x: number; h: number; cls?: string }) {
-  return (
-    <g class={cls}>
-      <rect x={x - 8} y={-h / 2 - 5} width="16" height={h + 10} rx="6" fill="#e9dcb9" stroke={INK} stroke-width="1.1" />
-      <path d={`M${x - 4} ${-h / 2 - 1} V${h / 2 + 1} M${x + 2} ${-h / 2 - 2} V${h / 2 + 2}`} stroke={INK} stroke-width="0.5" opacity="0.5" />
-    </g>
-  );
-}
-
-/** 展开的横幅：联系写在中间；play 时从中间往两边展开（两卷往外滚，滚到头就收起来，露出燕尾）。 */
-function Banner({ link, play }: { link: string; play: boolean }) {
-  const { lines, fs } = linkLayout(link);
-  const H = lines.length > 1 ? 56 : 44;
-  const t = H / 2;
-  const half = BAND_W / 2;
-  const cx = 12;
-  const tail = (s: 1 | -1) => `M${s * (half - 16)} ${-t + 9} H${s * (half + 28)} L${s * (half + 17)} 9 L${s * (half + 28)} ${t + 9} H${s * (half - 16)} Z`;
-  const fold = (s: 1 | -1) => `M${s * half} ${t} L${s * (half - 16)} ${t + 9} L${s * half} ${t + 9} Z`;
-  return (
-    <g transform={`translate(195 ${BNY})`} class={play ? 'b-o-banner is-play' : 'b-o-banner'}>
-      <g class="b-o-tails">
-        <path d={tail(-1)} fill="#d9c79c" stroke={INK} stroke-width="1" stroke-linejoin="round" />
-        <path d={tail(1)} fill="#d9c79c" stroke={INK} stroke-width="1" stroke-linejoin="round" />
-        <path d={fold(-1)} fill="#8f7a52" stroke={INK} stroke-width="0.8" stroke-linejoin="round" />
-        <path d={fold(1)} fill="#8f7a52" stroke={INK} stroke-width="0.8" stroke-linejoin="round" />
-      </g>
-      <g class="b-o-band">
-        <rect x={-half + 3} y={-t + 4} width={BAND_W} height={H} fill={INK} opacity="0.15" />
-        <rect x={-half} y={-t} width={BAND_W} height={H} fill="#fbf3dc" stroke={INK} stroke-width="1.3" />
-        <path d={`M${-half + 4} ${-t + 4} H${half - 4} M${-half + 4} ${t - 4} H${half - 4}`} stroke={INK} stroke-width="0.5" />
-        <path d={`M${-half + 30} ${-t + 8} V${t - 8}`} stroke={INK} stroke-width="0.7" />
-        <text x={-half + 16} y={-3} text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 10.5px; fill: ${MUTED}`}>
+      <g class="b-o-kick">
+        <text x={LX0 + 10} y={JY - 22} text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 11px; fill: ${MUTED}; ${HALO_PAGE}; stroke-width: 3px`}>
           联
         </text>
-        <text x={-half + 16} y={11} text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 10.5px; fill: ${MUTED}`}>
+        <text x={LX0 + 10} y={JY - 9} text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 11px; fill: ${MUTED}; ${HALO_PAGE}; stroke-width: 3px`}>
           系
         </text>
+      </g>
+      <g class="b-o-words">
         {lines.map((l, i) => (
           <text
             key={i}
             x={cx}
-            y={(i - (lines.length - 1) / 2) * (fs + 6) + fs * 0.36}
+            y={JY - 10 - (lines.length - 1 - i) * (fs + 5)}
             text-anchor="middle"
-            style={`font-family: var(--serif); font-weight: 900; font-size: ${fs}px; letter-spacing: 0.06em; fill: ${INK}`}
+            style={`font-family: var(--serif); font-weight: 900; font-size: ${fs}px; letter-spacing: 0.06em; fill: ${INK}; ${HALO_PAGE}; stroke-width: 6px`}
           >
             {l}
           </text>
         ))}
       </g>
-      {play ? (
-        <>
-          <Roll x={-half} h={H} cls="b-o-roll is-l" />
-          <Roll x={half} h={H} cls="b-o-roll is-r" />
-        </>
-      ) : null}
     </g>
   );
 }
@@ -431,9 +430,9 @@ function ResultMap({ g, open, play }: { g: G; open: boolean; play: boolean }) {
       {!open || play ? coast : null}
       {open ? <Raft rows={raftRows[0]} rowH={raftRows[1]} play={play} /> : null}
       {people}
-      {open ? null : <Rolled />}
-      {play ? <Rolled tieOnly /> : null}
-      {open ? <Banner link={rv.link} play={play} /> : null}
+      {open ? null : <LinkTag />}
+      {play ? <LinkTag fading /> : null}
+      {open ? <LinkLine link={rv.link} big={rv.big} small={rv.small} play={play} /> : null}
     </>
   );
 }
@@ -441,19 +440,21 @@ function ResultMap({ g, open, play }: { g: G; open: boolean; play: boolean }) {
 /* ================================================================ 名次：地质剖面 */
 
 /*
- * 名次不再放在一个框里，而是直接印在图纸上的一条地质剖面：海平面一条线，两头是海；
+ * 名次是一张装在图框里的地质剖面：海平面一条线，两头是海；
  * 每一方一座山，山高 = 得分，山顶立一个三角点（测量用的那个 △），上面写名次；
  * 山体是这一方的岩层（大国黄色砂岩的点、小国绿色页岩的短横、白板白色的十字），层理顺着山形弯；
- * 这一方的人写在海平面以下的岩层里。三方之间是斜的断层虚线。
+ * 这一方的人挂着一张张小标签（像岩石标本的标签）放在海平面以下的岩层里。三方之间是斜的断层虚线。
  */
 
-const SL = 630; // 海平面
-const GB = 716; // 剖面底
+const FT = 452; // 图框上沿
+const FB = 722; // 图框下沿
+const SL = 634; // 海平面
+const GB = 712; // 剖面底
 const U = 28; // 1 分多高
-const SX0 = 14;
-const SX1 = 376;
-const ZX0 = 46;
-const ZX1 = 344;
+const SX0 = 24;
+const SX1 = 366;
+const ZX0 = 54;
+const ZX1 = 336;
 const SLANT = 9; // 断层往下斜多少
 
 const ROCK: Record<Faction | 'none', { fill: string; mark: string; id: string }> = {
@@ -625,52 +626,64 @@ function Podium({ g, open, play }: { g: G; open: boolean; play: boolean }) {
           </tspan>
         </text>,
       );
-      // 这一方的人写在海平面以下的岩层里：按这一格的宽度折行，名字太长就截短；白板的分工放得下就写上
-      const maxW = zoneW - 12;
-      const items = rv.players
-        .filter((p) => p.faction === z.f)
-        .map((p) => {
+      // 这一方的人：每人一张小标签，按这一格的宽度排成几行；名字太长就截短，白板的分工放得下就写上
+      const maxW = zoneW - 8;
+      const members = rv.players.filter((p) => p.faction === z.f);
+      const build = (fs: number, max: number) => {
+        const tags = members.map((p) => {
           const mine = p.id === v.me.id;
-          const nm = g.name(p.id);
-          const role = z.f === 'blank' && p.role && p.role !== 'both' ? ` · ${ROLE[p.role].replace('白板', '')}` : '';
-          const width = (k: number, withRole: boolean) => textWidth(clip(nm, k) + (withRole ? role : ''), 12) + (mine ? 10 : 0);
-          let k = Array.from(nm).length;
-          const withRole = !!role && width(k, true) <= maxW;
-          while (k > 1 && width(k, withRole) > maxW) k--;
-          return { id: p.id, me: mine, label: clip(nm, k), role: withRole ? role : '', w: width(k, withRole) };
+          const label = clip(g.name(p.id), max);
+          let role = z.f === 'blank' && p.role && p.role !== 'both' ? ROLE[p.role].replace('白板', '') : '';
+          const base = 15 + textWidth(label, fs) + (mine ? 12 : 0);
+          if (role && base + 3 + textWidth(role, fs - 1.5) > maxW) role = '';
+          return { id: p.id, me: mine, out: !v.players.find((x) => x.id === p.id)?.alive, label, role, fs, w: Math.min(maxW, base + (role ? 3 + textWidth(role, fs - 1.5) : 0)) };
         });
-      const rows: (typeof items)[] = [];
-      let row: typeof items = [];
-      let used = 0;
-      for (const it of items) {
-        if (row.length && used + 12 + it.w > maxW) {
-          rows.push(row);
-          row = [];
-          used = 0;
+        const rows: (typeof tags)[] = [];
+        let row: typeof tags = [];
+        let used = 0;
+        for (const t of tags) {
+          if (row.length && used + 4 + t.w > maxW) {
+            rows.push(row);
+            row = [];
+            used = 0;
+          }
+          used += (row.length ? 4 : 0) + t.w;
+          row.push(t);
         }
-        used += (row.length ? 12 : 0) + it.w;
-        row.push(it);
-      }
-      if (row.length) rows.push(row);
-      const lh = rows.length > 3 ? 13 : 15;
+        if (row.length) rows.push(row);
+        return rows;
+      };
+      let rows = build(11.5, 6);
+      if (rows.length > 3) rows = build(10.5, 4);
+      if (rows.length > 3) rows = build(10, 3);
+      const step = rows.length > 3 ? 16 : 19;
+      const th = rows.length > 3 ? 14 : 16;
       rows.forEach((ln, i) => {
-        labels.push(
-          <text
-            x={z.cx + SLANT / 2}
-            y={SL + 20 + i * lh}
-            text-anchor="middle"
-            style={`font-family: var(--serif); font-weight: 700; font-size: ${rows.length > 3 ? 11 : 12}px; fill: #1e1b17; paint-order: stroke; stroke: ${ROCK[z.f].fill}; stroke-width: 3.5px; stroke-linejoin: round`}
-          >
-            {ln.map((it, j) => (
-              <tspan key={it.id} style={it.me ? 'font-weight: 900' : undefined}>
-                {j ? '、' : ''}
-                {it.label}
-                {it.me ? <tspan style="font-family: var(--sans); font-size: 10px; fill: var(--acc-text)">你</tspan> : null}
-                {it.role}
-              </tspan>
-            ))}
-          </text>,
-        );
+        const total = ln.reduce((acc, t) => acc + t.w, 0) + (ln.length - 1) * 4;
+        let x = z.cx + SLANT / 2 - total / 2;
+        const y = SL + 9 + i * step;
+        for (const t of ln) {
+          labels.push(
+            <g key={t.id}>
+              <rect x={x} y={y} width={t.w} height={th} rx="2" fill={PAGE} stroke={t.me ? 'var(--acc)' : INK} stroke-width={t.me ? 1.4 : 0.8} stroke-dasharray={t.out && !t.me ? '2.5 1.5' : undefined} />
+              <circle cx={x + 5} cy={y + th / 2} r="1.6" fill="none" stroke={INK} stroke-width="0.7" />
+              <text x={x + 9.5} y={y + th / 2 + t.fs * 0.36} style={`font-family: var(--serif); font-weight: 700; font-size: ${t.fs}px; fill: ${t.out ? '#6f6656' : INK}`}>
+                {t.label}
+                {t.me ? (
+                  <tspan dx="1.5" style="font-family: var(--sans); font-size: 9.5px; fill: var(--acc-text)">
+                    你
+                  </tspan>
+                ) : null}
+                {t.role ? (
+                  <tspan dx="3" style={`font-family: var(--sans); font-weight: 400; font-size: ${t.fs - 1.5}px; fill: ${MUTED}`}>
+                    {t.role}
+                  </tspan>
+                ) : null}
+              </text>
+            </g>,
+          );
+          x += t.w + 4;
+        }
       });
     }
   } else {
@@ -690,23 +703,25 @@ function Podium({ g, open, play }: { g: G; open: boolean; play: boolean }) {
 
   return (
     <Layer label={open ? '名次：一张地质剖面，山越高名次越前' : '名次还没揭晓'}>
-      {/* 剖面的标题和竖向比例尺：直接印在图纸上 */}
-      <text x="26" y="471" style="font-family: var(--serif); font-weight: 900; font-size: 17px; letter-spacing: 0.35em; fill: #1e1b17">
+      {/* 图框（双线）、标题和竖向比例尺 */}
+      <rect x="20" y={FT} width="350" height={FB - FT} fill={PAGE} stroke={INK} stroke-width="1.2" />
+      <rect x="23.5" y={FT + 3.5} width="343" height={FB - FT - 7} fill="none" stroke={INK} stroke-width="0.5" />
+      <text x="36" y={FT + 25} style="font-family: var(--serif); font-weight: 900; font-size: 17px; letter-spacing: 0.35em; fill: #1e1b17">
         名次
       </text>
-      <text x="86" y="470" style={`font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.06em; fill: ${MUTED}`}>
+      <text x="94" y={FT + 24} style={`font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.06em; fill: ${MUTED}`}>
         剖面 · 山越高名次越前
       </text>
       {open && myZone ? (
-        <text x="364" y="470" text-anchor="end" style="font-size: 11px; fill: #1e1b17">
+        <text x="354" y={FT + 24} text-anchor="end" style="font-size: 11px; fill: #1e1b17">
           <tspan style="font-weight: 700; fill: var(--acc-text)">你</tspan> {FNAME[myZone.f]} · {myZone.rank ? `第${'一二三'[myZone.rank - 1]}名` : '平局'} {myZone.pts ? `+${myZone.pts}` : '0'}
         </text>
       ) : (
-        <text x="364" y="470" text-anchor="end" style={`font-size: 11px; fill: ${MUTED}`}>
+        <text x="354" y={FT + 24} text-anchor="end" style={`font-size: 11px; fill: ${MUTED}`}>
           {open ? '' : '还没揭晓'}
         </text>
       )}
-      <path d="M26 479 H364" stroke={INK} stroke-width="0.8" />
+      <path d={`M36 ${FT + 33} H354`} stroke={INK} stroke-width="0.8" />
       <g stroke={WL} stroke-width="0.7">
         <path d={`M${SX0 + 8} ${SL} V${SL - 3 * U}`} />
         {[0, 1, 2, 3].map((k) => (
@@ -771,13 +786,13 @@ function RevealBar({ onDone, ms = 1400 }: { onDone: () => void; ms?: number }) {
       <i class="b-o-fill" aria-hidden="true" />
       <span class="b-o-in">
         <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round">
-          <rect x="3" y="9" width="7" height="14" rx="3" />
-          <rect x="20" y="9" width="7" height="14" rx="3" />
-          <path d="M10 12 H20 M10 20 H20" stroke-dasharray="2.5 2" />
+          <path d="M3 13 H27 M3 8 V18 M27 8 V18" />
+          <path d="M19 13 L12 26" stroke-dasharray="2.5 2" />
+          <circle cx="19" cy="13" r="2.6" fill="#ffffff" />
         </svg>
         <span class="b-o-label">
           <b>{holding ? '再按一会儿…' : '按住揭晓联系'}</b>
-          <small>按满 1.4 秒，展开岛上的横幅 · 大家一起看</small>
+          <small>按满 1.4 秒，揭开两个词之间的联系 · 大家一起看</small>
         </span>
       </span>
     </button>
@@ -801,14 +816,14 @@ export function OverScreen({ g }: { g: G }) {
   };
   return (
     <Stage bg="atlas" label="结算">
-      <Layer label={open ? `结算：大国的词${v.reveal.big}，小国的词${v.reveal.small}，联系是${v.reveal.link}` : `结算：大国的词${v.reveal.big}，小国的词${v.reveal.small}，联系还卷在横幅里`}>
+      <Layer label={open ? `结算：大国的词${v.reveal.big}，小国的词${v.reveal.small}，联系是${v.reveal.link}` : `结算：大国的词${v.reveal.big}，小国的词${v.reveal.small}，联系还没揭晓`}>
         <ResultMap g={g} open={open} play={play} />
       </Layer>
       <Podium g={g} open={open} play={play} />
       {open ? (
-        <TitleBlock kicker="游戏结束" title={TITLE_OF(v.result)} sub="大家回到了各自的阵营；横幅上是两个词之间的联系" size={26} />
+        <TitleBlock kicker="游戏结束" title={TITLE_OF(v.result)} sub="大家回到了各自的阵营；国界通向的那条线上，写着两个词之间的联系" size={26} />
       ) : (
-        <TitleBlock kicker="游戏结束" title="谜底" sub="两个词都摆在这儿了，它们之间的联系还卷在横幅里" />
+        <TitleBlock kicker="游戏结束" title="谜底" sub="两个词都摆在这儿了，它们之间的联系还没揭晓" />
       )}
       <Chips g={g} hold={false} />
       {open ? (

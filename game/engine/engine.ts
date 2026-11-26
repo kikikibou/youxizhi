@@ -915,7 +915,11 @@ function reliefGuessResult(g: GameState, text: string, verdict: GuessVerdict, no
 
 /* ================================================================ 抢答 */
 
-const hintCount = (g: GameState) => 1 + g.secret.hints.length;
+/** 抢答时公布的顺序：先是一条条提示，最后才是联系本身（联系指向性太强，放在最后）。 */
+export function hintSequence(g: Pick<GameState, 'secret'>): string[] {
+  return [...g.secret.hints, g.secret.link];
+}
+const hintCount = (g: GameState) => hintSequence(g).length;
 
 function startRace(g: GameState, purpose: 'first' | 'second', winner: Faction | null, now: number) {
   const targets: Record<PlayerId, WordSide> = {};
@@ -934,7 +938,8 @@ function startRace(g: GameState, purpose: 'first' | 'second', winner: Faction | 
     }
   }
   g.step = { k: 'race', purpose, winner, targets, queue: [], cooldown: {}, nextHintAt: null, endAt: null };
-  if (purpose === 'first') revealHint(g, now); // 两轮无人猜中，先公布联系
+  // 两轮无人猜中，进入抢答时先公布第一条提示（不是联系）；这组词没有提示时，联系也要等一个间隔再公布
+  if (purpose === 'first' && g.secret.hints.length) revealHint(g, now);
   else scheduleHint(g, now); // 第二名：从尚未公布的下一条继续按间隔放出
 }
 
@@ -952,8 +957,9 @@ function scheduleHint(g: GameState, now: number) {
 }
 
 function revealHint(g: GameState, now: number) {
+  const seq = hintSequence(g);
   const i = g.hintsShown;
-  emit(g, { t: 'hint', index: i, text: i === 0 ? g.secret.link : g.secret.hints[i - 1] }, now);
+  emit(g, i === seq.length - 1 ? { t: 'hint', index: i, text: seq[i], link: true } : { t: 'hint', index: i, text: seq[i] }, now);
   g.hintsShown += 1;
   scheduleHint(g, now);
 }

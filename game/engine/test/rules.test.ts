@@ -417,7 +417,7 @@ describe('第二阶段（§6）', () => {
     expect((s.step as { idx: number }).idx).toBe(1);
   });
 
-  it('无人猜中：第一轮 → 白板救济 → 第二轮 → 公布联系后抢答 → 提示用完平局', () => {
+  it('无人猜中：第一轮 → 白板救济 → 第二轮 → 抢答（先放提示，最后才是联系）→ 提示用完平局', () => {
     const s = new Sim({ n: 7, seed: 23 });
     s.toPhase2();
     // 第一轮全部超时
@@ -433,11 +433,19 @@ describe('第二阶段（§6）', () => {
     s.verdict('wrong');
     expect(s.step).toMatchObject({ k: 'turn', round: 2 });
     for (let i = 0; i < 5; i++) s.wait(T(s).turn);
-    // 公布联系，进入抢答
+    // 进入抢答：先公布第一条提示，不是联系
     expect(s.step).toMatchObject({ k: 'race', purpose: 'first' });
-    expect(s.lastEvent('hint')).toMatchObject({ index: 0, text: s.g.secret.link });
     const hints = s.g.secret.hints.length;
-    for (let i = 0; i < hints; i++) s.wait(T(s).hintInterval);
+    expect(hints).toBeGreaterThan(0);
+    expect(s.lastEvent('hint')).toMatchObject({ index: 0, text: s.g.secret.hints[0] });
+    expect(viewFor(s.g, 'p1', s.t).hints).not.toContain(s.g.secret.link);
+    for (let i = 1; i < hints; i++) s.wait(T(s).hintInterval);
+    expect(s.g.hintsShown).toBe(hints);
+    expect(viewFor(s.g, 'p1', s.t).hints).not.toContain(s.g.secret.link);
+    // 提示全部放完，最后一条才是联系
+    s.wait(T(s).hintInterval);
+    expect(s.lastEvent('hint')).toMatchObject({ index: hints, text: s.g.secret.link, link: true });
+    expect(viewFor(s.g, 'p1', s.t)).toMatchObject({ hintTotal: hints + 1 });
     expect(s.g.hintsShown).toBe(1 + hints);
     expect(s.step.k).toBe('race');
     s.wait(T(s).hintInterval);
@@ -490,6 +498,21 @@ describe('第二阶段（§6）', () => {
     for (let i = 0; i < 1 + s.g.secret.hints.length; i++) s.wait(T(s).hintInterval);
     s.wait(T(s).hintInterval);
     expect(s.g.result).toEqual({ first: f, second: [f === 'big' ? 'small' : 'big', 'blank'], third: [], how: 'turnGuess' });
+  });
+
+  it('这组词没有提示：进入抢答时什么都不公布，过一个间隔才公布联系', () => {
+    const s = new Sim({ n: 7, seed: 23, pair: { id: 't', wordA: '狗', wordB: '神', link: 'god / dog', hints: [] } });
+    s.toPhase2();
+    for (let i = 0; i < 5; i++) s.wait(T(s).turn);
+    s.wait(T(s).reliefAsk);
+    s.wait(T(s).reliefGuess);
+    for (let i = 0; i < 5; i++) s.wait(T(s).turn);
+    expect(s.step).toMatchObject({ k: 'race', purpose: 'first' });
+    expect(s.g.hintsShown).toBe(0);
+    s.wait(T(s).hintInterval);
+    expect(s.lastEvent('hint')).toMatchObject({ index: 0, text: 'god / dog', link: true });
+    s.wait(T(s).hintInterval);
+    expect(s.g.result?.how).toBe('draw');
   });
 
   it('救济猜中大国词：白板第一', () => {

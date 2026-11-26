@@ -1,7 +1,8 @@
 /**
  * 题库导入的校验和整理（纯函数，测试见 bank-lib.test.ts）。
  * 输入：表格的行（第一行是列名）；输出：词对和问题清单（第几行、错误还是提醒）。
- * 列名、各列的意思见 game/题库模板.xlsx 的「说明」工作表。
+ * 列名、各列的意思见 game/题目采集表.xlsx 的「说明」工作表。
+ * 提示列：新模板是 提示1–4，旧表格是 提示2–5；两种都认，按编号从小到大就是抢答时公布的顺序（联系永远排在最后）。
  */
 
 import { normalizeWord, type WordPair } from '../../engine/words.ts';
@@ -19,12 +20,14 @@ export interface Issue {
 /** 列名 → 字段。列名里的 ★、空格、括号里的说明都会被忽略。 */
 const HEADERS: Record<string, string> = {
   编号: 'id',
+  所属题库: 'bank',
   题库: 'bank',
   启用: 'enabled',
   难度: 'difficulty',
   词A: 'wordA',
   词B: 'wordB',
   联系: 'link',
+  提示1: 'hint1',
   提示2: 'hint2',
   提示3: 'hint3',
   提示4: 'hint4',
@@ -133,7 +136,7 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
     if (wordA && len(wordA) > 20) err(line, `词A 最多 20 字（现在 ${len(wordA)} 字）`);
     if (wordB && len(wordB) > 20) err(line, `词B 最多 20 字（现在 ${len(wordB)} 字）`);
     if (wordA && wordB && normalizeWord(wordA) === normalizeWord(wordB)) err(line, '词A 和词B 不能一样');
-    if (!link) err(line, '联系必填（它是第一条提示）');
+    if (!link) err(line, '联系必填（抢答时提示放完最后才公布，结算时揭晓）');
     else if (len(link) > 80) err(line, `联系最多 80 字（现在 ${len(link)} 字）`);
 
     const dRaw = get('difficulty');
@@ -143,7 +146,7 @@ export function parseRows(rows: Cell[][], file: string): ParseResult {
     if (len(bank) > 20) err(line, `题库名最多 20 字（现在 ${len(bank)} 字）`);
 
     const hints: string[] = [];
-    for (const k of ['hint2', 'hint3', 'hint4', 'hint5']) {
+    for (const k of ['hint1', 'hint2', 'hint3', 'hint4', 'hint5']) {
       const h = get(k);
       if (!h) continue;
       if (len(h) > 80) err(line, `${k.replace('hint', '提示')} 最多 80 字`);
