@@ -11,6 +11,7 @@ import { ANSWER, DIR, FACTION, ROLE, describe, phaseTitle, resultLine } from './
 import { P2 } from './art.ts';
 import { BIG, Btn, INK, Layer, MUTED, SMALL, Stage, Timer, WL, pad2, textWidth, useTick } from './board.tsx';
 import { coastSeat, labelSpot } from './seats.ts';
+import { PINS, QPin } from './atlas.tsx';
 
 type Pending = JudgeView['pending'][number];
 type RawStep = JudgeView['step'];
@@ -209,6 +210,17 @@ function MasterMap({ j, dy, mark }: { j: JudgeView; dy: number; mark: 'big' | 's
           stroke-dasharray="4 3"
         />
       ) : null}
+      {s.k === 'race'
+        ? null
+        : (['big', 'small'] as const).flatMap((side) =>
+            j.log
+              .filter((e): e is Extract<JudgeView['log'][number], { t: 'turn' }> => e.t === 'turn' && e.action === 'ask' && e.target === side)
+              .slice(-2)
+              .map((e, i) => {
+                const [x, y, r] = PINS[side][i];
+                return e.action === 'ask' ? <QPin x={x} y={y} rot={r} who={j.players.find((p) => p.id === e.player)?.name ?? '?'} q={e.text} ans={ANSWER[e.verdict] ?? '?'} /> : null;
+              }),
+          )}
       {(P2.markers as number[][]).slice(0, shownMarkers).map(([mx, my], i) => stone(mx, my, i + 1, i < j.hintsShown))}
       {j.players.map((p) => {
         const seat = coastSeat(P2.pts as number[][], p.seat, n, 195, 300);

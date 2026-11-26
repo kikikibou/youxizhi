@@ -149,7 +149,7 @@ function Dial({ kind, pick }: { kind: 'bearing' | 'cw' | 'ccw' | 'both' | 'idle'
 }
 
 /** 航海尺：半透明的有机玻璃，两边有刻度，上边嵌着一个罗盘。里面放这一夜要做的事。 */
-function Plotter({ top, rot, dial, children }: { top: number; rot: number; dial: preact.ComponentChildren; children: preact.ComponentChildren }) {
+function Plotter({ top, rot, dial, code, children }: { top: number; rot: number; dial: preact.ComponentChildren; code: string; children: preact.ComponentChildren }) {
   const W = 350;
   const H = 844 - 26 - top;
   const ticks: string[] = [];
@@ -172,7 +172,7 @@ function Plotter({ top, rot, dial, children }: { top: number; rot: number; dial:
           </text>
         ))}
         <text x={W - 14} y={H - 62} text-anchor="end" style="font-family: var(--mono); font-size: 6.5px; letter-spacing: 0.12em; fill: #7fa6c8">
-          NO. 3572
+          NO. {code}
         </text>
         <g transform={`translate(${W - 54} 4)`}>{dial}</g>
       </svg>
@@ -334,7 +334,7 @@ export function NightScreen({ g, s }: { g: G; s: Night }) {
       <p class="b-n-sub">把手机拿近一点，别让旁边的人看到</p>
       <Chips g={g} hold={false} />
 
-      <Plotter top={top} rot={wantDir ? 0.5 : -0.6} dial={<Dial kind={kind} pick={pickAt} />}>
+      <Plotter top={top} rot={wantDir ? 0.5 : -0.6} code={g.snap.room?.code ?? ''} dial={<Dial kind={kind} pick={pickAt} />}>
         <div class="b-n-title">
           <p>{title}</p>
           <p class="b-n-titlesub">

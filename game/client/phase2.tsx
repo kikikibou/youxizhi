@@ -8,7 +8,7 @@ import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { LogEntry, StepView } from '../engine/view.ts';
 import { ANSWER, FACTION } from './text.ts';
-import { AtlasSheet, Border, Caption, Coast, Dot, MeRing, Plate, QPin, SeatLabel, Stone, Territories, markerAt, seatPlace } from './atlas.tsx';
+import { AtlasSheet, Border, Caption, Coast, Dot, MeRing, Plate, QPin, SeatLabel, PINS, Stone, Territories, markerAt, placeSeats } from './atlas.tsx';
 import { BIG, Btn, INK, Layer, MUTED, SMALL, Stage, Timer, TitleBlock, okText } from './board.tsx';
 import { Chips, type G } from './game.tsx';
 
@@ -26,17 +26,6 @@ const FLAG_ICON = (
   </svg>
 );
 
-const PINS: Record<'big' | 'small', [number, number, number][]> = {
-  big: [
-    [58, 292, -2.5],
-    [72, 232, 2],
-  ],
-  small: [
-    [190, 348, 2],
-    [232, 236, -2],
-  ],
-};
-
 /** 第二阶段的地图。 */
 function PhaseMap({ g, s, mark }: { g: G; s: P2Step; mark?: 'big' | 'small' | null }) {
   const { v } = g;
@@ -45,7 +34,7 @@ function PhaseMap({ g, s, mark }: { g: G; s: P2Step; mark?: 'big' | 'small' | nu
   const turns = log.filter((e): e is TurnLog => e.t === 'turn');
   const asks = turns.filter((t): t is Extract<TurnLog, { action: 'ask' }> => t.action === 'ask');
   const pins: ComponentChildren[] = [];
-  for (const side of ['big', 'small'] as const) {
+  for (const side of s.k === 'race' ? [] : (['big', 'small'] as const)) {
     asks
       .filter((a) => a.target === side)
       .slice(-2)
@@ -97,13 +86,22 @@ function PhaseMap({ g, s, mark }: { g: G; s: P2Step; mark?: 'big' | 'small' | nu
             );
           })()
         : null}
-      {v.players.map((p) => {
-        const pl = seatPlace(p.seat, n, Array.from(p.name).length * 14 + (p.id === v.me.id ? 14 : 0) + 12);
+      {(() => {
+        const caps = v.players.map((p) => (p.id === actor ? (p.id === v.me.id ? '!轮到你' : '!正在想') : (lastAct.get(p.id) ?? (p.alive ? '' : '出局'))));
+        const spots = placeSeats(
+          v.players.map((p, k) => ({
+            seat: p.seat,
+            nameW: Array.from(p.name).length * 14 + (p.id === v.me.id ? 14 : 0) + (order.includes(p.id) ? 10 : 0),
+            capW: Array.from(caps[k].replace(/^!/, '')).length * 10,
+            cap: !!caps[k],
+          })),
+          n,
+        );
+        return v.players.map((p, k) => ({ p, pl: spots[k], cap: caps[k] }));
+      })().map(({ p, pl, cap }) => {
         const me = p.id === v.me.id;
         const dead = !p.alive;
         const idx = order.indexOf(p.id);
-        let cap = lastAct.get(p.id) ?? (dead ? '出局' : '');
-        if (p.id === actor) cap = me ? '!轮到你' : '!正在想';
         const hot = cap.startsWith('!');
         return (
           <g key={p.id}>

@@ -35,7 +35,7 @@ export function AtlasSheet() {
           <path d={w.d} opacity={w.op} />
         ))}
       </g>
-      <g transform="translate(356 150)">
+      <g transform="translate(34 160)">
         <circle r="13" fill="none" stroke={INK} stroke-width="0.6" />
         <path d="M0 -11 L4 4 L0 1.5 Z" fill={INK} />
         <path d="M0 -11 L-4 4 L0 1.5 Z" fill="none" stroke={INK} stroke-width="0.8" stroke-linejoin="round" />
@@ -116,8 +116,8 @@ export function Plate({ x, y, cap, word, mark, size = 25 }: { x: number; y: numb
 /** 公开的提问，像一张纸条钉在被问的那块地上。 */
 export function QPin({ x, y, who, q, ans, rot = -2 }: { x: number; y: number; who: string; q: string; ans: string; rot?: number }) {
   const qs = Array.from(q).length > 11 ? Array.from(q).slice(0, 10).join('') + '…' : q;
-  const w = Math.max(96, Math.min(150, Array.from(qs).length * 11.5 + 40));
-  const aw = Array.from(ans).length > 1 ? 34 : 17;
+  const w = Math.max(96, Math.min(150, Array.from(qs).length * 11.5 + 22 + Array.from(ans).length * 11));
+  const aw = Array.from(ans).length * 11 + 6;
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot})`}>
       <rect x="3" y="3" width={w} height="36" fill={INK} opacity="0.13" />
@@ -136,6 +136,18 @@ export function QPin({ x, y, who, q, ans, rot = -2 }: { x: number; y: number; wh
     </g>
   );
 }
+
+/** 钉提问纸条的位置（每国最近两条），避开名牌、国界和界碑。 */
+export const PINS: Record<'big' | 'small', [number, number, number][]> = {
+  big: [
+    [64, 294, -2.5],
+    [84, 344, 2],
+  ],
+  small: [
+    [232, 350, 2],
+    [222, 392, -2],
+  ],
+};
 
 /** 国界上的一块界碑（提示）：done 已立、new 刚立（强调色闪）、todo 还没立。 */
 export function Stone({ x, y, n, state }: { x: number; y: number; n: number; state: 'done' | 'new' | 'todo' }) {
@@ -181,6 +193,47 @@ export function seatPlace(seat: number, n: number, w = 44) {
   const l = labelSpot(s.at, s.a, 18, w, 20, 370);
   const top = l.anchor === 'middle' && !l.below;
   return { at: s.at, label: { x: l.x, y: l.y }, anchor: l.anchor, capY: top ? l.y - 15 : l.y + 13 };
+}
+
+/**
+ * 一圈座位一起排：每个座位的名字（和下面 / 上面的一行说明）先各放各的，
+ * 互相压住的再上下推开一点。nameW / capW：名字、说明大约多宽；cap：有没有说明。
+ */
+export function placeSeats(list: { seat: number; nameW: number; capW: number; cap: boolean }[], n: number) {
+  const spots = list.map((it) => {
+    const s = seatPlace(it.seat, n, Math.max(it.nameW, it.cap ? it.capW : 0));
+    return { ...s, label: { ...s.label } };
+  });
+  const box = (k: number) => {
+    const s = spots[k];
+    const it = list[k];
+    const w = Math.max(it.nameW, it.cap ? it.capW : 0);
+    const x0 = s.anchor === 'start' ? s.label.x : s.anchor === 'end' ? s.label.x - w : s.label.x - w / 2;
+    const y0 = Math.min(s.label.y - 13, it.cap ? s.capY - 10 : Infinity);
+    const y1 = Math.max(s.label.y + 3, it.cap ? s.capY + 3 : -Infinity);
+    return { x0, x1: x0 + w, y0, y1 };
+  };
+  const shift = (k: number, d: number) => {
+    spots[k].label.y += d;
+    spots[k].capY += d;
+  };
+  for (let round = 0; round < 8; round++) {
+    let moved = false;
+    for (let i = 0; i < spots.length; i++) {
+      for (let j = i + 1; j < spots.length; j++) {
+        const a = box(i);
+        const b = box(j);
+        if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) {
+          const d = a.y0 <= b.y0 ? a.y1 - b.y0 + 2 : -(b.y1 - a.y0 + 2);
+          shift(j, d / 2);
+          shift(i, -d / 2);
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return spots;
 }
 
 export function SeatLabel({

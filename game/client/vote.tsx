@@ -47,7 +47,7 @@ function Sheet() {
           <path d={w.d} opacity={w.op} />
         ))}
       </g>
-      <g transform="translate(356 150)">
+      <g transform="translate(34 160)">
         <circle r="13" fill="none" stroke={INK} stroke-width="0.6" />
         <path d="M0 -11 L4 4 L0 1.5 Z" fill={INK} />
         <path d="M0 -11 L-4 4 L0 1.5 Z" fill="none" stroke={INK} stroke-width="0.8" stroke-linejoin="round" />

@@ -14,6 +14,7 @@ import { Chat } from './chat.tsx';
 import { DayScreen } from './day.tsx';
 import { Dossier } from './dossier.tsx';
 import { flags } from './flags.ts';
+import { DayNightFold } from './fold.tsx';
 import { IdentityOverlay, holdHandlers } from './identity.tsx';
 import { NightScreen } from './night.tsx';
 import { OverScreen } from './over.tsx';
@@ -110,6 +111,7 @@ export function GameScreen({ conn, snap, onLeave }: { conn: RoomConnection; snap
   return (
     <>
       {screen}
+      <DayNightFold v={v} code={snap.room?.code ?? ''} />
       {holding && s.k !== 'over' ? <IdentityOverlay v={v} snap={snap} /> : null}
       {file ? <Dossier v={v} onClose={() => setFile(false)} /> : null}
       {chat && chatOpen ? <Chat v={v} conn={conn} channel={chat.channel} title={chat.title} onClose={() => setChatOpen(false)} /> : null}

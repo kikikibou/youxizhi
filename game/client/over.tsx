@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { factionScore } from '../engine/engine.ts';
 import type { Faction } from '../engine/rules.ts';
 import { ROLE } from './text.ts';
-import { AtlasSheet, BX0, BX1, BY0, BY1, Border, Caption, Coast, Dot, FactionDot, MIDX, MIDY, MeRing, Plate, SeatLabel, Territories, seatPlace } from './atlas.tsx';
+import { AtlasSheet, BX0, BX1, BY0, BY1, Border, Caption, Coast, Dot, FactionDot, MIDX, MIDY, MeRing, Plate, SeatLabel, Territories, placeSeats } from './atlas.tsx';
 import { BIG, Btn, INK, Layer, MUTED, PAGE, SMALL, Stage, TitleBlock } from './board.tsx';
 import { flags } from './flags.ts';
 import { Chips, type G } from './game.tsx';
@@ -29,7 +29,7 @@ function LinkOnBorder({ link }: { link: string }) {
   for (const ch of Array.from(link)) {
     if (ch === '「' || ch === '『') inQ = true;
     else if (ch === '」' || ch === '』') inQ = false;
-    else chars.push({ ch, q: inQ });
+    else if (ch.trim()) chars.push({ ch, q: inQ });
   }
   const n = chars.length;
   const step = Math.min(22, 180 / Math.max(1, n));
@@ -91,11 +91,19 @@ function ResultMap({ g, open }: { g: G; open: boolean }) {
       <Plate x={146} y={262} cap="大国的词" word={rv.big} size={28} />
       <Plate x={272} y={318} cap="小国的词" word={rv.small} size={28} />
       {open ? <LinkOnBorder link={rv.link} /> : <Tape />}
-      {v.players.map((p) => {
-        const pl = seatPlace(p.seat, n, Array.from(p.name).length * 14 + (p.id === v.me.id ? 14 : 0) + 12);
+      {(() => {
+        const capOf = (p: (typeof v.players)[number]) => {
+          const info = fOf.get(p.id);
+          return open && info ? (info.faction === 'blank' ? `白板${info.role && info.role !== 'both' ? ` · ${ROLE[info.role].replace('白板', '')}` : ''}` : FNAME[info.faction]) : p.alive ? '' : '出局';
+        };
+        const spots = placeSeats(
+          v.players.map((p) => ({ seat: p.seat, nameW: Array.from(p.name).length * 14 + (p.id === v.me.id ? 14 : 0), capW: Array.from(capOf(p)).length * 10, cap: !!capOf(p) })),
+          n,
+        );
+        return v.players.map((p, k) => ({ p, pl: spots[k], cap: capOf(p) }));
+      })().map(({ p, pl, cap }) => {
         const me = p.id === v.me.id;
         const info = fOf.get(p.id);
-        const cap = open && info ? (info.faction === 'blank' ? `白板${info.role && info.role !== 'both' ? ` · ${ROLE[info.role].replace('白板', '')}` : ''}` : FNAME[info.faction]) : p.alive ? '' : '出局';
         return (
           <g key={p.id}>
             {open && info ? <FactionDot x={pl.at.x} y={pl.at.y} f={info.faction} /> : <Dot x={pl.at.x} y={pl.at.y} out={!p.alive} />}
@@ -242,7 +250,7 @@ function Podium({ g, open, T }: { g: G; open: boolean; T: number }) {
     }
     if (!r.first) {
       out.push(
-        <text x="209" y={B - 40} text-anchor="middle" style="font-family: var(--serif); font-weight: 900; font-size: 16px; fill: #1e1b17">
+        <text x="209" y={B - 62} text-anchor="middle" style="font-family: var(--serif); font-weight: 900; font-size: 16px; fill: #1e1b17">
           无人猜中，平局
         </text>,
       );
