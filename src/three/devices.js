@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Lamp } from './props.js';
-import { TEXT_LAYER } from './typography.js';
+import { overTitles } from './typography.js';
 
 /**
  * "Reveal devices": each page has one shape through which the scene is shown
@@ -212,7 +212,7 @@ export class SplitDevice extends Device {
     );
     this.line.frustumCulled = false;
     this.line.renderOrder = 8;
-    this.line.layers.set(TEXT_LAYER); // (over the titles, which are drawn sharp in a pass of their own)
+    overTitles(this.line.material); // (over the titles, which are drawn sharp in a pass of their own)
     this.group.add(this.line);
 
     this.glow = { pos: this.p.clone(), radius: 1.4, day: 0.25, night: 0.95 };
@@ -507,14 +507,16 @@ export class RibbonDevice extends Device {
    */
   constructor({ ribbons, edge = 0.28, color = 0xff7d10 }) {
     super();
-    this.edgeMat = new THREE.MeshBasicMaterial({
-      color,
-      side: THREE.DoubleSide,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      fog: false,
-    });
+    this.edgeMat = overTitles(
+      new THREE.MeshBasicMaterial({
+        color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
     this.ribbons = ribbons.map((cfg) => {
       const holder = (parent) => {
         const h = new THREE.Group();

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { WIND } from './details.js';
+import { overTitles } from './typography.js';
 
 /**
  * Shared architectural materials. Every material that reacts to day/night is
@@ -98,6 +99,9 @@ export function createMaterials() {
   const bone = new THREE.MeshStandardMaterial({ color: 0xece4d2, roughness: 0.85 });
   // The pad's rim lights: a pale gold by day, lit at night.
   const padLight = new THREE.MeshStandardMaterial({ color: 0xf3d79a, roughness: 0.4, emissive: new THREE.Color(0xffc45e), emissiveIntensity: 0 });
+
+  // (the lamps stand over the titles, which are drawn sharp in a pass of their own)
+  [lampHead, lampPole, bulb].forEach(overTitles);
 
   return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit, gold, stone, bone, padLight };
 }

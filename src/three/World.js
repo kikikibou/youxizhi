@@ -74,8 +74,8 @@ const finalShader = {
       vec2 px = vUv * uMaskRes;
       vec4 scene = texture2D(tScene, vUv);
       vec3 c = scene.rgb;
-      // (alpha below 1 marks a lit sign's letters: less glow lands on them)
-      if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb * mix(0.25, 1.0, clamp(scene.a, 0.0, 1.0));
+      // (no glow lands on the letters themselves: they are laid over after it)
+      if (uBloom > 0.5) c += texture2D(tBloom, vUv).rgb;
       if (uMix > 0.5) {
         float k = beamCoverage(px);
         if (k > 0.0) c = mix(c, texture2D(tOther, vUv).rgb, k);
@@ -263,8 +263,10 @@ export class World {
   }
 
   /** Pixel-ratio range for "auto": never softer than one pixel per CSS pixel on a desktop. */
+  // (a visit starts at the screen's full resolution on a desktop, up to 2;
+  // "auto" turns it down within a second or two if the GPU can't keep up)
   get autoStartRatio() {
-    return Math.min(this.dpr, this.lowPower ? 1.25 : 1.5);
+    return this.lowPower ? Math.min(this.dpr, 1.25) : this.maxPixelRatio;
   }
   get maxPixelRatio() {
     return Math.min(this.dpr, 2);
@@ -538,6 +540,7 @@ export class World {
       }),
     );
     CRISP.tDepth.value = this.sceneRT.depthTexture;
+    CRISP.tSceneColor.value = this.sceneRT.texture;
     CRISP.uViewRes.value.copy(full);
     CRISP.uNear.value = this.camera.near;
     CRISP.uFar.value = this.camera.far;
@@ -626,10 +629,11 @@ export class World {
   }
 
   /**
-   * The lettering that should stay sharp (TEXT_LAYER: the titles, the
-   * lettering on the ground, the split's line) into textRT, at the canvas's
-   * full resolution however coarse "auto" draws the scene; laid over it in
-   * the final pass. (Facade signs stay in the scene, under the beams.)
+   * The lettering, kept sharp (TEXT_LAYER: the titles, the facade signs,
+   * the lettering on the ground) into textRT, at the
+   * canvas's full resolution however coarse "auto" draws the scene; laid
+   * over it in the final pass. (So a lamp's beam no longer veils a sign:
+   * none of the views has one crossing a sign.)
    */
   renderText() {
     const r = this.renderer;
@@ -666,8 +670,8 @@ export class World {
       site.cluster = cluster.group;
       site.texts.push(...cluster.blocks);
       for (const spec of site.page.scene.texts) {
-        const block = new TextBlock(spec, aniso);
-        block.mesh.renderOrder = 3; // facade lettering sits *behind* the beam
+        const block = new TextBlock(spec, aniso).crisp();
+        block.mesh.renderOrder = 3; // (facade lettering first, under the rest)
         site.group.add(block.mesh);
         site.texts.push(block);
       }
@@ -783,15 +787,16 @@ export class World {
    * page's titles and reveal fade (see update). flyTo() brings it back.
    */
   flyToSpot(spot, duration = 3.4) {
-    const v = this.camera.aspect < 0.9 && spot.portrait ? spot.portrait : spot.view;
+    const tall = this.camera.aspect < 0.9 && !!spot.portrait;
     const group = this.sites[this.active].group;
-    const to = this.viewFor(group, v);
+    const to = this.viewFor(group, tall ? spot.portrait : spot.view);
     const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
     // (straight up the tower first, then over to the view: the curve's
     // middle point stands near the start, a little above the end)
     const mid = from.pos.clone().lerp(to.pos, 0.3);
     mid.y = to.pos.y + 4;
-    this.closeUp = { spot, dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
+    // (tall: which view it took, so the ground lettering goes with it)
+    this.closeUp = { spot, tall, dive: group.localToWorld(new THREE.Vector3(...spot.dive)) };
     return this.fly(from, to, mid, duration);
   }
 
@@ -804,6 +809,7 @@ export class World {
     this.baseQuat.setFromRotationMatrix(new THREE.Matrix4().lookAt(this.basePos, target, UP));
     this.baseFov = v.fov - 6;
     this.flight = null;
+    this.sites[this.active].activity = 0; // (the page's titles don't show for a moment first)
   }
 
   /** From a close-up, drop towards its `dive` point (leaving for the card's site). */
@@ -861,6 +867,16 @@ export class World {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.fitClusters();
+    // At a close-up, a screen turned between upright and wide takes the
+    // close-up's other view (its ground lettering follows, see update).
+    const c = this.closeUp;
+    if (c && !this.flight && (w / h < 0.9 && !!c.spot.portrait) !== c.tall) {
+      c.tall = !c.tall;
+      const v = this.viewFor(this.sites[this.active].group, c.tall ? c.spot.portrait : c.spot.view);
+      this.basePos.copy(v.pos);
+      this.baseQuat.copy(v.quat);
+      this.baseFov = v.fov;
+    }
     this.renderer.setSize(w, h, false);
     const size = this.renderSize(this._size);
     this.sceneRT.setSize(size.x, size.y);
@@ -1225,9 +1241,9 @@ export class World {
    * Keeps one-second statistics for the debug panel and, in "auto" mode,
    * adapts the resolution. With a GPU timer the decision uses the GPU's own
    * time (a slow moment on the main thread, e.g. while the page is still
-   * loading, no longer drops the resolution for good), and it can step back
-   * up when there is room. Without one it only steps down, after two slow
-   * seconds in a row.
+   * loading, no longer drops the resolution for good), and it steps back up
+   * when there is room. Without one it steps down after two slow seconds in
+   * a row, and tries a step up after ten good ones (see adapt).
    */
   trackFrame(ms) {
     const p = this.perf;
@@ -1268,37 +1284,54 @@ export class World {
     p.gpuWin.length = 0;
     p.winStart = now;
 
-    if (this.quality.scale === 'auto' && now > p.settleUntil && !this.flight) this.adapt(median, gpuAvg, now);
+    // (during a flight only downwards: a slow opening flight shouldn't
+    // stutter to its end first, and a step up mid-flight would show)
+    if (this.quality.scale === 'auto' && now > p.settleUntil) this.adapt(median, gpuAvg, now, !!this.flight);
   }
 
-  adapt(median, gpu, now) {
+  adapt(median, gpu, now, flying = false) {
     const p = this.perf;
     const budget = 1000 / Math.min(60, this.fpsTarget || 60); // ms per frame we aim for
+    // Don't climb straight back to a ratio that was too slow a moment ago.
+    const top = p.ceiling && now - p.ceilingAt < 20000 ? Math.min(this.maxPixelRatio, p.ceiling * 0.95) : this.maxPixelRatio;
+    const tooSlow = () => {
+      p.ceiling = this.pixelRatio;
+      p.ceilingAt = now;
+    };
     let next = this.pixelRatio;
     let why = '';
     if (gpu !== null) {
-      // GPU time grows roughly with the number of pixels (ratio squared).
+      // GPU time grows roughly with the number of pixels (ratio squared):
+      // back up a step when the step's cost, so estimated, still leaves room.
+      const step = Math.min(1.15, top / this.pixelRatio);
       p.slow = gpu > budget * 0.95 ? p.slow + 1 : 0;
-      p.fast = gpu < budget * 0.5 ? p.fast + 1 : 0;
+      p.fast = step > 1.01 && gpu * step * step < budget * 0.8 ? p.fast + 1 : 0;
       if (p.slow >= 2) {
         next = this.pixelRatio * THREE.MathUtils.clamp(Math.sqrt((budget * 0.75) / gpu), 0.7, 0.92);
         why = `GPU 每帧 ${gpu.toFixed(1)} ms，偏慢`;
-        p.ceiling = this.pixelRatio;
-        p.ceilingAt = now;
+        tooSlow();
       } else if (p.fast >= 3) {
-        // Don't climb straight back to a ratio that was too slow a moment ago.
-        const top = p.ceiling && now - p.ceilingAt < 30000 ? Math.min(this.maxPixelRatio, p.ceiling * 0.95) : this.maxPixelRatio;
-        next = Math.max(this.pixelRatio, Math.min(top, this.pixelRatio * Math.min(1.15, Math.sqrt((budget * 0.7) / gpu))));
+        next = this.pixelRatio * step;
         why = `GPU 每帧 ${gpu.toFixed(1)} ms，有余量`;
       }
     } else {
+      // Without a GPU timer only the frame interval tells, and at the
+      // display's own rate it can't tell how much room is left: after ten
+      // good seconds in a row, try a step up (a slow one comes back down and
+      // isn't tried again for a while).
       p.slow = median > Math.max(21, budget * 1.25) ? p.slow + 1 : 0;
+      p.fast = median < budget * 1.12 ? p.fast + 1 : 0;
       if (p.slow >= 2) {
         next = this.pixelRatio * 0.85;
         why = `帧间隔 ${median.toFixed(1)} ms`;
+        tooSlow();
+      } else if (p.fast >= 10 && top > this.pixelRatio * 1.03) {
+        next = Math.min(top, this.pixelRatio * 1.1);
+        why = `帧间隔 ${median.toFixed(1)} ms，试着调高`;
       }
     }
     next = THREE.MathUtils.clamp(next, this.minPixelRatio, this.maxPixelRatio);
+    if (flying && next > this.pixelRatio) return;
     if (Math.abs(next - this.pixelRatio) < 0.03) return;
     this.note(`自动分辨率 ${this.pixelRatio.toFixed(2)} → ${next.toFixed(2)}（${why}）`);
     this.setPixelRatio(next);
@@ -1372,7 +1405,8 @@ export class World {
       for (const g of site.grounds || []) {
         const on = this.closeUp?.spot === g.spot ? 1 : 0;
         g.shown = damp(g.shown, on, on ? 1.1 : 3.5, dt);
-        const tall = this.camera.aspect < 0.9 && g.ground.portrait;
+        const at = this.closeUp?.spot === g.spot ? this.closeUp.tall : this.camera.aspect < 0.9;
+        const tall = at && g.ground.portrait;
         const v = tall || g.ground;
         g.group.position.set(v.p[0], 0.05, v.p[1]);
         g.group.rotation.y = v.r || 0;

@@ -19,19 +19,37 @@ export const MASK = {
 };
 
 /**
- * Lettering drawn sharp (the titles, the lettering on the ground): in a pass
- * of its own at the canvas's full resolution, after the scene, which "auto"
- * may draw coarser (World.renderText). Its blocks are on TEXT_LAYER; each
- * fragment tests itself against the scene's depth (tDepth, in the 3D's own
- * pixels) to stay hidden behind what stands in front of it.
+ * Lettering drawn sharp: in a pass of its own at the canvas's full
+ * resolution, after the scene, which "auto" may draw coarser
+ * (World.renderText). Its blocks are on TEXT_LAYER. Lettering that tests depth
+ * (facade signs, the lettering on the ground) tests itself against the
+ * scene's (tDepth, in the 3D's own pixels) to stay hidden behind what stands
+ * in front of it; the titles don't test depth, no building cuts into them, but
+ * they give way where something drawn after them stands (overTitles: the
+ * lamps, the split's line), as they did when they were in the scene.
  */
 export const TEXT_LAYER = 3;
 export const CRISP = {
   tDepth: { value: null },
+  tSceneColor: { value: null },
   uViewRes: { value: new THREE.Vector2(1, 1) },
   uNear: { value: 0.3 },
   uFar: { value: 2000 },
 };
+
+/**
+ * For a material drawn after the titles in the scene: it leaves a mark in the
+ * frame's alpha (alpha falls where it stands), which the sharp titles read to
+ * give way to it (see CRISP).
+ */
+export function overTitles(m) {
+  m.blending = THREE.CustomBlending;
+  m.blendSrc = THREE.SrcAlphaFactor;
+  m.blendDst = THREE.OneMinusSrcAlphaFactor;
+  m.blendSrcAlpha = THREE.ZeroFactor;
+  m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+  return m;
+}
 
 export const MASK_GLSL = /* glsl */ `
   uniform sampler2D tMask;
@@ -182,6 +200,7 @@ const frag = /* glsl */ `
   ${MASK_GLSL}
   #ifdef CRISP
   uniform sampler2D tDepth;
+  uniform sampler2D tSceneColor;
   uniform vec2 uViewRes;
   uniform float uNear;
   uniform float uFar;
@@ -189,9 +208,13 @@ const frag = /* glsl */ `
   #endif
   void main() {
     #ifdef CRISP
-    // (behind what the scene drew here, by more than a hair: hidden)
     vec2 sp = gl_FragCoord.xy / uViewRes;
+    #ifdef CRISP_DEPTH
+    // (behind what the scene drew here, by more than a hair: hidden)
     if (distanceAt(gl_FragCoord.z) > distanceAt(texture2D(tDepth, sp).r) * 1.01 + 0.15) discard;
+    #endif
+    // (giving way where something drawn after the titles stands: overTitles)
+    float under = clamp(texture2D(tSceneColor, sp).a, 0.0, 1.0);
     float cov = beamCoverage(sp * uMaskRes);
     #else
     float cov = beamCoverage(gl_FragCoord.xy);
@@ -217,6 +240,10 @@ const frag = /* glsl */ `
     }
     c *= uOpacity;
     a *= uOpacity;
+    #ifdef CRISP
+    c *= under;
+    a *= under;
+    #endif
     if (max(a, max(c.r, max(c.g, c.b))) < 0.004) discard;
     gl_FragColor = vec4(c, a);
   }
@@ -316,17 +343,6 @@ export class TextBlock {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    if (spec.c === 'sign') {
-      // Signs also leave their letters' coverage in the frame's alpha
-      // (alpha = 1 - coverage): the final pass lays less of the night glow
-      // over the letters there, so nearby strip lights don't wash them pale.
-      const m = this.material;
-      m.blending = THREE.CustomBlending;
-      m.blendSrc = THREE.OneFactor;
-      m.blendDst = THREE.OneMinusSrcAlphaFactor;
-      m.blendSrcAlpha = THREE.ZeroFactor;
-      m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
-    }
     if (tag) {
       const x0 = ink.x0 - tag.padX * px;
       const x1 = ink.x1 + tag.padX * px;
@@ -358,7 +374,8 @@ export class TextBlock {
 
   /** Drawn sharp, in the lettering's own pass (see CRISP). */
   crisp() {
-    this.material.defines = { CRISP: '' };
+    // (lettering that doesn't test depth, the titles, stays uncut by buildings)
+    this.material.defines = this.material.depthTest ? { CRISP: '', CRISP_DEPTH: '' } : { CRISP: '' };
     this.material.needsUpdate = true;
     this.mesh.layers.set(TEXT_LAYER);
     return this;

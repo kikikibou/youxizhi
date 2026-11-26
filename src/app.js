@@ -301,25 +301,37 @@ let spot = null; // { idx, c, landed } while at a close-up
 
 /** `back`: coming back from the card's site, the camera rises again from the spot. */
 function openSpot(idx, c, back = false) {
-  spot = { idx, c, landed: false };
+  if (!c?.spot) return;
+  const s = (spot = { idx, c, landed: false });
   if (back) world.placeAtDive(c.spot);
   const el = pageEls[idx];
   if (el.contains(document.activeElement)) document.activeElement.blur();
   el.classList.remove('is-in', 'is-settled');
+  // (the page and the footer, faded, are out of reach: not clicked, not tabbed to)
+  el.inert = bottom.inert = true;
   bottom.classList.add('is-swapping');
   document.body.classList.add('is-spot');
   spotEl.innerHTML = passHtml(c);
   spotEl.setAttribute('aria-hidden', 'false');
   world.flyToSpot(c.spot, back ? 2 : undefined).then(() => {
-    if (spot?.c !== c || spot.landed) return;
-    spot.landed = true;
+    if (spot !== s || s.landed) return;
+    s.landed = true;
     spotEl.classList.add('is-open');
+    spotEl.querySelector('.pass-board')?.focus({ preventScroll: true });
   });
 }
 
 /** Leave a close-up's pass behind (the camera is about to fly elsewhere). */
 function dropSpot() {
   spot = null;
+  pageEls.forEach((p) => (p.inert = false));
+  bottom.inert = false;
+  // (a boarding called off: Back shouldn't bring its pass back)
+  try {
+    sessionStorage.removeItem(SPOT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
   spotEl.classList.remove('is-open', 'is-boarding');
   spotEl.setAttribute('aria-hidden', 'true');
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
@@ -345,8 +357,9 @@ function closeSpot() {
 /** 登机: tear off the stub, drop into the spot, go dark, leave. */
 function board() {
   if (!spot?.landed) return;
-  const c = spot.c;
-  spot.landed = false;
+  const s = spot; // (this boarding: called off if the close-up changes meanwhile)
+  const c = s.c;
+  s.landed = false;
   spotEl.classList.add('is-boarding');
   takeoff.querySelector('.takeoff-motto').textContent = c.spot.pass.motto;
   // (so that Back, even if it loads this site afresh, comes back to this pass)
@@ -356,14 +369,14 @@ function board() {
     /* storage unavailable */
   }
   setTimeout(() => {
-    if (spot?.c !== c) return;
+    if (spot !== s) return;
     world.dive();
     takeoff.classList.add('is-on');
     // (black by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
     // only black is left, and the site opens on black)
-    setTimeout(() => spot?.c === c && takeoff.classList.add('is-quiet'), 2200);
+    setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), 2200);
     setTimeout(() => {
-      if (spot?.c === c) location.assign(c.href);
+      if (spot === s) location.assign(c.href);
     }, 2900);
   }, 380);
 }
@@ -389,9 +402,10 @@ window.addEventListener('pageshow', (e) => {
   takeBackSpot();
   takeoff.classList.remove('is-on', 'is-quiet');
   if (!spot) return;
-  world.flyToSpot(spot.c.spot, 1.6).then(() => {
-    if (!spot) return;
-    spot.landed = true;
+  const s = spot;
+  world.flyToSpot(s.c.spot, 1.6).then(() => {
+    if (spot !== s) return;
+    s.landed = true;
     spotEl.classList.remove('is-boarding');
     spotEl.classList.add('is-open');
   });
@@ -476,6 +490,8 @@ window.addEventListener('pointermove', (e) => {
 stage.addEventListener('click', (e) => {
   const card = e.target.closest('.card');
   if (!card || card.disabled) return;
+  // (a page just left stays on screen a moment, fading: its cards are done)
+  if (card.closest('.page') !== pageEls[current]) return;
   if (card.dataset.go) location.hash = `#/${card.dataset.go}`;
   else if (card.dataset.tool && TOOLS[card.dataset.tool]) drawer.open(TOOLS[card.dataset.tool]);
   else if (card.dataset.spot && !spot) openSpot(current, PAGES[current].cards[card.dataset.spot]);

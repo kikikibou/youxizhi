@@ -2094,6 +2094,14 @@ html[data-theme='night'] .pass-head {
 .spot.is-boarding .pass {
   pointer-events: none;
 }
+/* (its links and buttons too, which .ui a / .ui button would let through,
+   while it fades in or out or tears) */
+.spot:not(.is-open) .pass a,
+.spot:not(.is-open) .pass button,
+.spot.is-boarding .pass a,
+.spot.is-boarding .pass button {
+  pointer-events: none;
+}
 .spot.is-boarding .pass-main {
   opacity: 0;
   transform: translate3d(-10px, 10px, 0);
