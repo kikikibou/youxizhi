@@ -1,0 +1,348 @@
+/* 规则图解（.b-tour-）：七张分步的小图 */
+
+.b-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  animation: b-tour-open 0.25s ease-out;
+}
+
+@keyframes b-tour-open {
+  from {
+    opacity: 0;
+  }
+}
+
+.b-tour-k {
+  position: absolute;
+  left: 28px;
+  top: 30px;
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--muted);
+}
+
+.b-tour-no {
+  position: absolute;
+  right: 72px;
+  top: 26px;
+  margin: 0;
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.b-tour-no b {
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.b-tour-x {
+  position: absolute;
+  right: 26px;
+  top: 22px;
+}
+
+.b-tour-page {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  height: 690px;
+  touch-action: pan-y;
+}
+
+.b-tour-page.is-next {
+  animation: b-tour-next 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.b-tour-page.is-prev {
+  animation: b-tour-prev 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes b-tour-next {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+
+@keyframes b-tour-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+}
+
+.b-tour-t {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 48px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 3px double var(--ink);
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 25px;
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.b-tour-art {
+  position: absolute;
+  left: 0;
+  top: 104px;
+  overflow: visible;
+}
+
+.b-tour-replay {
+  position: absolute;
+  right: 22px;
+  top: 668px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  background: var(--page);
+  font-size: 11.5px;
+  color: var(--ink);
+}
+
+.b-tour-text {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 500px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.b-tour-text li {
+  position: relative;
+  margin: 0 0 7px;
+  padding-left: 17px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  animation: t-up 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.b-tour-text li:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.b-tour-text li:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+/* 菱形的图例点 */
+.b-tour-text li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+  transform: rotate(45deg);
+}
+
+.b-tour-nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 704px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.b-tour-stone {
+  width: 30px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.b-tour-stone path {
+  fill: #fbf6e8;
+  stroke: var(--ink);
+  stroke-width: 0.9;
+  stroke-dasharray: 2 1.6;
+}
+
+.b-tour-stone text {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 10.5px;
+  fill: var(--muted);
+}
+
+.b-tour-stone.is-done path {
+  fill: var(--ink);
+  stroke-dasharray: none;
+}
+
+.b-tour-stone.is-done text,
+.b-tour-stone.is-on text {
+  fill: #ffffff;
+}
+
+.b-tour-stone.is-on path {
+  fill: var(--acc);
+  stroke: var(--acc);
+  stroke-dasharray: none;
+}
+
+.b-tour-prev {
+  position: absolute;
+  left: 24px;
+  top: 752px;
+  width: 112px;
+  height: 50px;
+  padding: 0;
+  border: 1.2px solid var(--ink);
+  background: var(--page);
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.b-tour-prev:disabled {
+  opacity: 0.35;
+}
+
+.b-tour-next {
+  position: absolute;
+  left: 146px;
+  right: 24px;
+  top: 752px;
+}
+
+/* 图里的东西：按顺序出现，演一遍就停在最后一帧 */
+.t-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: t-pop 0.35s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+@keyframes t-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.t-in {
+  animation: t-in 0.4s ease-out both;
+}
+
+@keyframes t-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.t-up {
+  animation: t-up 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes t-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.t-draw {
+  stroke-dasharray: 1;
+  animation: t-draw 0.6s ease-in-out both;
+}
+
+@keyframes t-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.t-out {
+  animation: t-out 0.3s ease-in both;
+}
+
+@keyframes t-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 只亮一下（轮到谁、正在做什么） */
+.t-blink {
+  animation: t-blink 0.55s linear both;
+}
+
+.t-blink.t-long {
+  animation-duration: 1.4s;
+}
+
+@keyframes t-blink {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.t-rise {
+  transform-origin: 0 232px;
+  animation: t-rise 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes t-rise {
+  from {
+    transform: scaleY(0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .b-tour,
+  .b-tour-page,
+  .b-tour-text li,
+  .t-pop,
+  .t-in,
+  .t-up,
+  .t-draw,
+  .t-rise {
+    animation: none;
+  }
+
+  .t-draw {
+    stroke-dasharray: none;
+  }
+
+  .t-out,
+  .t-blink {
+    display: none;
+  }
+}

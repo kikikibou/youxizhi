@@ -5,3 +5,4 @@ import './lobby.css';
 import './game.css';
 import './phase.css';
 import './file.css';
+import './tour.css';

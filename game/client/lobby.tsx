@@ -14,6 +14,7 @@ import { RULE_INFO } from './text.ts';
 import { TOPO_ART } from './art.ts';
 import { Art, Layer, Stage, pad2, textWidth } from './board.tsx';
 import { ringPoint } from './seats.ts';
+import { RulesTour } from './tour.tsx';
 
 /* ================================================================ 节奏档位（和 A 版同一套算法） */
 
@@ -1132,6 +1133,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   const [pair, setPair] = useState<PairForm>(() => initialPair(room.customPair));
   const setField = (k: keyof PairForm, v: string) => setPair((prev) => ({ ...prev, [k]: v }));
   const [details, setDetails] = useState(false);
+  const [tour, setTour] = useState(false);
 
   const [lowerRef, lowerH] = useHeight<HTMLDivElement>();
   const H = 844 + Math.max(lowerH, 200) + 46;
@@ -1140,6 +1142,7 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
   const showStartTop = isHost && !isModerator;
 
   return (
+    <>
     <Stage bg="day" mode="scroll" h={H} label={`房间 ${room.code} 的大厅`}>
       <Art svg={TOPO_ART} />
       <SeatMap room={room} players={players} moderator={moderator} />
@@ -1182,7 +1185,13 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
       )}
 
       <div class="b-lb-foot-line" style={isModerator ? { top: '848px' } : undefined}>
-        <span class={isHost && room.startBlocker ? 'is-warn' : ''}>{isHost && room.startBlocker ? room.startBlocker : '开局时随机分配座位'}</span>
+        {isHost && room.startBlocker ? (
+          <span class="is-warn">{room.startBlocker}</span>
+        ) : (
+          <button type="button" class="b-lb-link" onClick={() => setTour(true)}>
+            怎么玩？看图解
+          </button>
+        )}
         <button type="button" class="b-lb-link" onClick={() => scrollToId('b-lb-lower')}>
           成员、规则在下面 ↓
         </button>
@@ -1206,6 +1215,10 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
 
         <InviteTicket code={room.code} link={link} />
 
+        <button type="button" class="b-btn b-btn--ghost b-lb-wide" onClick={() => setTour(true)}>
+          <span>第一次玩？看一分钟规则图解</span>
+        </button>
+
         {lastGame && room.gameNo > 0 ? (
           <button type="button" class="b-btn b-btn--ghost b-lb-wide" onClick={onShowLast}>
             <span>查看第 {room.gameNo} 局的结算和记录</span>
@@ -1221,5 +1234,8 @@ export function Lobby({ conn, snap, lastGame, onShowLast }: { conn: RoomConnecti
         <NameAndLeave conn={conn} name={me?.name ?? ''} showRename={isHost || isModerator} />
       </div>
     </Stage>
+      {/* 放在画板外面：画板有缩放，fixed 在里面会跟着缩放 */}
+      {tour ? <RulesTour onClose={() => setTour(false)} /> : null}
+    </>
   );
 }

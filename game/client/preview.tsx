@@ -18,6 +18,7 @@ import { SCENES, Sim, gameSnap, idOf, type Scene, type SceneData } from './previ
 import { RoomScreen } from './app.tsx';
 import { flags } from './flags.ts';
 import { Home } from './home.tsx';
+import { RulesTour } from './tour.tsx';
 
 const params = new URLSearchParams(location.search);
 const sceneId = params.get('scene');
@@ -143,6 +144,7 @@ function SceneView({ id }: { id: string }) {
     );
   }
   if (data.kind === 'home') return <Home />;
+  if (data.kind === 'tour') return <RulesTour start={data.step} onClose={() => {}} />;
   if (data.kind !== 'room') return null;
   flags.hold = !!data.hold;
   flags.dossier = data.dossier ?? null;

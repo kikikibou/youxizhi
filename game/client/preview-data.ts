@@ -204,7 +204,7 @@ export interface SceneFlags {
   dossier?: 'clues' | 'votes' | 'secret' | 'all';
   revealed?: boolean;
 }
-export type SceneData = { kind: 'home' } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
+export type SceneData = { kind: 'home' } | { kind: 'tour'; step: number } | ({ kind: 'room'; snap: Snapshot; info?: RoomInfo; token?: string | null } & SceneFlags);
 
 export interface Scene {
   id: string;
@@ -243,6 +243,15 @@ function phase2() {
 
 export const SCENES: Scene[] = [
   { id: 'home', group: '首页', title: '首页', note: '转动的地球、行李牌写名字、两张票：建房间 / 加入', build: () => ({ kind: 'home' }) },
+  ...['三方，两个词', '夜晚', '白天说词', '投票', '第二阶段', '抢答', '名次'].map(
+    (t, k): Scene => ({
+      id: `tour-${k + 1}`,
+      group: '规则图解',
+      title: `图解 ${k + 1} · ${t}`,
+      note: k ? '左右滑或点「下一步」换张；「再放一遍」重播' : '首页「怎么玩」和大厅都能打开；每张进来时按顺序动一遍',
+      build: () => ({ kind: 'tour', step: k }),
+    }),
+  ),
   {
     id: 'join',
     group: '首页',

@@ -4,7 +4,7 @@ import { useState } from 'preact/hooks';
 import { NAME_MAX, ROOM_CODE } from '../shared/protocol.ts';
 import { MAX_PLAYERS } from '../engine/rules.ts';
 import { createRoom, store, type RoomConnection, type RoomInfo, type Snapshot } from './net.ts';
-import { HOW_TO } from './text.ts';
+import { RulesTour } from './tour.tsx';
 import { JOIN_ART } from './art.ts';
 import { Art, Stage } from './board.tsx';
 import globeUrl from './globe.svg';
@@ -52,6 +52,7 @@ export function Home() {
   };
 
   return (
+    <>
     <Stage bg="paper" label="大国小国 · 首页">
       <img class="b-globe" src={globeUrl} alt="大国小国的标志：一个慢慢转动的地球，正面是「大」「小」两块国土，中间一条国界，背面是一块「白」" />
       <div class="b-brand">
@@ -153,36 +154,15 @@ export function Home() {
 
       <p class="b-howto">
         <button type="button" class="b-link" onClick={() => setRules(true)}>
-          怎么玩？看一分钟规则
+          怎么玩？看一分钟图解
         </button>
         <span>6–12 人，面对面坐成一圈，各用各的手机。</span>
       </p>
       <Footer back="← 回到 游戏之致西柚" href="../#/games" />
-      {rules ? <Rules onClose={() => setRules(false)} /> : null}
     </Stage>
-  );
-}
-
-/** 规则速览：一张钉在图上的说明。 */
-function Rules({ onClose }: { onClose: () => void }) {
-  return (
-    <div class="b-rules" role="dialog" aria-modal="true" aria-label="规则速览">
-      <div class="b-rules-sheet">
-        <p class="b-rules-h">
-          <b>一分钟规则</b>
-          <button type="button" class="b-x" aria-label="关闭" onClick={onClose}>
-            ×
-          </button>
-        </p>
-        {HOW_TO.map(([t, d]) => (
-          <p class="b-rules-row" key={t}>
-            <b>{t}</b>
-            <span>{d}</span>
-          </p>
-        ))}
-        <p class="b-rules-foot">6–12 人，面对面坐成一圈，各用各的手机。裁判由系统担任。</p>
-      </div>
-    </div>
+      {/* 放在画板外面：画板有缩放，fixed 在里面会跟着缩放 */}
+      {rules ? <RulesTour onClose={() => setRules(false)} /> : null}
+    </>
   );
 }
 
