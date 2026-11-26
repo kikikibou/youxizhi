@@ -59,14 +59,14 @@ function emblemSvg() {
 }
 
 /**
- * 大国小国's emblem, for the stub of its ride ticket: its globe (the one
- * turning at the top of its first page, game/client/globe.svg), drawn still
- * and small: the sea under a graticule, 大 and 小 as two countries with a
- * border between them, in a ring of the black-and-white degree scale its
- * map frames have.
+ * 大国小国's globe (the one turning at the top of its first page,
+ * game/client/globe.svg), drawn still: the sea under a graticule, 大 and 小
+ * as two countries with a border between them, in a ring of the
+ * black-and-white degree scale its map frames have. SVG elements centred on
+ * (cx, cy), the ball r across, the ring 8 more; `id` keeps its defs apart
+ * from another copy's on the same page.
  */
-function atlasEmblemSvg() {
-  const [cx, cy, r] = [75, 74, 36];
+function atlasGlobe(id, cx, cy, r) {
   const meridians = [0.35, 0.7, 0.92].map((k) => `<ellipse cx="${cx}" cy="${cy}" rx="${(r * k).toFixed(1)}" ry="${r}"/>`).join('');
   const parallels = [-0.62, -0.3, 0.3, 0.62].map((k) => {
     const y = cy + r * k;
@@ -74,25 +74,43 @@ function atlasEmblemSvg() {
     return `<line x1="${(cx - w).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(cx + w).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
   });
   const scale = 2 * Math.PI * (r + 5);
-  return `<svg class="pass-emblem" viewBox="0 0 150 250" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+  const k = r / 36; // (the countries were drawn for a ball 36 across)
+  return `
     <defs>
-      <radialGradient id="atlas-sea" cx="40%" cy="34%" r="70%"><stop offset="0" stop-color="#e6f0ee"/><stop offset="0.6" stop-color="#d4e3e1"/><stop offset="1" stop-color="#b7cdcc"/></radialGradient>
-      <clipPath id="atlas-ball"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
+      <radialGradient id="${id}-sea" cx="40%" cy="34%" r="70%"><stop offset="0" stop-color="#e6f0ee"/><stop offset="0.6" stop-color="#d4e3e1"/><stop offset="1" stop-color="#b7cdcc"/></radialGradient>
+      <clipPath id="${id}-ball"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
     </defs>
-    <circle cx="${cx}" cy="${cy}" r="${r + 8}" fill="none" stroke="#1e1b17" stroke-width="0.8"/>
-    <circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="none" stroke="#1e1b17" stroke-width="4" stroke-dasharray="${(scale / 48).toFixed(2)}"/>
-    <circle cx="${cx}" cy="${cy}" r="${r + 2}" fill="none" stroke="#1e1b17" stroke-width="0.8"/>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#atlas-sea)"/>
-    <g clip-path="url(#atlas-ball)">
-      <g fill="none" stroke="#5f8f93" stroke-width="0.6" opacity="0.7">${meridians}${parallels.join('')}</g>
-      <g font-family="'Noto Sans SC Variable', 'Noto Sans SC', sans-serif" font-weight="900" stroke="#1e1b17" stroke-width="1.3" paint-order="stroke" stroke-linejoin="round">
-        <text x="${cx - 15}" y="${cy + 13}" font-size="40" text-anchor="middle" fill="#efc965" transform="rotate(-8 ${cx - 15} ${cy})">大</text>
-        <text x="${cx + 19}" y="${cy + 14}" font-size="30" text-anchor="middle" fill="#a9cf8f" transform="rotate(6 ${cx + 19} ${cy})">小</text>
+    <circle cx="${cx}" cy="${cy}" r="${r + 8 * k}" fill="none" stroke="#1e1b17" stroke-width="${0.8 * k}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r + 5 * k}" fill="none" stroke="#1e1b17" stroke-width="${4 * k}" stroke-dasharray="${((scale * k) / 48).toFixed(2)}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r + 2 * k}" fill="none" stroke="#1e1b17" stroke-width="${0.8 * k}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${id}-sea)"/>
+    <g clip-path="url(#${id}-ball)">
+      <g fill="none" stroke="#5f8f93" stroke-width="${0.6 * k}" opacity="0.7">${meridians}${parallels.join('')}</g>
+      <g font-family="'Noto Sans SC Variable', 'Noto Sans SC', sans-serif" font-weight="900" stroke="#1e1b17" stroke-width="${1.3 * k}" paint-order="stroke" stroke-linejoin="round">
+        <text x="${cx - 15 * k}" y="${cy + 13 * k}" font-size="${40 * k}" text-anchor="middle" fill="#efc965" transform="rotate(-8 ${cx - 15 * k} ${cy})">大</text>
+        <text x="${cx + 19 * k}" y="${cy + 14 * k}" font-size="${30 * k}" text-anchor="middle" fill="#a9cf8f" transform="rotate(6 ${cx + 19 * k} ${cy})">小</text>
       </g>
-      <path d="M${cx + 3} ${cy - r} Q${cx - 2} ${cy - 8} ${cx + 4} ${cy + 4} T${cx + 1} ${cy + r}" fill="none" stroke="#1e1b17" stroke-width="1" stroke-dasharray="3 2"/>
+      <path d="M${cx + 3 * k} ${cy - r} Q${cx - 2 * k} ${cy - 8 * k} ${cx + 4 * k} ${cy + 4 * k} T${cx + k} ${cy + r}" fill="none" stroke="#1e1b17" stroke-width="${k}" stroke-dasharray="${3 * k} ${2 * k}"/>
     </g>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e1b17" stroke-width="1.3"/>
-  </svg>`;
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e1b17" stroke-width="${1.3 * k}"/>`;
+}
+
+/** 大国小国's emblem, for the stub of its ride ticket: its globe, small. */
+function atlasEmblemSvg() {
+  return `<svg class="pass-emblem" viewBox="0 0 150 250" preserveAspectRatio="xMidYMin slice" aria-hidden="true">${atlasGlobe('stub', 75, 74, 36)}</svg>`;
+}
+
+/**
+ * The cover of 大国小国's folded map (its way in, foldmap.js): map paper in
+ * its frame of the degree scale, its globe, its name.
+ */
+export function foldCoverHtml(c) {
+  return `
+    <div class="fold-cover">
+      <svg class="fold-cover-globe" viewBox="0 0 100 100" aria-hidden="true">${atlasGlobe('cover', 50, 50, 40)}</svg>
+      <b>${esc(c.title)}</b>
+      <small>${esc(c.en)}</small>
+    </div>`;
 }
 
 /** The other site's address as its stub prints it (this site's own pages with their path). */

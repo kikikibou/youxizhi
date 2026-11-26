@@ -1,6 +1,7 @@
 import { PAGES } from './pages.js';
 import { World } from './three/World.js';
-import { renderNav, renderPages, renderFooter, Drawer, passHtml } from './ui.js';
+import { renderNav, renderPages, renderFooter, Drawer, passHtml, foldCoverHtml } from './ui.js';
+import { foldMap } from './foldmap.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
@@ -104,6 +105,7 @@ for (const ev of ['wheel', 'touchstart', 'touchend']) palEl.addEventListener(ev,
 if (import.meta.env.DEV) {
   // Debug helpers for driving the scene from devtools.
   window.__world = world;
+  window.__fold = () => fold; // (大国小国's map while it's out: seek(t) shows a moment of it)
   window.__step = (n = 60) => {
     for (let i = 0; i < n; i++) world.update(1 / 60);
   };
@@ -338,7 +340,9 @@ function dropSpot() {
   spotEl.setAttribute('aria-hidden', 'true');
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
   document.body.classList.remove('is-spot');
-  takeoff.classList.remove('is-on', 'is-quiet'); // (if it was on its way out)
+  takeoff.classList.remove('is-on', 'is-quiet', 'is-open'); // (if it was on its way out)
+  fold?.remove();
+  fold = null;
 }
 
 /** 返回: fly back down to the page. */
@@ -357,11 +361,20 @@ function closeSpot() {
 }
 
 /**
- * The leaving's look, as the card's pass says (its `kind`): by default the
- * black 攻错 opens on; 'atlas', 大国小国's globe opening out of the spot
- * (where it is on the screen: --x, --y) to the grey-green its page opens on.
- * Set without a transition, so nothing slides over from the last one.
+ * The leaving's look, as the card's pass says (its `takeoff`): by default
+ * the black 攻错 opens on; 'fold', 大国小国's folded map coming out of the
+ * spot and unfolding to the grey-green its page opens on (foldmap.js);
+ * 'globe', its globe opening out of the spot instead (where the spot is on
+ * the screen: --x, --y), the earlier version, kept to compare: ?takeoff=globe.
  */
+function takeoffKind(c) {
+  const kind = c.spot.pass.takeoff || '';
+  if (kind === 'fold' && new URLSearchParams(location.search).get('takeoff') === 'globe') return 'globe';
+  return kind;
+}
+let fold = null; // (大国小国's map while it unfolds, or folds back up)
+
+/** Set the leaving's look without a transition, so nothing slides over from the last one. */
 function readyTakeoff(kind) {
   const ring = takeoff.querySelector('.takeoff-ring');
   const at = world.diveOnScreen();
@@ -391,15 +404,32 @@ function board() {
   }
   setTimeout(() => {
     if (spot !== s) return;
-    readyTakeoff(c.spot.pass.kind);
+    const kind = takeoffKind(c);
+    readyTakeoff(kind);
     world.dive();
     takeoff.classList.add('is-on');
-    // (covered by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
-    // only the other site's first colour is left, and it opens on that)
-    setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), 2200);
-    setTimeout(() => {
-      if (spot === s) location.assign(c.href);
-    }, 2900);
+    const leave = (quiet, go) => {
+      setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), quiet);
+      setTimeout(() => {
+        if (spot === s) location.assign(c.href);
+      }, go);
+    };
+    if (kind !== 'fold') {
+      // (covered by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
+      // only the other site's first colour is left, and it opens on that)
+      leave(2200, 2900);
+      return;
+    }
+    // (the map out of the cabin's window as the camera dives into it, open
+    // by 1.8 s; then the motto on its sea, and away again)
+    fold?.remove();
+    const f = (fold = foldMap(takeoff, { cover: foldCoverHtml(c), source: () => world.diveOnScreen() }));
+    f.play(1).then(() => {
+      if (spot !== s || fold !== f) return;
+      takeoff.classList.add('is-open'); // (the sea itself now, laid over the whole screen)
+      f.el.hidden = true;
+      leave(800, 1400);
+    });
   }, 380);
 }
 
@@ -422,13 +452,24 @@ document.addEventListener('click', (e) => {
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   takeBackSpot();
-  // (大国小国's globe closes again, into the cabin where it is now)
+  // (大国小国's globe closes again, into the cabin where it is now; its map
+  // folds up again and goes back in through the window)
   const at = world.diveOnScreen();
   if (at) {
     takeoff.style.setProperty('--x', `${at.x.toFixed(1)}px`);
     takeoff.style.setProperty('--y', `${at.y.toFixed(1)}px`);
   }
-  takeoff.classList.remove('is-on', 'is-quiet');
+  takeoff.classList.remove('is-on', 'is-quiet', 'is-open');
+  const f = fold;
+  if (f) {
+    f.el.hidden = false;
+    f.seek(f.end);
+    f.play(-1).then(() => {
+      if (fold !== f) return;
+      f.remove();
+      fold = null;
+    });
+  }
   if (!spot) return;
   const s = spot;
   world.flyToSpot(s.c.spot, 1.6).then(() => {
