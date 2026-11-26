@@ -159,12 +159,15 @@ export const PAGES = [
           // the clown of As You Like It (V. iv), on the seven degrees of the
           // lie, all avoidable "with an If". Decoration: it may run off the
           // screen or behind the tower. (p: [x, z] on the ground, r: turned to
-          // face the camera; items at [across, away] in metres; under: drawn
-          // beneath the others, a watermark)
+          // face the camera, scale: all of it larger; items at [across, away]
+          // in metres; under: drawn beneath the others, a watermark)
           ground: {
-            p: [-30.2, -57.4],
+            // (high and large enough that the title runs off the top, under the
+            // top bar, and the script off the right)
+            p: [-28.5, -67.3],
             r: 0.29,
-            portrait: { p: [-12.5, -53.5], r: 0.02, scale: 0.5 }, // (only the title: the rest would fall behind the roof)
+            scale: 1.15,
+            portrait: { p: [-12.5, -59.5], r: 0.02, scale: 0.62 }, // (only the title, just under the nav: the rest would fall behind the roof)
             items: [
               { t: 'IF', f: 'display', s: 50, at: [-27, -19], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
               { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [3, -0.4], c: 'orange' },
