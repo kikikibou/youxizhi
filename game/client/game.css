@@ -7,6 +7,8 @@
 .b-chip--hold:active {
   background: var(--ink);
   color: var(--paper);
+  box-shadow: none;
+  transform: translate(1px, 1px);
 }
 
 /* ================================================================ 夜晚 */
@@ -252,7 +254,7 @@
   flex-direction: row-reverse;
 }
 
-.b-bg-line .b-chip {
+.b-bg-line .b-chip--plain {
   background: transparent;
 }
 
@@ -1078,12 +1080,46 @@
   top: 690px;
 }
 
-/* ================================================================ 按住看身份 */
+/* ================================================================ 按住看词 */
 
 .b-overlay {
   position: fixed;
   inset: 0;
   z-index: 40;
+}
+
+/*
+ * 打开：垫子亮起 → 折好的图从下面放上来 → 沿折痕打开（同时往左挪，打开后正好居中）。
+ * 合上：反过来——先折回去（挪回中间），再往下收走，垫子最后暗掉。
+ * 每个状态写自己的过渡，中途松手 / 再按下都会从当前位置接着走。
+ */
+.b-id {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease-in 0.33s;
+}
+
+.b-id.is-open {
+  opacity: 1;
+  transition: opacity 0.1s ease-out;
+}
+
+.b-id-lift {
+  position: absolute;
+  inset: 0;
+  transform: translateY(110px) scale(0.92);
+  opacity: 0;
+  transition:
+    transform 0.2s cubic-bezier(0.5, 0, 0.8, 0.4) 0.26s,
+    opacity 0.14s ease-in 0.33s;
+}
+
+.b-id.is-open .b-id-lift {
+  transform: none;
+  opacity: 1;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.1s ease-out;
 }
 
 .b-id-sheet {
@@ -1094,6 +1130,13 @@
   height: 664px;
   perspective: 1700px;
   perspective-origin: 175px 332px;
+  transform: translateX(87.5px);
+  transition: transform 0.26s cubic-bezier(0.5, 0, 0.5, 1);
+}
+
+.b-id.is-open .b-id-sheet {
+  transform: none;
+  transition: transform 0.4s cubic-bezier(0.3, 0.7, 0.2, 1) 0.12s;
 }
 
 .b-id-half {
@@ -1114,20 +1157,13 @@
   height: 664px;
   transform-origin: 0 50%;
   transform-style: preserve-3d;
-  animation: b-id-open 0.5s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  transform: rotateY(-180deg);
+  transition: transform 0.26s cubic-bezier(0.5, 0, 0.5, 1);
 }
 
-.b-id-sheet.is-still .b-id-flap {
-  animation: none;
-}
-
-@keyframes b-id-open {
-  from {
-    transform: rotateY(-180deg);
-  }
-  to {
-    transform: rotateY(0deg);
-  }
+.b-id.is-open .b-id-flap {
+  transform: rotateY(0deg);
+  transition: transform 0.4s cubic-bezier(0.3, 0.7, 0.2, 1) 0.12s;
 }
 
 .b-id-face {
@@ -1151,6 +1187,13 @@
   height: 664px;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.7) 0 1px, rgba(30, 27, 23, 0.16) 1px 2px, rgba(0, 0, 0, 0.06) 2px, rgba(0, 0, 0, 0) 36px);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.b-id.is-open .b-id-crease {
+  opacity: 1;
+  transition: opacity 0.2s 0.36s;
 }
 
 .b-id-bar {
@@ -1159,6 +1202,8 @@
   right: 20px;
   top: 736px;
   height: 64px;
+  transform: translateY(120px);
+  transition: transform 0.2s ease-in;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -1166,6 +1211,11 @@
   background: var(--acc);
   color: #fff;
   box-shadow: inset 0 0 0 3px var(--acc), inset 0 0 0 3.8px rgba(255, 255, 255, 0.7), inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.b-id.is-open .b-id-bar {
+  transform: none;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) 0.08s;
 }
 
 .b-id-bar::before {
@@ -1319,9 +1369,15 @@
   .b-n-sweep,
   .b-n-drift,
   .b-v-march,
-  .b-v-ring,
-  .b-id-flap {
+  .b-v-ring {
     animation: none;
+  }
+
+  .b-id,
+  .b-id *,
+  .b-fl-wrap,
+  .b-fl-wrap * {
+    transition: none !important;
   }
 }
 

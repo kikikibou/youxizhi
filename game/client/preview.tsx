@@ -76,6 +76,26 @@ const CROWDED: Scene[] = [
     },
   },
   {
+    id: 'b12-over',
+    group: '12 人',
+    title: '12 人 · 结算（揭晓后）',
+    note: '每个人回到自己的阵营，白板在海上的木筏上；横幅展开在岛的上方',
+    build: () => {
+      const s = sim12();
+      s.night('c', 'cw');
+      s.clues();
+      s.discuss();
+      const b = idOf(s, 'blank');
+      s.voteAll(b);
+      s.do(b, { a: 'guess', text: s.g.secret.big.word });
+      s.wait(s.g.rules.timers.exitMinShow);
+      s.do(idOf(s, 'big'), { a: 'guess', text: '牛市' });
+      if (s.g.judge.length) s.verdict('wrong');
+      if (s.step.k !== 'over') throw new Error(`没结束：${s.step.k}`);
+      return { kind: 'room', snap: gameSnap(s, idOf(s, 'small')), revealed: true };
+    },
+  },
+  {
     id: 'b12-turn',
     group: '12 人',
     title: '12 人 · 第二阶段',

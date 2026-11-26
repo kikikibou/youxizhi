@@ -147,24 +147,6 @@ export function TitleBlock({ kicker, title, sub, size = 28, style }: { kicker: s
   );
 }
 
-export function EyeIcon({ color = 'currentColor' }: { color?: string }) {
-  return (
-    <svg width="12" height="12" viewBox="0 0 20 20" aria-hidden="true">
-      <circle cx="10" cy="10" r="7.5" fill="none" stroke={color} stroke-width="2" />
-      <circle cx="10" cy="10" r="3" fill={color} />
-    </svg>
-  );
-}
-
-export function DocIcon() {
-  return (
-    <svg width="12" height="13" viewBox="0 0 12 13" aria-hidden="true">
-      <rect x="1.5" y="2" width="9" height="10" fill="none" stroke="currentColor" stroke-width="1.3" />
-      <path d="M3 0.5 V3.5 M6 0.5 V3.5 M9 0.5 V3.5 M3.5 6.5 H8.5 M3.5 9 H7" stroke="currentColor" stroke-width="1" />
-    </svg>
-  );
-}
-
 export function Btn({
   children,
   onClick,

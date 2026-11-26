@@ -501,7 +501,7 @@ export const SCENES: Scene[] = [
     id: 'over',
     group: '结算',
     title: '结算 · 揭晓前',
-    note: '历史疆域图：国界上贴着胶带，按住撕开',
+    note: '历史疆域图：联系卷在国界中段的横幅里，按住揭晓（预览里也能按）',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -516,7 +516,7 @@ export const SCENES: Scene[] = [
     id: 'over-revealed',
     group: '结算',
     title: '结算 · 揭晓后',
-    note: '联系写在两国共用的国界上；名次是一张剖面图',
+    note: '每个人回到自己的阵营，白板在海上的木筏上；横幅展开写着联系；名次是一张剖面图',
     build: () => {
       const { s, b } = blankOut();
       s.do(b, { a: 'guess', text: s.g.secret.big.word });
@@ -530,8 +530,8 @@ export const SCENES: Scene[] = [
     (tab): Scene => ({
       id: `dossier-${tab}`,
       group: '档案',
-      title: `档案 · ${{ clues: '线索', votes: '投票', secret: '秘密（白板）', all: '全部记录' }[tab]}`,
-      note: { clues: '每人每天的身份提示排成一张表', votes: '选一天，看谁投了谁', secret: '只有白板阵营有：队友、裁判私下的回答', all: '按时间的完整记录' }[tab],
+      title: `档案 · ${{ clues: '每轮', votes: '投票', secret: '秘密（白板）', all: '全部记录' }[tab]}`,
+      note: { clues: '每人每天的提示和投给了谁排成一张总表', votes: '选一天，看谁投了谁', secret: '只有白板阵营有：队友、裁判私下的回答', all: '按时间的完整记录' }[tab],
       build: () => {
         const s = new Sim();
         s.night('c', 'cw');

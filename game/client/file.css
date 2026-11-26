@@ -9,6 +9,59 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--mat);
+  opacity: 0;
+  transition: opacity 0.16s ease-in 0.4s;
+}
+
+.b-fl-wrap.is-open {
+  opacity: 1;
+  transition: opacity 0.12s ease-out;
+}
+
+/*
+ * 打开：手簿从下面推上来，封面沿顶上的线圈往上翻开（翻过去就看不见了）。
+ * 合上：封面翻下来盖好，手簿往下退，垫子最后暗掉。
+ */
+.b-fl-lift {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  transform: translateY(160px);
+  transition: transform 0.24s cubic-bezier(0.5, 0, 0.8, 0.4) 0.3s;
+}
+
+.b-fl-wrap.is-open .b-fl-lift {
+  transform: none;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.b-fl-hinge {
+  position: absolute;
+  left: 14px;
+  width: 334px;
+  height: 790px;
+  perspective: 2400px;
+  perspective-origin: 50% 0;
+  pointer-events: none;
+}
+
+.b-fl-cover {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.b-fl-wrap.is-open .b-fl-cover {
+  transform: rotateX(180deg);
+  transition: transform 0.55s cubic-bezier(0.35, 0.1, 0.25, 1) 0.2s;
+}
+
+.b-fl-cover svg {
+  display: block;
 }
 
 .b-fl-tab {
@@ -177,12 +230,17 @@
 
 .b-fl-name {
   position: relative;
+  height: 56px;
+  padding-left: 6px;
+  white-space: nowrap;
+}
+
+.b-fl-name > div {
   height: 28px;
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  padding: 0 0 6px 6px;
-  white-space: nowrap;
+  padding-bottom: 6px;
   overflow: hidden;
 }
 
@@ -207,10 +265,9 @@
 }
 
 .b-fl-name span {
-  margin-left: auto;
-  padding-right: 3px;
-  font-size: 9px;
-  color: var(--faint);
+  padding-left: 18px;
+  font-size: 10px;
+  color: var(--muted);
 }
 
 .b-fl-name.is-out b {
@@ -225,7 +282,7 @@
   content: '';
   position: absolute;
   left: -20px;
-  bottom: 9px;
+  top: 13px;
   border-left: 8px solid var(--acc);
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
@@ -248,13 +305,106 @@
 }
 
 .b-fl-cell {
+  height: 56px;
+  white-space: nowrap;
+}
+
+.b-fl-say,
+.b-fl-to {
   height: 28px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0 2px 5px;
+  overflow: hidden;
+}
+
+.b-fl-to {
+  position: relative;
+  padding-bottom: 7px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+.b-fl-to span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.b-fl-to i {
+  margin-right: 2px;
+  font-style: normal;
+  color: var(--muted);
+}
+
+/* 这人当天得了几票：格子右上角一个小数字 */
+.b-fl-say {
+  position: relative;
+}
+
+.b-fl-say small {
+  position: absolute;
+  right: 3px;
+  top: 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border: 0.8px solid var(--ink);
+  border-radius: 7px;
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 9.5px;
+  line-height: 12.5px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--page);
+}
+
+.b-fl-cell.is-out {
+  background: repeating-linear-gradient(135deg, rgba(30, 27, 23, 0.07) 0 2px, transparent 2px 6px);
+}
+
+.b-fl-cell.is-out .b-fl-say small {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* 最后一行：那天谁出局 */
+.b-fl-foot,
+.b-fl-foot-h {
+  height: 56px;
+  border-top: 1.1px solid var(--ink);
+}
+
+.b-fl-foot-h {
+  padding: 8px 0 0 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+
+.b-fl-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px 0;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.b-fl-foot b {
+  max-width: 100%;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.b-fl-foot small {
+  font-size: 10px;
+  color: var(--muted);
 }
 
 .b-fl-cell b {

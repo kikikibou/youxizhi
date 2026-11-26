@@ -265,7 +265,7 @@ a {
   color: var(--ink-2);
 }
 
-/* 右上角的小圆角按钮（按住看身份 / 档案） */
+/* 右上角的按钮：按住看词（强调色的图标）、档案（墨色实心）；私密频道、跳过等待是普通的小圆角 */
 .b-chips {
   position: absolute;
   right: 26px;
@@ -273,27 +273,80 @@ a {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 7px;
   z-index: 5;
 }
 
 .b-chip {
-  height: 30px;
-  padding: 0 11px;
+  position: relative;
+  height: 36px;
+  padding: 0 14px 0 4px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--ink);
-  border-radius: 15px;
+  gap: 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
   background: var(--paper);
-  font-size: 12px;
-  font-weight: 500;
+  box-shadow: 2px 2px 0 rgba(30, 27, 23, 0.25);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--ink);
   white-space: nowrap;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+}
+
+.b-chip--plain {
+  height: 30px;
+  padding: 0 11px;
+  gap: 6px;
+  border-width: 1px;
+  border-radius: 15px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.b-chip-ic {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.b-chip--hold .b-chip-ic {
+  background: var(--acc);
+  color: #fff;
+}
+
+.b-chip--file {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.b-chip--file .b-chip-ic {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* 档案里有新的一轮记录 */
+.b-chip-new {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 0 2px var(--paper);
 }
 
 .b-chip.is-on {
@@ -305,6 +358,21 @@ a {
   background: var(--night);
   border-color: var(--night-ink);
   color: var(--night-ink);
+  box-shadow: none;
+}
+
+.b-bg-night .b-chip--file {
+  background: var(--night-ink);
+  color: var(--night);
+}
+
+.b-bg-night .b-chip--file .b-chip-ic {
+  background: var(--night);
+  color: var(--night-ink);
+}
+
+.b-bg-night .b-chip-new {
+  box-shadow: 0 0 0 2px var(--night);
 }
 
 /* 主按钮：强调色，里面一圈细白线 */

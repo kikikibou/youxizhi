@@ -1,11 +1,12 @@
 /**
- * 档案：一本上翻的测量手簿，摊在切割垫上。右边是索引页签（线索 / 投票 / 秘密 / 全部），
- * 内容写在横线上：线索是「人 × 天」的表，投票是手簿上画的岛和箭头，全部是倒着记的流水账。
- * 白天、夜晚都能打开，盖住整个屏幕；内容多了手簿就变长，往下滚。
+ * 档案：一本上翻的测量手簿，摊在切割垫上。右边是索引页签（每轮 / 投票 / 秘密 / 全部），
+ * 内容写在横线上：每轮是「人 × 天」的总表（每格是那天的提示和投给了谁），投票是手簿上画的岛和箭头，
+ * 全部是倒着记的流水账。白天、夜晚都能打开，盖住整个屏幕；内容多了手簿就变长，往下滚。
+ * 打开时手簿从下面推上来、封面沿顶上的线圈翻上去；合上时封面翻下来盖好，再退下去。
  */
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { LogEntry, PlayerView } from '../engine/view.ts';
 import { ANSWER, DIR, FACTION, ROLE, ROLE_DUTY, VERDICT, describe, resultLine } from './text.ts';
 import { P2 } from './art.ts';
@@ -131,19 +132,22 @@ function phase2Lines(v: PlayerView): P2Line[] {
 function cluesModel(v: PlayerView) {
   const clues = v.log.filter((e): e is E<'clue'> => e.t === 'clue');
   const nights = new Map(v.log.filter((e): e is E<'night'> => e.t === 'night').map((e) => [e.day, e]));
-  const days = [...new Set([...nights.keys(), ...clues.map((c) => c.day)])].sort((a, b) => a - b);
+  const votes = new Map(v.log.filter((e): e is E<'votes'> => e.t === 'votes').map((e) => [e.day, e]));
+  const days = [...new Set([...nights.keys(), ...clues.map((c) => c.day), ...votes.keys()])].sort((a, b) => a - b);
   const said = new Map(clues.map((c) => [`${c.day}:${c.player}`, c.text]));
   const outDay = new Map<string, number>();
-  for (const e of v.log) if (e.t === 'votes') for (const id of e.out) outDay.set(id, e.day);
+  for (const e of votes.values()) for (const id of e.out) outDay.set(id, e.day);
   const p2 = phase2Lines(v);
   const n = v.players.length;
-  const rules = days.length ? 2 + n + 2 + (p2.length ? 1 + p2.length : 0) : 2;
-  return { days, nights, said, outDay, p2, rules };
+  // 表头 2 格 + 每人 2 格（提示、投给谁）+ 出局 2 格 + 说明 2 格
+  const rules = days.length ? 2 + 2 * n + 2 + 3 + (p2.length ? 1 + p2.length : 0) : 2;
+  return { days, nights, votes, said, outDay, p2, rules };
 }
 
+/** 每轮：一张「人 × 天」的总表，每格上面一行是那天的身份提示，下面一行是那天投给了谁；最后一行是那天谁出局。 */
 function Clues({ v }: { v: PlayerView }) {
   const name = nameOf(v);
-  const { days, nights, said, outDay, p2 } = cluesModel(v);
+  const { days, nights, votes, said, outDay, p2 } = cluesModel(v);
   if (!days.length) {
     return (
       <Line k={2} class="b-fl-empty">
@@ -155,10 +159,10 @@ function Clues({ v }: { v: PlayerView }) {
   const wide = days.length > 3;
   const colW = wide ? 64 : Math.floor(194 / days.length);
   const players = [...v.players].sort((a, b) => a.seat - b.seat);
-  const after = 2 + n + 1;
+  const after = 2 + 2 * n + 2 + 1;
   return (
     <>
-      <div class="b-fl-table" style={{ top: `${TOP}px`, height: `${(2 + n) * RULE}px` }} role="table" aria-label="每人每天的身份提示">
+      <div class="b-fl-table" style={{ top: `${TOP}px`, height: `${(2 + 2 * n + 2) * RULE}px` }} role="table" aria-label="每人每天的身份提示和投票">
         <div class="b-fl-names" role="rowgroup">
           <div class="b-fl-th" role="columnheader">
             玩家
@@ -168,17 +172,23 @@ function Clues({ v }: { v: PlayerView }) {
             const me = p.id === v.me.id;
             return (
               <div class={`b-fl-name ${me ? 'is-me' : ''} ${od ? 'is-out' : ''}`} role="rowheader" key={p.id}>
-                <small class="b-mono">{pad2(r + 1)}</small>
-                <b>{p.name}</b>
-                {me ? <em>你</em> : null}
-                {od ? <span>D{od} 出局</span> : null}
+                <div>
+                  <small class="b-mono">{pad2(r + 1)}</small>
+                  <b>{p.name}</b>
+                  {me ? <em>你</em> : null}
+                </div>
+                <div>{od ? <span>D{od} 出局</span> : null}</div>
               </div>
             );
           })}
+          <div class="b-fl-foot-h">出局</div>
         </div>
         <div class={`b-fl-days ${wide ? 'is-wide' : ''}`} role="rowgroup">
           {days.map((d) => {
             const night = nights.get(d);
+            const vote = votes.get(d);
+            const got = new Map<string, number>();
+            if (vote) for (const t of Object.values(vote.ballots)) got.set(t, (got.get(t) ?? 0) + 1);
             return (
               <div class="b-fl-col" style={{ width: `${colW}px` }} key={d}>
                 <div class="b-fl-th">
@@ -194,35 +204,62 @@ function Clues({ v }: { v: PlayerView }) {
                   const od = outDay.get(p.id);
                   const t = said.get(key);
                   const len = t ? Array.from(t).length : 0;
+                  const to = vote?.ballots[p.id];
+                  const outHere = !!vote && vote.out.includes(p.id);
                   return (
-                    <div class="b-fl-cell" role="cell" key={p.id}>
-                      {said.has(key) ? (
-                        t === null ? (
-                          <span class="b-fl-none">没给</span>
+                    <div class={`b-fl-cell ${outHere ? 'is-out' : ''}`} role="cell" key={p.id}>
+                      <div class="b-fl-say">
+                        {said.has(key) ? (
+                          t === null ? (
+                            <span class="b-fl-none">没给</span>
+                          ) : (
+                            <b style={{ fontSize: `${len > 6 ? 11.5 : len > 4 ? 13 : 15}px` }}>{t}</b>
+                          )
+                        ) : od && d > od ? (
+                          <span class="b-fl-gone">／</span>
                         ) : (
-                          <b style={{ fontSize: `${len > 6 ? 11.5 : len > 4 ? 13 : 15}px` }}>{t}</b>
-                        )
-                      ) : od && d > od ? (
-                        <span class="b-fl-gone">／</span>
-                      ) : (
-                        <span class="b-fl-gone">·</span>
-                      )}
+                          <span class="b-fl-gone">·</span>
+                        )}
+                        {got.get(p.id) ? <small aria-label={`得 ${got.get(p.id)} 票`}>{got.get(p.id)}</small> : null}
+                      </div>
+                      <div class="b-fl-to">
+                        {to ? (
+                          <span>
+                            <i aria-hidden="true">→</i>
+                            {to === p.id ? '自己' : name(to)}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   );
                 })}
+                <div class="b-fl-foot">
+                  {vote ? (
+                    vote.out.length ? (
+                      <>
+                        <b>{vote.out.map(name).join('、')}</b>
+                        <small>{vote.out.length > 1 ? '平票，一起出局' : `${got.get(vote.out[0]) ?? 0} 票出局`}</small>
+                      </>
+                    ) : (
+                      <small>没人出局</small>
+                    )
+                  ) : (
+                    <small>还没投票</small>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
       </div>
-      <Line k={after} class="b-fl-hint">
-        {wide ? '横着看一个人每天的提示；表格可以左右滑' : '横着看同一个人每天的提示，竖着看同一天的所有提示'}
+      <Line k={after} span={2} class="b-fl-hint">
+        {wide ? '每格：上面是那天的提示，下面是投给了谁；右上角的数字是这人那天得了几票。表格可以左右滑' : '每格：上面是那天的提示，下面是投给了谁；右上角的数字是这人那天得了几票'}
       </Line>
       {p2.length ? (
         <>
-          <Heading k={after + 1}>第二阶段</Heading>
+          <Heading k={after + 2}>第二阶段</Heading>
           {p2.map((l, i) => (
-            <Line k={after + 2 + i} key={i} class="b-fl-p2">
+            <Line k={after + 3 + i} key={i} class="b-fl-p2">
               <small class="b-cond">{i + 1}</small>
               <b class={l.me ? 'is-me' : ''}>{l.who}</b>
               <span>{l.what}</span>
@@ -539,43 +576,120 @@ function All({ v }: { v: PlayerView }) {
   );
 }
 
+/* ================================================================ 封面 */
+
+/** 封面合上时上沿的位置（线圈下面）。 */
+const COVER_TOP = 56;
+const COVER_H = 790;
+
+function Cover({ me, day }: { me: string; day: number }) {
+  const holes = [];
+  for (let x = 36; x < 336; x += 15) holes.push(<ellipse key={x} cx={x - 14} cy="12" rx="2.6" ry="2" fill="#2a2520" />);
+  return (
+    <svg width="334" height={COVER_H} viewBox={`0 0 334 ${COVER_H}`} aria-hidden="true">
+      <rect x="0.6" y="0.6" width="332.8" height={COVER_H - 1.2} fill="#a88b5f" stroke={INK} stroke-width="1.2" />
+      <rect x="9" y="22" width="316" height={COVER_H - 32} fill="none" stroke={INK} stroke-width="0.6" opacity="0.55" />
+      {holes}
+      <g transform="translate(167 150)">
+        <rect x="-108" y="-62" width="216" height="132" fill={PAGE} stroke={INK} stroke-width="1.1" />
+        <rect x="-103" y="-57" width="206" height="122" fill="none" stroke={INK} stroke-width="0.5" />
+        <text x="7" y="-6" text-anchor="middle" style={`font-family: var(--serif); font-weight: 900; font-size: 36px; letter-spacing: 0.4em; fill: ${INK}`}>
+          档案
+        </text>
+        <path d="M-80 10 H80" stroke={INK} stroke-width="0.8" />
+        <text y="30" text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 11.5px; letter-spacing: 0.3em; fill: ${INK}`}>
+          测量手簿
+        </text>
+        <text y="51" text-anchor="middle" style={`font-family: var(--mono); font-size: 9.5px; fill: ${MUTED}`}>
+          第 {day} 天 · {me}
+        </text>
+      </g>
+      <text x="167" y={COVER_H - 26} text-anchor="middle" style={`font-family: var(--serif); font-weight: 700; font-size: 10px; letter-spacing: 0.3em; fill: ${INK}; opacity: 0.7`}>
+        大国小国 · 圆桌岛
+      </text>
+    </svg>
+  );
+}
+
 /* ================================================================ 档案 */
+
+const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+/** 合上要多久（封面翻下来 + 手簿退下去），和 file.css 里的过渡一致。 */
+const CLOSE_MS = 560;
 
 export function Dossier({ v, onClose }: { v: PlayerView; onClose: () => void }) {
   const blank = !!v.me.blank;
   const [tab, setTab] = useState<Tab>(flags.dossier && (flags.dossier !== 'secret' || blank) ? flags.dossier : 'clues');
   const rounds = v.log.filter((e) => e.t === 'votes').length;
   const [sel, setSel] = useState(Math.max(0, rounds - 1));
+  // 预览里一开始就开着的（flags.dossier）直接是打开的样子
+  const [open, setOpen] = useState(flags.dossier !== null);
+  const [hinge, setHinge] = useState(COVER_TOP);
+  const wrap = useRef<HTMLDivElement>(null);
+  const closing = useRef(false);
+
+  useLayoutEffect(() => {
+    if (open) return;
+    // 先让浏览器把「合着、在下面」的样子算出来，再换成打开，过渡才会从那里开始
+    void wrap.current?.offsetWidth;
+    setOpen(true);
+  }, []);
+
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    if (reduced()) return onClose();
+    // 往下翻过了，封面就从现在看到的这一页的上沿翻下来
+    const el = wrap.current;
+    const u = el ? Math.min(el.clientWidth, 440) / 390 : 1;
+    const at = el ? el.scrollTop / u : 0;
+    setHinge(Math.max(COVER_TOP, at + 8));
+    setOpen(false);
+    window.setTimeout(onClose, CLOSE_MS);
+  };
+
   useEffect(() => {
-    const on = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const on = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
-  }, [onClose]);
+  }, []);
 
-  const tabs: [Tab, string][] = [['clues', '线索'], ['votes', '投票'], ...(blank ? ([['secret', '秘密']] as [Tab, string][]) : []), ['all', '全部']];
+  const tabs: [Tab, string][] = [['clues', '每轮'], ['votes', '投票'], ...(blank ? ([['secret', '秘密']] as [Tab, string][]) : []), ['all', '全部']];
   const rules =
     tab === 'clues' ? cluesModel(v).rules : tab === 'votes' ? votesModel(v, sel).rules : tab === 'secret' ? secretModel(v).rules : allModel(v).rules;
   const bottom = Math.max(MIN_BOTTOM, TOP + (rules + 2) * RULE);
   const H = bottom + 30;
 
   return (
-    <div class="b-fl-wrap" role="dialog" aria-modal="true" aria-label="档案">
+    <div class={`b-fl-wrap ${open ? 'is-open' : ''}`} role="dialog" aria-modal="true" aria-label="档案" ref={wrap}>
       <Stage bg="mat" mode="scroll" h={H} frame={false} label="档案">
-        <Layer h={H}>
-          <Book bottom={bottom} tabs={tabs} tab={tab} me={v.me.name} day={v.day} />
-        </Layer>
-        <div role="tablist" aria-label="档案分页">
-          {tabs.map(([k, label], i) => (
-            <button type="button" role="tab" aria-selected={tab === k} aria-label={label} class="b-fl-tab" style={{ top: `${128 + i * 70}px` }} onClick={() => setTab(k)} key={k} />
-          ))}
-        </div>
-        <button type="button" class="b-fl-x" aria-label="合上档案" onClick={onClose}>
-          ×
-        </button>
-        <div class="b-fl-body" key={tab}>
-          {tab === 'clues' ? <Clues v={v} /> : tab === 'votes' ? <Votes v={v} sel={sel} setSel={setSel} /> : tab === 'secret' ? <Secret v={v} /> : <All v={v} />}
+        <div class="b-fl-lift" style={{ height: `${H}px` }}>
+          <Layer h={H}>
+            <Book bottom={bottom} tabs={tabs} tab={tab} me={v.me.name} day={v.day} />
+          </Layer>
+          <div role="tablist" aria-label="档案分页">
+            {tabs.map(([k, label], i) => (
+              <button type="button" role="tab" aria-selected={tab === k} aria-label={label} class="b-fl-tab" style={{ top: `${128 + i * 70}px` }} onClick={() => setTab(k)} key={k} />
+            ))}
+          </div>
+          <button type="button" class="b-fl-x" aria-label="合上档案" onClick={close}>
+            ×
+          </button>
+          <div class="b-fl-body" key={tab}>
+            {tab === 'clues' ? <Clues v={v} /> : tab === 'votes' ? <Votes v={v} sel={sel} setSel={setSel} /> : tab === 'secret' ? <Secret v={v} /> : <All v={v} />}
+          </div>
+          <div class="b-fl-hinge" style={{ top: `${hinge}px` }} aria-hidden="true">
+            <div class="b-fl-cover">
+              <Cover me={v.me.name} day={v.day} />
+            </div>
+          </div>
         </div>
       </Stage>
     </div>
   );
+}
+
+/** game.tsx 用：开着就放一本手簿；合上的动画由手簿自己放完再通知。 */
+export function DossierLayer({ on, v, onClose }: { on: boolean; v: PlayerView; onClose: () => void }) {
+  return on ? <Dossier v={v} onClose={onClose} /> : null;
 }

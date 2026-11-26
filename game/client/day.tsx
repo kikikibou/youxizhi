@@ -259,7 +259,7 @@ function Header({ g, title, d }: { g: G; title: string; d: DayData }) {
       <h1 class="b-d-h1">{title}</h1>
       <Chips g={g} label="按住看词" noSkip style={{ top: '30px' }} />
       {g.skip ? (
-        <button type="button" class="b-chip b-d-skip" onClick={g.skip}>
+        <button type="button" class="b-chip b-chip--plain b-d-skip" onClick={g.skip}>
           跳过等待
         </button>
       ) : null}

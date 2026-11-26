@@ -1,11 +1,12 @@
 /**
- * 按住看身份：一张竖着对折的身份图，按住时在切割垫上打开，松手就合上。
+ * 按住看词：一张竖着对折的身份图。按住时折好的图放到切割垫上、沿中间的折痕打开；
+ * 松手就折回去、收走。
  * 国家玩家：岛上写着你的词，旁边一块虚线的「?」是另一国；①② 两条规则提示；下面是本局人数。
  * 白板：空白的图上写身份，下面是要做的事、今晚的任务、裁判私下的回答。
  */
 
 import type { ComponentChildren } from 'preact';
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useState } from 'preact/hooks';
 import { PRESETS } from '../engine/rules.ts';
 import type { PlayerView } from '../engine/view.ts';
 import type { Snapshot } from './net.ts';
@@ -380,30 +381,37 @@ function Cover({ v, code }: { v: PlayerView; code: string }) {
   );
 }
 
-/** 按住时的整屏：切割垫上，身份图从中间的折痕打开。 */
-export function IdentityOverlay({ v, snap }: { v: PlayerView; snap: Snapshot }) {
+/** 不想看动画的设置。 */
+const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** 收起要多久（折回去 + 收走），和 game.css 里 .b-id 的过渡一致。 */
+const CLOSE_MS = 480;
+
+/** 按住时的整屏：切割垫上，身份图放上来、从中间的折痕打开。open = false 时折回去、收走。 */
+export function IdentityOverlay({ v, snap, open }: { v: PlayerView; snap: Snapshot; open: boolean }) {
   const code = snap.room?.code ?? '····';
   const n = v.players.length;
   const comp = snap.room?.settings.composition ?? PRESETS[n] ?? null;
-  const [still] = useState(flags.still);
   return (
-    <div class="b-overlay b-id" aria-live="polite">
+    <div class={`b-overlay b-id ${open ? 'is-open' : ''}`} aria-live="polite" aria-hidden={!open}>
       <Stage bg="mat" frame={false} label="你的身份（只在按住时显示）">
-        <div class={`b-id-sheet ${still ? 'is-still' : ''}`}>
-          <div class="b-id-half">
-            <Inside v={v} code={code} comp={comp} />
-          </div>
-          <div class="b-id-flap">
-            <div class="b-id-face">
-              <div style={{ position: 'absolute', left: `-${HALF}px`, top: 0, width: `${W}px`, height: `${H}px` }}>
-                <Inside v={v} code={code} comp={comp} />
+        <div class="b-id-lift">
+          <div class="b-id-sheet">
+            <div class="b-id-half">
+              <Inside v={v} code={code} comp={comp} />
+            </div>
+            <div class="b-id-flap">
+              <div class="b-id-face">
+                <div style={{ position: 'absolute', left: `-${HALF}px`, top: 0, width: `${W}px`, height: `${H}px` }}>
+                  <Inside v={v} code={code} comp={comp} />
+                </div>
+              </div>
+              <div class="b-id-face b-id-back">
+                <Cover v={v} code={code} />
               </div>
             </div>
-            <div class="b-id-face b-id-back">
-              <Cover v={v} code={code} />
-            </div>
+            <i class="b-id-crease" aria-hidden="true" />
           </div>
-          <i class="b-id-crease" aria-hidden="true" />
         </div>
         <div class="b-id-bar" aria-hidden="true">
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round">
@@ -420,3 +428,27 @@ export function IdentityOverlay({ v, snap }: { v: PlayerView; snap: Snapshot }) 
   );
 }
 
+/**
+ * 管身份图什么时候在屏幕上：按下时先放上来（合着），下一帧开始打开；
+ * 松手后折回去，折完再拿掉。预览里一开始就按着的（flags.hold）直接是打开的样子。
+ */
+export function IdentityLayer({ on, v, snap }: { on: boolean; v: PlayerView; snap: Snapshot }) {
+  const [shown, setShown] = useState(on);
+  const [open, setOpen] = useState(on && (flags.hold || flags.still));
+  useLayoutEffect(() => {
+    if (on) {
+      setShown(true);
+      return;
+    }
+    setOpen(false);
+    const t = window.setTimeout(() => setShown(false), reduced() ? 0 : CLOSE_MS);
+    return () => clearTimeout(t);
+  }, [on]);
+  useLayoutEffect(() => {
+    if (!on || !shown || open) return;
+    // 先让浏览器把「合着」的样子算出来，再换成打开，过渡才会从合着开始
+    void document.body.offsetWidth;
+    setOpen(true);
+  }, [on, shown, open]);
+  return shown ? <IdentityOverlay v={v} snap={snap} open={open} /> : null;
+}

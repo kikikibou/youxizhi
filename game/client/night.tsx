@@ -374,7 +374,7 @@ export function NightScreen({ g, s }: { g: G; s: Night }) {
             <circle cx="10" cy="10" r="7.5" fill="none" stroke="#132033" stroke-width="1.6" />
             <circle cx="10" cy="10" r="2.5" fill="#132033" />
           </svg>
-          <span>按住看身份和今晚的任务</span>
+          <span>按住看词和今晚的任务</span>
           <small>松手就盖上</small>
         </button>
       </Plotter>
