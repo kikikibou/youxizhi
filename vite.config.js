@@ -17,6 +17,9 @@ export default defineConfig({
         dgxg: 'dgxg/index.html',
         // 页面预览器：每个画面并排看（数据来自规则引擎，不连服务器）
         dgxgPreview: 'dgxg/preview.html',
+        // 版本 B「地图朋克」：同一个房间服务器，另一套画面，先放在 /dgxg/b/ 试
+        dgxgB: 'dgxg/b/index.html',
+        dgxgBPreview: 'dgxg/b/preview.html',
       },
     },
   },

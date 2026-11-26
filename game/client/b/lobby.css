@@ -1,0 +1,1247 @@
+/* 大厅（版本 B）：上面一屏是设计稿，往下滚是邀请票、成员名册、规则说明、口令、出题表 */
+
+/* ---------------------------------------------------------------- 上面一屏 */
+
+.b-lb-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 1;
+}
+
+.b-lb-head h1 {
+  margin: 0;
+  padding-left: 0.5em;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: 0.5em;
+}
+
+.b-lb-head > i {
+  width: 64px;
+  margin: 9px 0 7px;
+  border-top: 0.75px solid var(--ink);
+}
+
+.b-lb-code {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.b-lb-code span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.b-lb-code b {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  padding-left: 0.16em;
+}
+
+.b-lb-status {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.b-lb-modline {
+  margin: 6px 0 0;
+  padding: 3px 10px;
+  border: 0.75px solid var(--acc);
+  background: #f6efde;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--acc-text);
+}
+
+/* 凹角图例框 + 飘带标题 */
+.b-lb-cart {
+  position: relative;
+  display: flow-root;
+}
+
+.b-lb-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+}
+
+.b-lb-cart-body {
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.b-lb-ribbon {
+  position: relative;
+  height: 24px;
+  margin: -12px auto 0;
+}
+
+.b-lb-ribbon svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.b-lb-ribbon span {
+  position: relative;
+  display: block;
+  text-align: center;
+  line-height: 20px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  padding-left: 0.4em;
+}
+
+.b-lb-legend {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.b-lb-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 19px;
+}
+
+.b-lb-legend-ico {
+  width: 26px;
+  display: flex;
+}
+
+.b-lb-legend-k {
+  flex: 1;
+  font-weight: 500;
+}
+
+.b-lb-legend-v {
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+.b-lb-legend-note {
+  margin: 8px 16px 0;
+  padding-top: 5px;
+  border-top: 0.6px solid var(--ink);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.b-lb-legend-note .b-lb-link {
+  font-size: 11px;
+}
+
+.b-lb-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--acc-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.b-lb-link:disabled {
+  color: #b3a994;
+}
+
+/* 右边一栏 */
+.b-lb-side {
+  position: absolute;
+  left: 232px;
+  top: 566px;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.b-lb-count-h {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.b-lb-count-h span {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+.b-lb-count-h small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-lb-count-n {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.b-lb-count-n b {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.b-lb-count-n span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.b-lb-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.b-lb-name-k {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.b-lb-name-v {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  color: var(--acc-text);
+}
+
+.b-lb-name .b-lb-link {
+  margin-left: auto;
+  flex: none;
+}
+
+.b-lb-rename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.b-lb-rename input {
+  width: 86px;
+  height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1.4px solid var(--acc);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.b-lb-mini-invite {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.b-lb-mini-invite svg {
+  flex: none;
+}
+
+.b-lb-mini-invite p {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.b-lb-mini-invite p > span:first-child {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.b-lb-mini-links {
+  font-size: 11.5px;
+  color: var(--acc-text);
+  white-space: nowrap;
+}
+
+/* 开始游戏（房主） */
+.b-lb-start {
+  position: absolute;
+  left: 26px;
+  width: 338px;
+  height: 52px;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 0 18px;
+  letter-spacing: 0;
+}
+
+.b-lb-start b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.3em;
+}
+
+.b-lb-start small {
+  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.92;
+}
+
+.b-lb-start--flow {
+  position: relative;
+  left: 0;
+  width: 100%;
+}
+
+.b-lb-start-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 等房主开始的飘带 */
+.b-lb-wait {
+  position: absolute;
+  left: 26px;
+  top: 758px;
+  width: 338px;
+  height: 50px;
+}
+
+.b-lb-wait > svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.b-lb-wait > div {
+  position: relative;
+  height: 41px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.b-lb-wait b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.16em;
+}
+
+.b-lb-wait small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.b-lb-wait-clock {
+  animation: b-spin 12s linear infinite;
+}
+
+.b-lb-foot-line {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  top: 810px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.b-lb-foot-line .is-warn {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+.b-lb-foot-line .b-lb-link {
+  flex: none;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* 主持人的出题图例 */
+.b-lb-pair {
+  position: relative;
+  padding: 6px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.b-lb-pair-k {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-lb-pair-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 38px;
+}
+
+.b-lb-pair-sw {
+  width: 30px;
+  display: flex;
+  padding-bottom: 6px;
+}
+
+.b-lb-pair-l {
+  width: 32px;
+  flex: none;
+  padding-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.b-lb-pair-row input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1.2px dotted var(--ink);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 19px;
+}
+
+.b-lb-pair-row input:focus {
+  border-bottom: 1.4px solid var(--acc);
+}
+
+.b-lb-pair-row input::placeholder {
+  font-weight: 400;
+  font-size: 14px;
+  color: #b3a994;
+}
+
+.b-lb-pair-more {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.b-lb-pair-go {
+  margin-top: 10px;
+  height: 46px;
+  letter-spacing: 0.3em;
+}
+
+.b-lb-pair-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.b-lb-mod-text {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.b-lb-mod-text--muted {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- 往下滚的部分 */
+
+.b-lb-lower {
+  position: absolute;
+  left: 24px;
+  top: 870px;
+  width: 342px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.b-lb-wide {
+  width: 100%;
+}
+
+/* 一张图纸说明表：双线框 + 黑色表头带 + 一层错位的印刷阴影 */
+.b-lb-sheet {
+  position: relative;
+  padding-bottom: 12px;
+  background: #f7f0de;
+  border: 1.2px solid var(--ink);
+  box-shadow: inset 0 0 0 3px #f7f0de, inset 0 0 0 3.6px var(--ink), 3px 4px 0 rgba(30, 27, 23, 0.15);
+}
+
+.b-lb-sheet::before,
+.b-lb-sheet::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ink) 1.4px, transparent 1.6px);
+}
+
+.b-lb-sheet::before {
+  left: -5px;
+}
+
+.b-lb-sheet::after {
+  right: -5px;
+}
+
+.b-lb-sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 7px 0;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: #fbf6ea;
+}
+
+.b-lb-sheet-head b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+}
+
+.b-lb-sheet-head span {
+  font-size: 10.5px;
+  opacity: 0.85;
+}
+
+.b-lb-sheet-note {
+  margin: 8px 16px 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.b-lb-sheet-body {
+  padding: 10px 16px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.b-lb-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.b-lb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-lb-field input,
+.b-lb-field textarea {
+  width: 100%;
+  padding: 3px 2px;
+  border: 0;
+  border-bottom: 1.2px dotted var(--ink);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+  resize: vertical;
+}
+
+.b-lb-field textarea {
+  border: 1px dotted var(--ink);
+  background: #fffaf0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.b-lb-field input:focus,
+.b-lb-field textarea:focus {
+  border-color: var(--acc);
+}
+
+/* 邀请：一张船票，二维码在存根上 */
+.b-lb-invite {
+  position: relative;
+  width: 342px;
+  height: 132px;
+  transform: rotate(-0.8deg);
+}
+
+.b-lb-invite-bg {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 4px 4px rgba(30, 27, 23, 0.22));
+}
+
+.b-lb-invite-band {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 228px;
+  height: 26px;
+  margin: 0;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fffaf0;
+}
+
+.b-lb-invite-band span:first-child {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+}
+
+.b-lb-invite-band .b-cond {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.b-lb-invite-main {
+  position: absolute;
+  left: 6px;
+  top: 32px;
+  width: 228px;
+  height: 94px;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.b-lb-invite-main b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--acc-text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.b-lb-invite-main small {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-2);
+  word-break: break-all;
+}
+
+.b-lb-invite-main span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.b-lb-invite-qr {
+  position: absolute;
+  left: 250px;
+  top: 22px;
+  width: 84px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+}
+
+.b-lb-invite-qr svg {
+  width: 84px;
+  height: 84px;
+}
+
+/* 成员名册 */
+.b-lb-roll {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 16px;
+}
+
+.b-lb-roll li {
+  display: grid;
+  grid-template-columns: 22px 10px auto 1fr auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 8px 0 7px;
+  border-bottom: 0.75px solid #d8ceb7;
+}
+
+.b-lb-roll-no {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.b-lb-roll-dot {
+  width: 8px;
+  height: 8px;
+  border: 1.1px solid var(--faint);
+  border-radius: 50%;
+}
+
+.b-lb-roll-dot.is-on {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.b-lb-roll-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.b-lb-roll li.is-me .b-lb-roll-name {
+  color: var(--acc-text);
+}
+
+.b-lb-roll li.is-off .b-lb-roll-name {
+  color: var(--faint);
+}
+
+.b-lb-roll-name em {
+  font-style: normal;
+  padding: 0 4px;
+  border: 0.75px solid var(--ink);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9.5px;
+  color: var(--ink-2);
+}
+
+.b-lb-roll-name em.is-me {
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+.b-lb-roll-lead {
+  align-self: end;
+  margin-bottom: 6px;
+  border-bottom: 1px dotted var(--faint);
+}
+
+.b-lb-roll-score {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.b-lb-roll-acts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 4px 0 0 38px;
+}
+
+/* 规则说明 */
+.b-lb-rules {
+  padding: 2px 16px 0;
+}
+
+.b-lb-rule {
+  padding: 11px 0;
+  border-bottom: 0.75px solid #d8ceb7;
+}
+
+.b-lb-rule:last-child {
+  border-bottom: 0;
+}
+
+.b-lb-rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.b-lb-rule-head > span {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.b-lb-info {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: #fffaf0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.b-lb-info.is-on {
+  background: var(--ink);
+  color: #fffaf0;
+}
+
+.b-lb-info-box {
+  margin: 7px 0 0;
+  padding: 7px 10px 7px 24px;
+  background: #fffaf0;
+  border-left: 3px solid var(--ink);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.b-lb-rule-body {
+  margin-top: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.b-lb-val {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.b-lb-val small {
+  margin-left: 8px;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-lb-sw {
+  display: inline-block;
+  width: 13px;
+  height: 10px;
+  margin: 0 2px 0 6px;
+  border: 0.75px solid var(--ink);
+}
+
+.b-lb-sw:first-child {
+  margin-left: 0;
+}
+
+.b-lb-sw--big {
+  background: var(--big);
+}
+
+.b-lb-sw--small {
+  background: var(--small);
+}
+
+.b-lb-sw--blank {
+  background: #fff;
+  border-style: dashed;
+}
+
+.b-lb-choice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--ink);
+  background: #fffaf0;
+}
+
+.b-lb-choice button {
+  padding: 5px 10px;
+  border: 0;
+  border-right: 1px solid var(--ink);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.b-lb-choice button:last-child {
+  border-right: 0;
+}
+
+.b-lb-choice button.is-on {
+  background: var(--ink);
+  color: #fffaf0;
+  font-weight: 700;
+}
+
+.b-lb-choice button:disabled:not(.is-on) {
+  color: var(--faint);
+}
+
+.b-lb-choice button:not(:disabled):not(.is-on):hover {
+  background: #efe5cc;
+}
+
+.b-lb-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.b-lb-switch i {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 16px;
+  margin-top: 2px;
+  border: 1.2px solid var(--ink);
+  background: #fffaf0;
+}
+
+.b-lb-switch i::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  background: var(--faint);
+  transition: left 0.15s;
+}
+
+.b-lb-switch.is-on i {
+  background: var(--ink);
+}
+
+.b-lb-switch.is-on i::after {
+  left: 16px;
+  background: #fffaf0;
+}
+
+.b-lb-switch:disabled {
+  color: var(--ink-2);
+}
+
+.b-lb-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--ink);
+  background: #fffaf0;
+}
+
+.b-lb-stepper button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.b-lb-stepper button:disabled {
+  color: #c9bfab;
+}
+
+.b-lb-stepper b {
+  min-width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.b-lb-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 12.5px;
+}
+
+.b-lb-comp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.b-lb-comp-row {
+  display: flex;
+  gap: 12px;
+}
+
+.b-lb-comp-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.b-lb-comp-cell small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.b-lb-bad {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+.b-lb-muted {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.b-lb-pill {
+  height: 28px;
+  padding: 0 12px;
+  border: 1.2px solid var(--ink);
+  background: #fffaf0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.b-lb-pill.is-on {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: #fff;
+}
+
+.b-lb-pill:disabled {
+  border-color: #c9bfab;
+  background: #c9bfab;
+  color: #f7f2e6;
+}
+
+.b-lb-banks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.b-lb-bank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--ink);
+  background: #fffaf0;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.b-lb-bank input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.b-lb-bank i {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border: 1.2px solid var(--ink);
+}
+
+.b-lb-bank.is-on i {
+  background: var(--ink);
+}
+
+.b-lb-bank.is-on i::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 3px;
+  height: 7px;
+  border: solid #fffaf0;
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+
+.b-lb-bank:focus-within {
+  outline: 1.5px solid var(--acc);
+}
+
+.b-lb-bank small {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+/* 口令：钉在图上的小纸条 */
+.b-lb-note {
+  position: relative;
+  padding: 18px 16px 12px;
+  background: #fffaf0;
+  border: 0.9px solid var(--ink);
+  box-shadow: 3px 4px 0 rgba(30, 27, 23, 0.15);
+  transform: rotate(-1deg);
+}
+
+.b-lb-pin {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: #6f6252;
+}
+
+.b-lb-note-h {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.b-lb-note-h b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.3em;
+}
+
+.b-lb-note-h span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.b-lb-note-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.b-lb-note-form input,
+.b-lb-foot-form input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1.2px dashed var(--ink);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.b-lb-note-form input:focus,
+.b-lb-foot-form input:focus {
+  border-bottom: 1.4px solid var(--acc);
+}
+
+.b-lb-note-form input::placeholder,
+.b-lb-foot-form input::placeholder {
+  font-weight: 400;
+  font-size: 13px;
+  color: #b3a994;
+}
+
+.b-lb-note-small {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* 改名、离开 */
+.b-lb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.b-lb-foot-form {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.b-lb-leave {
+  flex: none;
+  color: var(--ink-2);
+}

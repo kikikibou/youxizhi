@@ -1,0 +1,540 @@
+/*
+ * 版本 B「地图朋克」的样式。每个画面是一张 390 × 844 的设计画板，按屏幕等比缩放后居中，
+ * 画板外面是同一张海图的底纹和图框（.b-stage 的背景），所以窄屏、短屏只是两边或上下多出一点海。
+ * 平面印刷风格：细墨线、平涂、最多一层错位的印刷阴影；强调色只给「你」、能点的、正在发生的。
+ */
+
+:root {
+  --paper: #f4ecda;
+  --page: #fbf6ea;
+  --ink: #1e1b17;
+  --ink-2: #3b362f;
+  --muted: #5d564c;
+  --faint: #8b8273;
+  --sea: #d4e3e1;
+  --atlas: #d8e3df;
+  --wl: #5f8f93;
+  --big: #efc965;
+  --small: #a9cf8f;
+  --acc: #df4a1f;
+  --acc-text: #b5371a;
+  --night: #132033;
+  --night-sea: #0e2a3c;
+  --night-ink: #e8ecf3;
+  --night-line: #7fa6c8;
+  --night-acc: #ff6a3d;
+  --mat: #1f3d38;
+  --serif: 'Noto Serif SC Variable', 'Noto Serif SC', 'Songti SC', serif;
+  --sans: 'Noto Sans SC Variable', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --cond: 'Oswald', 'Arial Narrow', sans-serif;
+  --mono: 'Space Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: #b9c7c4;
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: var(--acc-text);
+}
+
+/* ================================================================ 舞台与画板 */
+
+.b-root {
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+.b-stage {
+  position: relative;
+  width: min(100vw, 440px);
+  overflow: hidden;
+  background-color: var(--sea);
+  isolation: isolate;
+}
+
+.b-stage--fit {
+  height: 100dvh;
+}
+
+.b-board {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  transform-origin: 0 0;
+}
+
+/* 底纹：方格十字 */
+.b-bg-day,
+.b-bg-atlas {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.25' height='45.333'%3E%3Cpath d='M19.625 22.667h6M22.625 19.667v6' stroke='%231e1b17' stroke-width='0.6' opacity='0.4'/%3E%3C/svg%3E");
+}
+
+.b-bg-atlas {
+  background-color: var(--atlas);
+}
+
+.b-bg-paper {
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.25' height='45.333'%3E%3Cpath d='M19.625 22.667h6M22.625 19.667v6' stroke='%231e1b17' stroke-width='0.6' opacity='0.3'/%3E%3C/svg%3E");
+}
+
+.b-bg-night {
+  background-color: var(--night-sea);
+  color: var(--night-ink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.25' height='45.333'%3E%3Cpath d='M19.625 22.667h6M22.625 19.667v6' stroke='%237fa6c8' stroke-width='0.6' opacity='0.4'/%3E%3C/svg%3E");
+}
+
+.b-bg-mat {
+  background-color: var(--mat);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.13) 0.8px, transparent 0.8px), linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0.8px, transparent 0.8px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 0.6px, transparent 0.6px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0.6px, transparent 0.6px);
+  background-size: 50px 50px, 50px 50px, 10px 10px, 10px 10px;
+}
+
+.b-bg-line {
+  background-color: var(--paper);
+}
+
+/* 图框：外细线 + 黑白相间的经纬度刻度带 + 内细线 */
+.b-frame {
+  position: absolute;
+  inset: 8px;
+  border: 1.4px solid var(--ink);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.b-frame i {
+  position: absolute;
+  background-repeat: repeat;
+}
+
+.b-frame i:nth-child(1),
+.b-frame i:nth-child(2) {
+  left: 6px;
+  right: 6px;
+  height: 6px;
+  background-image: linear-gradient(90deg, var(--fc, var(--ink)) 50%, transparent 50%);
+  background-size: 45.25px 6px;
+}
+
+.b-frame i:nth-child(1) {
+  top: -0.7px;
+}
+
+.b-frame i:nth-child(2) {
+  bottom: -0.7px;
+}
+
+.b-frame i:nth-child(3),
+.b-frame i:nth-child(4) {
+  top: 6px;
+  bottom: 6px;
+  width: 6px;
+  background-image: linear-gradient(180deg, transparent 50%, var(--fc, var(--ink)) 50%);
+  background-size: 6px 45.333px;
+}
+
+.b-frame i:nth-child(3) {
+  left: -0.7px;
+}
+
+.b-frame i:nth-child(4) {
+  right: -0.7px;
+}
+
+.b-frame b {
+  position: absolute;
+  inset: 5.3px;
+  border: 0.6px solid var(--fc, var(--ink));
+}
+
+.b-bg-night .b-frame {
+  border-color: rgba(232, 236, 243, 0.9);
+  --fc: rgba(232, 236, 243, 0.85);
+}
+
+.b-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.14;
+  z-index: 2;
+}
+
+.b-bg-night .b-grain {
+  mix-blend-mode: screen;
+  opacity: 0.08;
+}
+
+/* ================================================================ 通用部件 */
+
+.b-abs {
+  position: absolute;
+}
+
+.b-serif {
+  font-family: var(--serif);
+}
+
+.b-cond {
+  font-family: var(--cond);
+}
+
+.b-mono {
+  font-family: var(--mono);
+}
+
+.b-halo {
+  paint-order: stroke;
+  stroke: var(--sea);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* 图名框（左上角的标题块）：双线框 + 小字 + 大标题 + 一句说明 */
+.b-title {
+  position: absolute;
+  left: 26px;
+  top: 28px;
+  max-width: 250px;
+  padding: 9px 16px 10px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 3.7px var(--ink), 2px 3px 0 rgba(30, 27, 23, 0.12);
+  z-index: 4;
+}
+
+.b-title p {
+  margin: 0;
+}
+
+.b-title .k {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.45em;
+  color: var(--muted);
+}
+
+.b-title .t {
+  margin-top: 1px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: 0.14em;
+}
+
+.b-title .s {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 0.75px solid var(--ink);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+/* 右上角的小圆角按钮（按住看身份 / 档案） */
+.b-chips {
+  position: absolute;
+  right: 26px;
+  top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  z-index: 5;
+}
+
+.b-chip {
+  height: 30px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ink);
+  border-radius: 15px;
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.b-chip.is-on {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.b-bg-night .b-chip {
+  background: var(--night);
+  border-color: var(--night-ink);
+  color: var(--night-ink);
+}
+
+/* 主按钮：强调色，里面一圈细白线 */
+.b-btn {
+  position: relative;
+  height: 50px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  background: var(--acc);
+  color: #fff;
+  box-shadow: inset 0 0 0 3px var(--acc), inset 0 0 0 3.8px rgba(255, 255, 255, 0.7), 0 3px 0 rgba(30, 27, 23, 0.3);
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.25em;
+}
+
+.b-btn > span {
+  padding-left: 0.25em;
+}
+
+.b-btn:disabled {
+  background: #c9bfab;
+  box-shadow: inset 0 0 0 3px #c9bfab, inset 0 0 0 3.8px rgba(255, 255, 255, 0.6);
+  color: #f7f2e6;
+}
+
+.b-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 3px var(--acc), inset 0 0 0 3.8px rgba(255, 255, 255, 0.7), 0 1px 0 rgba(30, 27, 23, 0.3);
+}
+
+.b-btn--ghost {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.2px solid var(--ink);
+  box-shadow: 0 3px 0 rgba(30, 27, 23, 0.18);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.b-btn--ghost:disabled {
+  background: var(--paper);
+  color: #b3a994;
+  box-shadow: none;
+}
+
+.b-bg-night .b-btn {
+  background: var(--night-acc);
+  color: var(--night);
+  box-shadow: inset 0 0 0 3px var(--night-acc), inset 0 0 0 3.8px rgba(19, 32, 51, 0.5), 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.b-bg-night .b-btn:disabled {
+  background: #3b4b63;
+  color: #8a9ab0;
+  box-shadow: none;
+}
+
+/* 一行手写栏：小字标题 + 粗宋体输入 + 字数 */
+.b-write {
+  display: block;
+}
+
+.b-write > small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.b-write > span {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1.4px solid var(--ink);
+}
+
+.b-write input,
+.b-write textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.25;
+  caret-color: var(--acc);
+}
+
+.b-write input::placeholder,
+.b-write textarea::placeholder {
+  font-weight: 400;
+  font-size: 15px;
+  color: #b3a994;
+}
+
+.b-write em {
+  font-style: normal;
+  padding-bottom: 3px;
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.b-write em.is-over {
+  color: var(--acc-text);
+}
+
+.b-write:focus-within > span {
+  border-bottom-color: var(--acc);
+}
+
+/* 倒计时小圆环 */
+.b-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.b-timer.is-low {
+  color: var(--acc-text);
+  font-weight: 700;
+}
+
+.b-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.b-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.b-wait::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 1.6px dashed currentColor;
+  border-radius: 50%;
+  animation: b-spin 3s linear infinite;
+}
+
+@keyframes b-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.b-pulse {
+  animation: b-pulse 1.6s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes b-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.b-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(360px, 90vw);
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.25);
+  z-index: 50;
+}
+
+.b-offline {
+  position: fixed;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 5px 12px;
+  background: var(--acc);
+  color: #fff;
+  font-size: 12px;
+  z-index: 50;
+}
+
+.b-center-msg {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 380px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .b-pulse,
+  .b-wait::before {
+    animation: none;
+  }
+}

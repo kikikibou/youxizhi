@@ -64,11 +64,11 @@ function squid(): string {
 }
 const AVATARS: Record<string, string> = { a: squid(), c: 'p:3', e: 'p:15', g: 'p:20' };
 
-class Sim {
+export class Sim {
   g: GameState;
   t = 1_000_000;
-  constructor(rules: Partial<Rules> = {}, seed = 11) {
-    this.g = createGame({ players: NAMES.map(([id, name]) => ({ id, name })), pair: PAIR, rules, seed, now: this.t });
+  constructor(rules: Partial<Rules> = {}, seed = 11, names: [string, string][] = NAMES) {
+    this.g = createGame({ players: names.map(([id, name]) => ({ id, name })), pair: PAIR, rules, seed, now: this.t });
   }
   get step() {
     return this.g.step;
@@ -199,7 +199,7 @@ function snapOf(r: RoomView, extra: Partial<Snapshot> = {}): Snapshot {
 }
 
 /** 对局中的画面：某个玩家的视角。 */
-function gameSnap(s: Sim, me: string, opts: { gameNo?: number; host?: string; settings?: Partial<RoomSettings> } = {}): Snapshot {
+export function gameSnap(s: Sim, me: string, opts: { gameNo?: number; host?: string; settings?: Partial<RoomSettings> } = {}): Snapshot {
   const v = viewFor(s.g, me, s.t);
   return snapOf(room({ me, inGame: v.phase !== 'over', gameNo: opts.gameNo ?? 1, host: opts.host, settings: opts.settings }), { game: v, offset: s.t - Date.now() });
 }
@@ -210,7 +210,7 @@ const roleOf = (s: Sim, role: 'black' | 'white') => {
   return p.id;
 };
 
-const idOf = (s: Sim, f: Faction, aliveOnly = true, n = 0) => {
+export const idOf = (s: Sim, f: Faction, aliveOnly = true, n = 0) => {
   const p = s.of(f, aliveOnly)[n];
   if (!p) throw new Error(`找不到第 ${n + 1} 个${f}`);
   return p.id;

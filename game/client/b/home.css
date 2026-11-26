@@ -1,0 +1,590 @@
+/* 首页、扫码进房、找不到房间 */
+
+.b-globe {
+  position: absolute;
+  left: 84px;
+  top: 27px;
+  width: 222px;
+  height: 222px;
+}
+
+.b-brand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 241px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.b-brand h1 {
+  margin: 0;
+  padding-left: 0.5em;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: 0.5em;
+}
+
+.b-brand i {
+  width: 64px;
+  margin: 9px 0 7px;
+  border-top: 0.75px solid var(--ink);
+}
+
+.b-brand p {
+  margin: 0;
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+
+.b-uline {
+  border: 0;
+  border-bottom: 1.2px dashed var(--ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 2px;
+  outline: none;
+  color: var(--ink);
+}
+
+.b-uline:focus {
+  border-bottom: 1.4px solid var(--acc);
+}
+
+.b-uline::placeholder {
+  color: #b3a994;
+  font-weight: 400;
+}
+
+/* 行李牌 */
+.b-tag {
+  position: absolute;
+  left: 44px;
+  top: 346px;
+  width: 310px;
+  height: 82px;
+  transform: rotate(-2deg);
+}
+
+.b-tag svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  filter: drop-shadow(0 3px 3px rgba(30, 27, 23, 0.22));
+}
+
+.b-tag label {
+  position: absolute;
+  left: 44px;
+  top: 13px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #5b4423;
+}
+
+.b-tag input {
+  position: absolute;
+  left: 44px;
+  top: 32px;
+  width: 170px;
+  height: 34px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 23px;
+}
+
+.b-tag-max {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  font-size: 10.5px;
+  color: #5b4423;
+}
+
+/* 两张票 */
+.b-ticket {
+  position: absolute;
+  left: 26px;
+  width: 338px;
+  height: 112px;
+  margin: 0;
+}
+
+.b-ticket > svg {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 4px 4px rgba(30, 27, 23, 0.22));
+}
+
+.b-ticket-h {
+  position: absolute;
+  left: 18px;
+  top: 12px;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.b-ticket-h b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+}
+
+.b-ticket-h span {
+  font-family: var(--cond);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.b-ticket-l {
+  position: absolute;
+  left: 18px;
+  top: 50px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.b-ticket-pw {
+  position: absolute;
+  left: 52px;
+  top: 44px;
+  width: 176px;
+  height: 28px;
+  font-size: 16px;
+}
+
+.b-ticket-n {
+  position: absolute;
+  left: 18px;
+  top: 84px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-stub {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.2em;
+}
+
+.b-stub span {
+  padding-left: 0.2em;
+}
+
+.b-stub--acc {
+  left: 249px;
+  top: 0;
+  width: 89px;
+  height: 112px;
+  color: #fff;
+}
+
+.b-stub--join {
+  left: 256px;
+  top: 20px;
+  width: 70px;
+  height: 72px;
+  color: var(--ink);
+}
+
+.b-stub--join:not(:disabled) {
+  background: var(--acc);
+  color: #fff;
+}
+
+.b-stub--join:disabled {
+  color: #b3a994;
+}
+
+.b-digits {
+  position: absolute;
+  left: 18px;
+  top: 46px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.b-digit {
+  width: 40px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1.2px solid var(--ink);
+  background: #fffdf6;
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 26px;
+}
+
+.b-digits-input {
+  position: absolute;
+  left: 18px;
+  top: 46px;
+  width: 184px;
+  height: 46px;
+  opacity: 0;
+  font-size: 16px;
+  border: 0;
+}
+
+.b-digits-input:focus + .b-stub,
+.b-ticket:focus-within .b-digit.is-next {
+  border: 2px solid var(--acc);
+}
+
+.b-home-err {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 706px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+.b-howto {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 728px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.b-howto span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.b-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--acc-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.b-foot {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  top: 806px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.b-foot a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.b-foot .b-mono {
+  font-size: 8.5px;
+}
+
+/* 规则速览 */
+.b-rules {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 27, 23, 0.35);
+  z-index: 20;
+}
+
+.b-rules-sheet {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 120px;
+  padding: 16px 18px 14px;
+  background: var(--page);
+  border: 1.2px solid var(--ink);
+  box-shadow: inset 0 0 0 3.5px var(--page), inset 0 0 0 4.1px var(--ink), 4px 5px 0 rgba(30, 27, 23, 0.25);
+}
+
+.b-rules-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 3px double var(--ink);
+}
+
+.b-rules-h b {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.3em;
+}
+
+.b-x {
+  width: 28px;
+  height: 28px;
+  border: 1.1px solid var(--ink);
+  background: var(--page);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.b-rules-row {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 0.75px solid #d8ceb7;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.b-rules-row b {
+  font-family: var(--serif);
+  font-weight: 900;
+}
+
+.b-rules-foot {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 扫码进房 */
+.b-join-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.b-join-head p {
+  margin: 0;
+}
+
+.b-join-k {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.b-join-code {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 4px !important;
+}
+
+.b-join-code span {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.2em;
+}
+
+.b-join-code b {
+  font-family: var(--cond);
+  font-weight: 500;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  padding-left: 0.14em;
+}
+
+.b-join-chips {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px !important;
+  font-size: 11.5px;
+}
+
+.b-join-chips span {
+  padding: 2px 8px;
+  border: 0.75px solid var(--ink);
+  background: #f6efde;
+}
+
+.b-pass {
+  position: absolute;
+  left: 26px;
+  top: 520px;
+  width: 338px;
+  height: 226px;
+  margin: 0;
+  transform: rotate(-1deg);
+  filter: drop-shadow(0 7px 10px rgba(20, 50, 56, 0.28));
+}
+
+.b-pass > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.b-pass-band {
+  position: absolute;
+  left: 16px;
+  top: 0;
+  width: 230px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fffaf0;
+}
+
+.b-pass-band span:first-child {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+}
+
+.b-pass-band .b-cond {
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+}
+
+.b-pass-from {
+  position: absolute;
+  left: 16px;
+  top: 44px;
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.b-pass-l {
+  position: absolute;
+  left: 16px;
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+
+.b-pass-in {
+  position: absolute;
+  left: 16px;
+  width: 222px;
+  height: 34px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1.4px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.b-pass-in:focus {
+  border-bottom-color: var(--acc);
+}
+
+.b-pass-in::placeholder {
+  font-weight: 400;
+  font-size: 14px;
+  color: #b3a994;
+}
+
+.b-pass-pw {
+  letter-spacing: 0.1em;
+}
+
+.b-pass-go {
+  position: absolute;
+  left: 254px;
+  top: 0;
+  width: 84px;
+  height: 226px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+
+.b-pass-go:disabled {
+  opacity: 0.55;
+}
+
+.b-vert {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+}
+
+.b-pass-go small {
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.b-join-warn {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 760px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+.b-notice {
+  position: absolute;
+  left: 36px;
+  right: 36px;
+  top: 300px;
+  padding: 18px 18px 18px;
+  background: var(--page);
+  border: 1.2px solid var(--ink);
+  box-shadow: inset 0 0 0 3.5px var(--page), inset 0 0 0 4.1px var(--ink), 4px 5px 0 rgba(30, 27, 23, 0.2);
+  transform: rotate(-1deg);
+}
+
+.b-notice-h {
+  margin: 0 0 8px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.15em;
+}
