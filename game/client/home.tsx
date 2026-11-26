@@ -178,7 +178,7 @@ export function JoinForm({ conn, code, info, snap }: { conn: RoomConnection; cod
   return (
     <Stage bg="day" label={`扫码进房：房间 ${code}`}>
       <Art svg={JOIN_ART.replaceAll('{{accent}}', 'var(--acc)')} />
-      <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0 }}>
+      <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
         <g transform="translate(218 268)">
           <rect x="0" y="0" width="56" height="20" fill="#f6efde" stroke="#1e1b17" stroke-width="0.8" />
           <text x="28" y="15" text-anchor="middle" style="font-family: var(--cond); font-weight: 500; font-size: 14px; letter-spacing: 2px; fill: #1e1b17">

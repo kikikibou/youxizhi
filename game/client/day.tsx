@@ -447,7 +447,7 @@ export function DayScreen({ g, s }: { g: G; s: Clue | Talk }) {
   };
   return (
     <Stage bg="line" label={clueStep ? '身份提示' : '轮流发言'}>
-      <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0 }} dangerouslySetInnerHTML={{ __html: BG_LINES }} />
+      <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }} dangerouslySetInnerHTML={{ __html: BG_LINES }} />
       <Layer label={`第 ${v.day} 天的线路：${d.order.map(g.name).join('、')}`}>
         <LineMap d={d} cur={cur} me={v.me.id} talking={talk ? talk.idx : undefined} signTop={signTop} />
       </Layer>

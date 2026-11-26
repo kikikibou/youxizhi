@@ -318,7 +318,7 @@ export function NightScreen({ g, s }: { g: G; s: Night }) {
                   aria-checked={on}
                   aria-label={`明天从 ${p.name} 开始`}
                   tabIndex={0}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                   onClick={() => setPick(p.id)}
                   onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setPick(p.id)}
                 />

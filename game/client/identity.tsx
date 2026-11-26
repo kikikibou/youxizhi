@@ -317,7 +317,7 @@ function Inside({ v, code, comp }: Info) {
     countY = ny + 116;
   }
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', left: 0, top: 0 }} aria-hidden="true">
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }} aria-hidden="true">
       <defs>
         <pattern id="id-bh" x={fx0 - 4} y="0" width="32" height="10" patternUnits="userSpaceOnUse">
           <rect width="16" height="10" fill={INK} />
@@ -371,7 +371,7 @@ function Inside({ v, code, comp }: Info) {
 /** 封面（合上时看到的一面）：每个人都一样。 */
 function Cover({ v, code }: { v: PlayerView; code: string }) {
   return (
-    <svg width={HALF} height={H} viewBox={`0 0 ${HALF} ${H}`} style={{ position: 'absolute', left: 0, top: 0 }} aria-hidden="true">
+    <svg width={HALF} height={H} viewBox={`0 0 ${HALF} ${H}`} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }} aria-hidden="true">
       <rect width={HALF} height={H} fill="#ede1c6" />
       <rect x="8" y="8" width={HALF - 16} height={H - 16} fill="none" stroke={INK} stroke-width="1.3" />
       <rect x="12" y="12" width={HALF - 24} height={H - 24} fill="none" stroke={INK} stroke-width="0.5" />

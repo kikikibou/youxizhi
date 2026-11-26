@@ -64,6 +64,12 @@
   display: block;
 }
 
+/* 分页签和合上按钮永远在纸面内容上面，内容排版出错也挡不住它们 */
+.b-fl-tab,
+.b-fl-x {
+  z-index: 2;
+}
+
 .b-fl-tab {
   position: absolute;
   left: 343px;
@@ -543,8 +549,8 @@
   letter-spacing: 0.12em;
 }
 
+/* 不能写 position: relative：会盖掉 .b-fl-line 的 absolute，整行变成整页宽、压住右边的分页签 */
 .b-fl-item {
-  position: relative;
   padding-left: 14px;
 }
 

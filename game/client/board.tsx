@@ -103,7 +103,10 @@ function Grain() {
   );
 }
 
-/** 一张画板坐标里的 SVG 层（390 × h）。 */
+/**
+ * 一张画板坐标里的 SVG 层（390 × h）。它盖满整块画板，所以默认不接点击（pointer-events: none），
+ * 不然会挡住下面和前面的按钮；层里真要点的图形自己写 style={{ pointerEvents: 'auto' }}。
+ */
 export function Layer({ h = 844, children, label, style }: { h?: number; children: ComponentChildren; label?: string; style?: CSSProperties }) {
   return (
     <svg
@@ -113,14 +116,14 @@ export function Layer({ h = 844, children, label, style }: { h?: number; childre
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', ...style }}
+      style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none', ...style }}
     >
       {children}
     </svg>
   );
 }
 
-/** 一段设计稿里的静态 SVG（字符串），画在画板坐标里。 */
+/** 一段设计稿里的静态 SVG（字符串），画在画板坐标里。只是画，不接点击。 */
 export function Art({ svg, h = 844, style }: { svg: string; h?: number; style?: CSSProperties }) {
   return (
     <svg
@@ -128,7 +131,7 @@ export function Art({ svg, h = 844, style }: { svg: string; h?: number; style?: 
       height={h}
       viewBox={`0 0 390 ${h}`}
       aria-hidden="true"
-      style={{ position: 'absolute', left: 0, top: 0, ...style }}
+      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', ...style }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

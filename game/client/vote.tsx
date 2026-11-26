@@ -180,7 +180,7 @@ function DistrictMap({
                 aria-checked={d.id === pick}
                 aria-label={`投给 ${d.name}`}
                 tabIndex={0}
-                style={{ cursor: 'pointer', outline: 'none' }}
+                style={{ cursor: 'pointer', outline: 'none', pointerEvents: 'auto' }}
                 onClick={() => onPick(d.id)}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onPick(d.id)}
               />
