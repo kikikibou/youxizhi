@@ -362,8 +362,9 @@ export const PAGES = [
         // wheel as it comes up on the right (ride.start: its angle on the
         // wheel, 0 at the top, turning anticlockwise) and rides along with it
         // (World.followRide), the cabin still on the screen, the park going
-        // by behind; a ride ticket opens. 上车 dives into the cabin's window
-        // and 大国小国's globe opens out of it (takeoff, kind 'atlas').
+        // by behind; a ride ticket opens (kind 'atlas': its stub in 大国小国's
+        // look). 上车 dives into the cabin's window, and out of it comes
+        // 大国小国's folded map, unfolding over the screen (takeoff 'fold').
         // (view / portrait / dive: from the cabin's hanging point on the rim,
         // in the building's frame)
         spot: {
@@ -375,6 +376,7 @@ export const PAGES = [
           dive: [0, -1.165, 0.92],
           pass: {
             kind: 'atlas',
+            takeoff: 'fold',
             head: 'ADMIT ONE · 乘车券',
             label: '乘车券',
             flight: 'CABIN 07',
