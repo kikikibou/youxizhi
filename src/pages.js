@@ -27,7 +27,10 @@
  *               in its own type (English sub in italic serif, English lines in
  *               small caps, Chinese in the Chinese sans).
  * intro         a paragraph, or several: on a short screen the ones after the
- *               first fold away behind a 展开 link (see fitPoems in ui.js)
+ *               first fold away behind a 展开 link (see fitPoems in ui.js).
+ *               **words** are set in bold, *words* in italic serif
+ * cards         keep each one line: title with its English, and desc (about
+ *               22 Chinese characters fit)
  * cards[].spot  (optional) a close-up before a card's href: where the camera
  *               flies and the boarding pass shown there (see 攻错 below)
  * panelTop      (optional) the highest the content panel's top may stand, as a
@@ -154,25 +157,37 @@ export const PAGES = [
           dive: [-11.5, 39.25, -10.3],
           // Over the roof, the ground behind the tower as a poster: Touchstone,
           // the clown of As You Like It (V. iv), on the seven degrees of the
-          // lie, all avoidable "with an If". (p: [x, z] on the ground, r: turned
-          // to face the camera; items at [across, away] in metres)
+          // lie, all avoidable "with an If". Decoration: it may run off the
+          // screen or behind the tower. (p: [x, z] on the ground, r: turned to
+          // face the camera; items at [across, away] in metres; under: drawn
+          // beneath the others, a watermark)
           ground: {
             p: [-30.2, -57.4],
             r: 0.29,
-            portrait: { p: [-12.5, -53.5], r: 0.02, scale: 0.6 }, // (the list and the script would fall behind the roof)
+            portrait: { p: [-12.5, -53.5], r: 0.02, scale: 0.5 }, // (only the title: the rest would fall behind the roof)
             items: [
-              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 10, at: [0, 0.2], c: 'orange' },
+              { t: 'IF', f: 'display', s: 50, at: [-27, -19], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
+              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [3, -0.4], c: 'orange' },
               {
                 t: 'I. THE RETORT COURTEOUS\nII. THE QUIP MODEST\nIII. THE REPLY CHURLISH\nIV. THE REPROOF VALIANT\nV. THE COUNTERCHECK QUARRELSOME\nVI. THE LIE WITH CIRCUMSTANCE\nVII. THE LIE DIRECT',
                 f: 'caps',
-                s: 1.3,
-                at: [-41, -8.2],
+                s: 2,
+                at: [-47.5, -15.4],
                 anchor: 'left',
                 c: 'ink',
                 portrait: false,
               },
-              { t: 'We quarrel in print, by the book.', f: 'script', s: 5.2, at: [24, -4.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
-              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.15, at: [39, -8.4], anchor: 'right', c: 'ink', portrait: false },
+              {
+                t: 'ALL THESE YOU MAY AVOID BUT THE LIE DIRECT;\nAND YOU MAY AVOID THAT TOO, WITH AN IF.',
+                f: 'caps',
+                s: 1.5,
+                at: [-44.5, -28.4],
+                anchor: 'left',
+                c: 'orange',
+                portrait: false,
+              },
+              { t: 'We quarrel in print, by the book.', f: 'script', s: 4.9, at: [26.5, -7.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
+              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.4, at: [47, -12.4], anchor: 'right', c: 'ink', portrait: false },
             ],
           },
           pass: {
@@ -185,8 +200,8 @@ export const PAGES = [
       },
       // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
       { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', ready: false },
-      { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑元素的新型赛制', ready: false },
-      { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了包含更多动效之外没有什么提升点的辩论计时器', ready: false },
+      { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑的新型赛制', ready: false },
+      { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了动效更多之外没有什么提升点的辩论计时器', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 4, items: [['Straw', '0 g'], ['Steel', '100%'], ['Red Herring', 'trace']] },
@@ -245,15 +260,15 @@ export const PAGES = [
       lines: ['睡前智力题', '睡不着智力题', '睡梦中智力题'],
     },
     intro: [
-      '纯粹的「知识竞答」对我来说有一个问题：它只考验「是否知道」，所以只要我「不知道」，就只剩下无所适从的垃圾时间了。',
-      '相比之下，我更喜欢「智力竞答」——在知识量能提供帮助的前提下，也留出了考验「能不能搞懂」的空间。开动脑筋、驱使策略、让不同知识储备的人都能享受到乐趣，或许这样获得的胜利也别有一番风味。',
+      '纯粹的**知识竞答**对我来说有一个问题：它只考验**是否知道**。一旦我**不知道**，就只剩下了停滞的垃圾时间。',
+      '相比之下，我更喜欢**智力竞答**——依然要求知识量，但也考验**能不能搞懂**。开动脑筋、驱使策略，一起享受这份活动大脑的乐趣吧。',
     ],
     cards: [
-      { no: '01', title: '人造语言的三国知识问答', en: 'Conlang Kingdoms', desc: '很久以前出的一套题，其实是在这个板块建设起来之前占位的…', ready: false },
-      { no: '02', title: '三园警察', en: 'Mole Patrol', desc: '一个考验反应速度、知识量，与直觉的打地鼠小游戏', ready: false },
+      { no: '01', title: '人造语言的三国问答', en: 'Conlang Kingdoms', desc: '很久以前出的一套题，是板块建成前的占位…', ready: false },
+      { no: '02', title: '三园警察', en: 'Mole Patrol', desc: '考验反应速度、知识量，与直觉的打地鼠小游戏', ready: false },
       { no: '03', title: '切半', en: 'Bisect', desc: '一个考验地理知识与常识的小游戏', ready: false },
       // (until the old ones move in, the stand-in puzzle from the first prototype)
-      { no: '04', title: '每周睡前智力题', en: 'Weekly Bedtime Puzzle', desc: '如果占位的新游戏暂时更新不出来，会在这里用旧作拖延时间', tool: 'daily', ready: true },
+      { no: '04', title: '每周睡前智力题', en: 'Weekly Bedtime Puzzle', desc: '新游戏更新不出来时，会在这里用旧作拖延时间', tool: 'daily', ready: true },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 5, items: [['Drunk Bird', '34%'], ['Goats', '⅔'], ['Camels', '17 + 1'], ['Pigeons', 'n + 1']] },
@@ -330,14 +345,14 @@ export const PAGES = [
       mark: 'À table',
       lines: ['聚会游戏', '独立游戏开发'],
     },
-    intro: '这里是一些我自己设计的，需要「多人参与」的聚会小游戏。之后也会把一些自己设计的桌游所需要用到的桌游助手也放在这里，欢迎大家尝试。',
+    intro: '这里是一些我自己设计的，需要**多人参与**的聚会小游戏。之后也会把一些自己设计的桌游所需要用到的桌游助手也放在这里，欢迎大家尝试。',
     cards: [
       // (href: a page of its own, opened in place of the drawer)
       { no: '01', title: '大国小国', en: 'Big & Small', desc: '基于微妙联系的猜词类身份推理游戏', href: 'dgxg/', ready: true },
-      { no: '02', title: '对抗性问答猜人', en: 'Twenty Questions, Versus', desc: '用Yes/No问题来锁定人物的那个经典小游戏，加入了对抗性与策略要素', ready: false },
+      { no: '02', title: '对抗性问答猜人', en: 'Twenty Questions, Versus', desc: '用Yes/No锁定人物的经典游戏，加入对抗与策略', ready: false },
       // (纵横: a crossword's two directions)
       { no: '03', title: '纵横猜词', en: 'Across & Down', desc: '强调战略性的团队对抗猜词游戏', ready: false },
-      { no: '04', title: '死亡游戏', en: 'No Continues', desc: '只能玩一次的合作类闯关游戏，请凑齐队友都在场时再点开', ready: false },
+      { no: '04', title: '死亡游戏', en: 'No Continues', desc: '只能玩一次的合作闯关游戏，请凑齐队友再点开', ready: false },
     ],
     footer: {
       left: { title: 'INGREDIENTS', stars: 4, items: [['Agôn', '1 v 1'], ['Alea', '2d6'], ['Mimicry', 'Lv. 1'], ['Ilinx', '720°']] },

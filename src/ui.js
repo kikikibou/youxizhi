@@ -10,8 +10,11 @@ export function renderNav(pages, el) {
     .join('');
 }
 
-/** Escaped copy in which *words* are set in italic (see .intro em). */
-const emph = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
+/** Escaped copy in which **words** are set in bold and *words* in italic (see .intro b, .intro em). */
+const emph = (s) =>
+  esc(s)
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
 function cardHtml(c, i) {
   // (a card with a close-up flies there first: see openSpot in app.js)

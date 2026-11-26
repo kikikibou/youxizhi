@@ -604,6 +604,7 @@ export class World {
         const group = new THREE.Group();
         const blocks = g.items.map((it) => {
           const block = new TextBlock({ ...it, p: [it.at[0], 0, -it.at[1]], r: [-Math.PI / 2, 0, it.turn || 0] }, aniso);
+          if (it.under) block.mesh.renderOrder = 5; // (a watermark, beneath the rest)
           group.add(block.mesh);
           return block;
         });

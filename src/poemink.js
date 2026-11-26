@@ -138,8 +138,16 @@ class Part {
     if (key === this.key) return;
     this.key = key;
     const c = this.canvas;
-    c.width = Math.max(1, Math.ceil((box.width + 2 * PAD) * ratio));
-    c.height = Math.max(1, Math.ceil((box.height + 2 * PAD) * ratio));
+    const w = Math.max(1, Math.ceil((box.width + 2 * PAD) * ratio));
+    const h = Math.max(1, Math.ceil((box.height + 2 * PAD) * ratio));
+    // three.js sizes a texture's storage on the GPU once, at its first
+    // upload: a canvas of another size after that was written into a corner
+    // of the old storage (when the automatic resolution stepped down, the
+    // letters shrank towards the bottom left with the old ones showing past
+    // them). A new size gets new storage.
+    if (c.width !== w || c.height !== h) this.tex.dispose();
+    c.width = w;
+    c.height = h;
     const g = c.getContext('2d');
     g.setTransform(ratio, 0, 0, ratio, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
