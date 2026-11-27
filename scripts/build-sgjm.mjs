@@ -32,26 +32,29 @@ function parseSlot(id) {
   if (!norms.length) throw new Error(`${id}: 答案是空的`);
   const n = /^解析[：:](.*)$/m.exec(body);
   const note = n ? body.slice(n.index + n[0].length - n[1].length).trim() : '';
-  return { norms, note };
+  return { norms, note, display: names[0] };
 }
 
 const slots = {};
 const keys = [];
 const notes = {};
+const answers = {};
 let names = 0;
 for (const id of SLOT_IDS) {
-  const { norms, note } = parseSlot(id);
+  const { norms, note, display } = parseSlot(id);
   const key = await contentKeyOf(id, norms[0]);
   keys.push(key);
   const checks = {};
   for (const norm of norms) checks[await checkOf(id, norm)] = await seal(await wrapKeyOf(id, norm), key);
   slots[id] = { checks };
   notes[id] = note;
+  answers[id] = display;
   names += norms.length;
 }
-// The notes and the dictionary open together, once every slot is solved.
+// The answers (as first written in the sheet), the notes and the dictionary
+// open together, once every slot is solved.
 const dictionary = (blocks.get('词典') ?? []).join('\n').trim();
-const final = await seal(await dictionaryKeyOf(keys), JSON.stringify({ notes, dictionary }));
+const final = await seal(await dictionaryKeyOf(keys), JSON.stringify({ answers, notes, dictionary }));
 
 const extra = [...blocks.keys()].filter((k) => k !== '词典' && !SLOT_IDS.includes(k));
 if (extra.length) console.warn(`答案表里这些编号没有对应的题目，已忽略：${extra.join('、')}`);

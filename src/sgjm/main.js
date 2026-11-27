@@ -11,14 +11,18 @@
  * player writes their reading (shown as a slip of paper pinned above the
  * word), or cuts the word between letters and writes a reading for each
  * piece. Readings are kept by spelling, so a piece "crr" read once shows
- * wherever the player has cut "crr" out. The panel lists the word's other
- * places to jump to; for a piece the player cut, also the other words that
- * contain the same letters. The page never cuts a word on its own: finding
- * Crr in Crrupel stays the player's move.
+ * wherever the player has cut "crr" out. The panel steps through the word's
+ * other places; for a piece the player cut, it also lists the other words
+ * that contain the same letters. The page never cuts a word on its own:
+ * finding Crr in Crrupel stays the player's move. The notebook lists every
+ * reading (drag to reorder); opening an entry lists and steps through its
+ * places too.
  *
  * Answers are checked against hashes (seal.js). A right answer only gets a
- * seal; the notes and the dictionary open once every slot is solved.
- * Progress, readings, cuts and open sheets stay in this browser.
+ * seal; wrong answers are counted per slot (each different wrong answer
+ * once). Once every slot is solved, the report, the answers with their
+ * notes, and the dictionary open together at the bottom. Everything stays in
+ * this browser; 遗忘答案 clears it for the next player.
  */
 import '@fontsource-variable/noto-serif-sc';
 import '@fontsource/space-mono/latin-400.css';
@@ -32,18 +36,29 @@ import { normalizeAnswer, checkOf, wrapKeyOf, open, openText, toB64, fromB64, di
 const STORE = 'sgjm:v1';
 const TOTAL = SLOT_IDS.length;
 const still = matchMedia('(prefers-reduced-motion: reduce)');
+const smooth = () => (still.matches ? 'auto' : 'smooth');
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 const state = load();
 function load() {
+  let s = {};
   try {
-    const s = JSON.parse(localStorage.getItem(STORE)) ?? {};
-    return { solved: s.solved ?? {}, notes: s.notes ?? {}, splits: s.splits ?? {}, open: s.open ?? {} };
+    s = JSON.parse(localStorage.getItem(STORE)) ?? {};
   } catch {
-    return { solved: {}, notes: {}, splits: {}, open: {} };
+    /* start afresh */
   }
+  return {
+    solved: s.solved ?? {}, // slot → { k: the slot's key, typed: what the player wrote }
+    notes: s.notes ?? {}, // spelling → reading
+    splits: s.splits ?? {}, // word → letter positions cut at
+    open: s.open ?? {}, // set → true when its letter is open
+    wrong: s.wrong ?? {}, // slot → the different wrong answers tried (normalized)
+    order: s.order ?? [], // the notebook's order
+    started: s.started ?? 0, // first letter opened
+    finished: s.finished ?? 0, // last slot solved
+  };
 }
 const save = () => localStorage.setItem(STORE, JSON.stringify(state));
 
@@ -74,6 +89,10 @@ function wordsHtml(text, live) {
 const hash = (s) => [...s].reduce((h, c) => (h * 33 + c.charCodeAt(0)) >>> 0, 5381);
 const slotsOf = (r) => r.questions.flatMap((q) => q.slots.map((s) => s.id));
 const labelOf = (s) => (s.label ? `${s.label}：` : '答：');
+/** slot → the id of its question's first slot (the question's anchor) */
+const QUESTION_OF = Object.fromEntries(ROUNDS.flatMap((r) => r.questions.flatMap((q) => q.slots.map((s) => [s.id, q.slots[0].id]))));
+const tries = (id) => state.wrong[id]?.length ?? 0;
+const wrongTotal = () => SLOT_IDS.reduce((n, id) => n + tries(id), 0);
 
 // ---------------------------------------------------------------- the page
 
@@ -97,7 +116,7 @@ document.getElementById('app').innerHTML = `
                 ${ROUNDS.map((r) => `<div class="pip-group"><span>${esc(r.name)}</span><span class="pip-row">${slotsOf(r).map((id) => `<i class="pip" data-slot="${id}"></i>`).join('')}</span></div>`).join('')}
               </div>
               <div class="cover-side">
-                <span class="progress">已破译 <b id="count">0</b> / ${TOTAL}</span>
+                <span class="progress">已破译 <b id="count">0</b> / ${TOTAL}<small id="wrongCount"></small></span>
                 <span class="cover-stamp" id="coverStamp">待破译</span>
               </div>
             </div>
@@ -142,7 +161,6 @@ document.getElementById('app').innerHTML = `
                   <div class="q-body">
                     <p class="q-text">${wordsHtml(q.text, true)}</p>
                     <div class="q-slots">${q.slots.map((s) => `<div class="slot" id="slot-${s.id}" data-label="${esc(labelOf(s))}"></div>`).join('')}</div>
-                    <div class="q-notes">${q.slots.map((s) => `<div class="note" id="note-${s.id}" data-label="${esc(s.label ?? '')}" hidden></div>`).join('')}</div>
                   </div>
                 </article>`,
                 )
@@ -153,7 +171,7 @@ document.getElementById('app').innerHTML = `
       ).join('')}
 
       <section class="appendix" id="dict"></section>
-      <p class="reset-row"><button type="button" class="reset" id="reset">清空进度和笔记</button></p>
+      <p class="reset-row"><button type="button" class="reset forget">遗忘答案，换人再来</button></p>
     </main>
     <aside class="side" id="side">
       <div class="ed" id="ed" hidden></div>
@@ -176,6 +194,7 @@ const OPEN = '.round.is-open .q-text';
 function setOpen(id, open, animate = true) {
   if (open) state.open[id] = true;
   else delete state.open[id];
+  if (open && animate && !state.started) state.started = Date.now();
   save();
   const sec = $(`round-${id}`);
   const letter = $(`letter-${id}`);
@@ -188,8 +207,8 @@ function setOpen(id, open, animate = true) {
   refresh();
   renderNotebook();
   if (!animate) return;
-  if (open) setTimeout(() => sec.scrollIntoView({ behavior: still.matches ? 'auto' : 'smooth', block: 'start' }), 420);
-  else letter.scrollIntoView({ behavior: still.matches ? 'auto' : 'smooth', block: 'nearest' });
+  if (open) setTimeout(() => sec.scrollIntoView({ behavior: smooth(), block: 'start' }), 420);
+  else letter.scrollIntoView({ behavior: smooth(), block: 'nearest' });
 }
 
 // ---------------------------------------------------------------- words, readings, highlights
@@ -264,6 +283,37 @@ function displayOf(key) {
 }
 const isPiece = (key) => !document.querySelector(`.q-text .w[data-k="${key}"]`);
 
+/** Brings a word into view (above the floating panel or drawer on narrow screens) and makes it pulse. */
+function goTo(el) {
+  const w = el.closest('.w');
+  const r = w.getBoundingClientRect();
+  const high = document.body.classList.contains('nb-open') || getComputedStyle(ed).position === 'fixed';
+  scrollBy({ top: r.top - innerHeight * (high ? 0.2 : 0.3), behavior: smooth() });
+  w.classList.remove('is-pulse');
+  void w.offsetWidth;
+  w.classList.add('is-pulse');
+}
+
+/** Jump buttons, one per place, named by question (·2, ·3 for a second, third time in one question). */
+function chipsHtml(els, { here, sub = false, attr = 'data-w' } = {}) {
+  const seen = {};
+  return els
+    .map((el, i) => {
+      const w = el.closest('.w');
+      const label = w.closest('.q').dataset.label;
+      seen[label] = (seen[label] ?? 0) + 1;
+      const isHere = w === here;
+      const value = attr === 'data-w' ? WORDS.indexOf(w) : i;
+      return `<button type="button" class="chip${isHere ? ' is-here' : ''}${sub ? ' is-sub' : ''}" ${attr}="${value}"${isHere ? ' disabled' : ''}>${esc(label)}${seen[label] > 1 ? `·${seen[label]}` : ''}</button>`;
+    })
+    .join('');
+}
+
+const stepperHtml = (at, n) =>
+  `<div class="stepper"><button type="button" class="step" data-step="-1" aria-label="上一处">↑ 上一处</button><span>${at >= 0 ? at + 1 : '–'} / ${n}</span><button type="button" class="step" data-step="1" aria-label="下一处">下一处 ↓</button></div>`;
+/** The next place to go to from position `at` (-1: none yet) among n, going `step` (±1). */
+const stepFrom = (at, step, n) => (at < 0 ? (step > 0 ? 0 : n - 1) : (at + step + n) % n);
+
 // ---------------------------------------------------------------- the annotation panel
 
 function openEditor(w, keep = false) {
@@ -284,7 +334,7 @@ function keepAbovePanel(w) {
   const r = w.getBoundingClientRect();
   const panelTop = ed.getBoundingClientRect().top;
   if (r.top > 40 && r.bottom < panelTop - 16) return;
-  scrollBy({ top: r.top - Math.min(innerHeight * 0.25, panelTop * 0.4), behavior: still.matches ? 'auto' : 'smooth' });
+  scrollBy({ top: r.top - Math.min(innerHeight * 0.25, panelTop * 0.4), behavior: smooth() });
 }
 
 function closeEditor() {
@@ -343,49 +393,47 @@ function renderLetters() {
   for (const row of ed.querySelectorAll('.ed-row')) row.classList.toggle('is-active', row.dataset.key === active?.key);
 }
 
-/** Where the looked-up spelling occurs (jump buttons), and for a piece, the words that contain it. */
+const exactWords = (key) => exactTargets(key).map((el) => el.closest('.w'));
+
+/** Where the looked-up spelling occurs (step through, or jump), and for a piece, the words that contain it. */
 function renderFind() {
   const { key, piece } = active;
-  /** Jump buttons, one per place, named by question (·2, ·3 for a second, third time in one question). */
-  const chips = (words, sub = false) => {
-    const seen = {};
-    return words
-      .map((w) => {
-        const label = w.closest('.q').dataset.label;
-        seen[label] = (seen[label] ?? 0) + 1;
-        const here = w === editing.w;
-        return `<button type="button" class="chip${here ? ' is-here' : ''}${sub ? ' is-sub' : ''}" data-w="${WORDS.indexOf(w)}"${here ? ' disabled' : ''}>${esc(label)}${seen[label] > 1 ? `·${seen[label]}` : ''}</button>`;
-      })
-      .join('');
-  };
-  const exact = exactTargets(key).map((el) => el.closest('.w'));
-  let html = `<p class="ed-find-title">「${esc(displayOf(key))}」在打开的题里出现 ${exact.length} 次</p><div class="chips">${chips(exact)}</div>`;
+  const exact = exactWords(key);
+  let html = `<p class="ed-find-title">「${esc(displayOf(key))}」在打开的题里出现 ${exact.length} 次</p>`;
+  if (exact.length > 1 || (exact.length && !exact.includes(editing.w))) html += stepperHtml(exact.indexOf(editing.w), exact.length);
+  html += `<div class="chips">${chipsHtml(exact, { here: editing.w })}</div>`;
   if (piece && key.length >= 2) {
     // (grouped by word: Dasi with all its places, then the next word)
     const groups = new Map();
     for (const w of containTargets(key)) groups.set(w.dataset.t, [...(groups.get(w.dataset.t) ?? []), w]);
     html += groups.size
       ? `<p class="ed-find-title">含有「${esc(key)}」的其他词</p>${[...groups]
-          .map(([t, words]) => `<div class="find-group"><b>${esc(t)}</b><div class="chips">${chips(words, true)}</div></div>`)
+          .map(([t, words]) => `<div class="find-group"><b>${esc(t)}</b><div class="chips">${chipsHtml(words, { here: editing.w, sub: true })}</div></div>`)
           .join('')}`
       : `<p class="ed-find-title is-none">没有别的词含有「${esc(key)}」</p>`;
   }
   $('edFind').innerHTML = html;
 }
 
+/** Moves the panel to another word, keeping the looked-up spelling. */
 function jump(w) {
   openEditor(w, true);
-  const r = w.getBoundingClientRect();
-  scrollBy({ top: r.top - innerHeight * 0.3, behavior: still.matches ? 'auto' : 'smooth' });
-  w.classList.remove('is-pulse');
-  void w.offsetWidth;
-  w.classList.add('is-pulse');
+  goTo(w);
 }
 
+// (the panel handles its own clicks: what was clicked may be redrawn before
+// the click reaches the page, which would otherwise read it as a click outside)
 ed.addEventListener('click', (e) => {
+  e.stopPropagation();
   if (e.target.closest('.ed-x')) return closeEditor();
   const chip = e.target.closest('.chip');
   if (chip) return jump(WORDS[Number(chip.dataset.w)]);
+  const step = e.target.closest('.step');
+  if (step) {
+    const exact = exactWords(active.key);
+    if (exact.length) jump(exact[stepFrom(exact.indexOf(editing.w), Number(step.dataset.step), exact.length)]);
+    return;
+  }
   const cut = e.target.closest('.ed-cut');
   if (!cut) return;
   const { k } = editing.w.dataset;
@@ -408,7 +456,10 @@ ed.addEventListener('input', (e) => {
   const key = e.target.dataset.key;
   if (!key) return;
   const v = e.target.value.trim();
-  if (v && !state.notes[key]) fresh = key;
+  if (v && !state.notes[key]) {
+    fresh = key;
+    state.order = [...state.order.filter((k) => k !== key), key];
+  }
   if (v) state.notes[key] = v;
   else delete state.notes[key];
   save();
@@ -428,38 +479,146 @@ ed.addEventListener('focusin', (e) => {
 
 // ---------------------------------------------------------------- the notebook
 
+let shown = null; // the notebook entry opened to list its places
+const cursor = {}; // spelling → index of the place last gone to from the notebook
+
+/** The notebook's entries in the player's order; readings written since come last. */
+function orderedKeys() {
+  const order = state.order.filter((k) => k in state.notes);
+  for (const k of Object.keys(state.notes).sort()) if (!order.includes(k)) order.push(k);
+  state.order = order;
+  return order;
+}
+
 function renderNotebook() {
-  const keys = Object.keys(state.notes).sort();
+  const keys = orderedKeys();
   $('nbToggle').textContent = keys.length ? `笔记本 · ${keys.length}` : '笔记本';
+  const entry = (k) => {
+    const places = exactTargets(k);
+    const isOpen = k === shown;
+    let more = '';
+    if (isOpen) {
+      more = places.length
+        ? `<div class="nb-more">${stepperHtml(cursor[k] ?? -1, places.length)}<div class="chips">${chipsHtml(places, { attr: 'data-go' })}</div></div>`
+        : `<div class="nb-more"><p class="nb-none">打开的题里没有这个词</p></div>`;
+    }
+    return `<li class="nb-li${isOpen ? ' is-open' : ''}" data-key="${k}">
+      <div class="nb-row">
+        <span class="nb-grip" title="拖动排序" aria-hidden="true"></span>
+        <button type="button" class="nb-item${k === active?.key ? ' is-sel' : ''}${places.length ? '' : ' is-away'}" data-key="${k}" aria-expanded="${isOpen}">
+          <b>${esc(displayOf(k))}</b><span>${esc(state.notes[k])}</span><small>${places.length ? `×${places.length}` : '—'}</small>
+        </button>
+      </div>
+      ${more}
+    </li>`;
+  };
   nb.innerHTML = `
-    <div class="nb-head"><h2>笔记本</h2><button type="button" class="nb-close" aria-label="收起">×</button></div>
+    <div class="nb-head"><h2>笔记本</h2><span class="nb-hint">${keys.length > 1 ? '拖动左侧排序' : ''}</span><button type="button" class="nb-close" aria-label="收起">×</button></div>
     ${
       keys.length
-        ? `<ul class="nb-list">${keys
-            .map((k) => {
-              const n = exactTargets(k).length;
-              return `<li><button type="button" class="nb-item${k === active?.key ? ' is-sel' : ''}${n ? '' : ' is-away'}" data-key="${k}">
-                <b>${esc(displayOf(k))}</b><span>${esc(state.notes[k])}</span><small>${n ? `×${n}` : '—'}</small>
-              </button></li>`;
-            })
-            .join('')}</ul>`
+        ? `<ul class="nb-list">${keys.map(entry).join('')}</ul>`
         : `<p class="nb-empty">点题目里任意一个密语词，就能给它贴一张写着你猜测的签条。</p><p class="nb-empty">点字母之间的缝隙，可以把一个词拆成几段，分别注上意思。</p>`
     }`;
 }
 
+nb.addEventListener('click', (e) => {
+  e.stopPropagation(); // (see the panel's click handler)
+  if (e.target.closest('.nb-close')) return document.body.classList.remove('nb-open');
+  const step = e.target.closest('.step');
+  const chip = e.target.closest('.chip');
+  if ((step || chip) && shown) {
+    const places = exactTargets(shown);
+    if (!places.length) return;
+    const i = chip ? Number(chip.dataset.go) : stepFrom(cursor[shown] ?? -1, Number(step.dataset.step), places.length);
+    cursor[shown] = i;
+    goTo(places[i]);
+    return renderNotebook();
+  }
+  const item = e.target.closest('.nb-item');
+  if (!item) return;
+  if (editing) closeEditor();
+  const k = item.dataset.key;
+  if (shown === k) {
+    shown = null;
+    active = null;
+  } else {
+    shown = k;
+    active = { key: k, piece: isPiece(k) };
+  }
+  refresh();
+  renderNotebook();
+});
+
+// Dragging entries by their grip reorders them (mouse; the grip is hidden on touch screens).
+let dragKey = null;
+const endDrag = () => {
+  dragKey = null;
+  for (const li of nb.querySelectorAll('.nb-li')) {
+    li.draggable = false;
+    li.classList.remove('is-drag', 'drop-before', 'drop-after');
+  }
+};
+nb.addEventListener('pointerdown', (e) => {
+  const grip = e.target.closest('.nb-grip');
+  if (grip) grip.closest('.nb-li').draggable = true;
+});
+nb.addEventListener('pointerup', () => {
+  if (!dragKey) endDrag();
+});
+nb.addEventListener('dragstart', (e) => {
+  const li = e.target.closest('.nb-li');
+  if (!li) return;
+  dragKey = li.dataset.key;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragKey);
+  li.classList.add('is-drag');
+});
+nb.addEventListener('dragover', (e) => {
+  if (!dragKey) return;
+  const li = e.target.closest('.nb-li');
+  if (!li) return;
+  e.preventDefault();
+  const after = e.clientY > li.getBoundingClientRect().top + li.offsetHeight / 2;
+  for (const other of nb.querySelectorAll('.drop-before, .drop-after')) other.classList.remove('drop-before', 'drop-after');
+  if (li.dataset.key !== dragKey) li.classList.add(after ? 'drop-after' : 'drop-before');
+});
+nb.addEventListener('drop', (e) => {
+  if (!dragKey) return;
+  e.preventDefault();
+  const li = nb.querySelector('.drop-before, .drop-after');
+  if (li) {
+    const order = orderedKeys().filter((k) => k !== dragKey);
+    order.splice(order.indexOf(li.dataset.key) + (li.classList.contains('drop-after') ? 1 : 0), 0, dragKey);
+    state.order = order;
+    save();
+  }
+  endDrag();
+  renderNotebook();
+});
+nb.addEventListener('dragend', endDrag);
+
 // ---------------------------------------------------------------- answers
+
+let unlocked = false; // everything solved and the final bundle opened
+
+function triesHtml(id, solved) {
+  const n = tries(id);
+  if (solved) return `<span class="slot-tries is-done">${n ? `答错 ${n} 次` : '一次答对'}</span>`;
+  return `<span class="slot-tries">${n ? `已答错 ${n} 次` : ''}</span>`;
+}
 
 function renderSlot(id, isNew = false) {
   const el = $(`slot-${id}`);
   const solved = state.solved[id];
   el.classList.toggle('is-solved', Boolean(solved));
   el.innerHTML = solved
-    ? `<span class="slot-label">${esc(el.dataset.label)}</span><span class="slot-answer">${esc(solved.typed)}</span><span class="stamp${isNew ? ' is-new' : ''}">已破译</span>`
+    ? `<span class="slot-label">${esc(el.dataset.label)}</span><span class="slot-answer">${esc(solved.typed)}</span><span class="stamp${isNew ? ' is-new' : ''}">已破译</span>${triesHtml(id, true)}${unlocked ? `<a class="slot-link" href="#ans-${QUESTION_OF[id]}">解析 ↓</a>` : ''}`
     : `<form class="slot-form" data-slot="${id}">
         <label class="slot-label" for="in-${id}">${esc(el.dataset.label)}</label>
         <input id="in-${id}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
         <button type="submit">核对</button>
         <span class="slot-msg" aria-live="polite"></span>
+        ${triesHtml(id, false)}
       </form>`;
 }
 
@@ -467,6 +626,8 @@ function updateCounts(freshId) {
   const solved = (id) => Boolean(state.solved[id]);
   const n = SLOT_IDS.filter(solved).length;
   $('count').textContent = n;
+  const m = wrongTotal();
+  $('wrongCount').textContent = m ? ` · 答错 ${m} 次` : '';
   for (const pip of document.querySelectorAll('.pip')) {
     pip.classList.toggle('is-on', solved(pip.dataset.slot));
     if (pip.dataset.slot === freshId) pip.classList.add('is-new');
@@ -479,18 +640,90 @@ function updateCounts(freshId) {
   return done;
 }
 
-function noteHtml(text, label) {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  return (
-    `<div class="note-head">出题人注${label ? ` · ${esc(label)}` : ''}</div>` +
-    lines
-      .map((l) =>
-        /^词[：:]/.test(l)
-          ? `<p class="note-words"><span class="note-tag">词</span>${wordsHtml(l.slice(2), false)}</p>`
-          : `<p>${wordsHtml(l, false)}</p>`,
-      )
-      .join('')
-  );
+// ---------------------------------------------------------------- the report, the answers, the dictionary
+
+const RANKS = [
+  [0, '料事如神'],
+  [5, '运筹帷幄'],
+  [12, '足智多谋'],
+  [25, '愈挫愈勇'],
+  [Infinity, '锲而不舍'],
+];
+const rankOf = (m) => RANKS.find(([max]) => m <= max)[1];
+
+function duration(ms) {
+  const min = Math.max(1, Math.round(ms / 60000));
+  if (min < 60) return `${min} 分钟`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} 小时 ${min % 60} 分`;
+  return `${Math.floor(h / 24)} 天 ${h % 24} 小时`;
+}
+const dateOf = (t) => {
+  const d = new Date(t);
+  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+};
+
+function reportHtml(isNew) {
+  const m = wrongTotal();
+  const firstTry = SLOT_IDS.filter((id) => !tries(id)).length;
+  const time = state.started && state.finished > state.started ? duration(state.finished - state.started) : '—';
+  return `<div class="report${isNew ? ' is-new' : ''}" id="report">
+    <div class="report-inner">
+      <p class="report-kicker"><span>CASE CLOSED</span><span>捷 报</span></p>
+      <div class="report-title">
+        <span class="report-big" aria-hidden="true">捷</span>
+        <div><h2>全部破译</h2><p>${TOTAL} 格密语，一格不落。</p></div>
+      </div>
+      <dl class="report-stats">
+        <div><dt>用时</dt><dd>${time}</dd></div>
+        <div><dt>答错</dt><dd>${m} 次</dd></div>
+        <div><dt>一次答对</dt><dd>${firstTry} / ${TOTAL}</dd></div>
+      </dl>
+      <div class="report-foot">
+        <span class="report-rank"><small>评</small>${rankOf(m)}</span>
+        <span class="report-date">${state.finished ? `破译于 ${dateOf(state.finished)}` : ''}</span>
+      </div>
+      <button type="button" class="forget report-forget">遗忘答案，换人再来</button>
+    </div>
+  </div>`;
+}
+
+function noteBody(text) {
+  return text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) =>
+      /^词[：:]/.test(l)
+        ? `<p class="note-words"><span class="note-tag">词</span>${wordsHtml(l.slice(2), false)}</p>`
+        : `<p>${wordsHtml(l, false)}</p>`,
+    )
+    .join('');
+}
+
+function analysisHtml({ answers, notes }) {
+  let html = `<div class="sheet analysis"><div class="sheet-head"><span class="sheet-kicker">ANSWERS</span><h2>题目解析</h2></div>`;
+  for (const r of ROUNDS) {
+    html += `<h3>${esc(r.name)}</h3>`;
+    for (const q of r.questions) {
+      html += `<article class="ans" id="ans-${q.slots[0].id}">
+        <div class="ans-q"><span class="ans-no">${esc(q.no)}</span><p>${wordsHtml(q.text, false)}</p></div>
+        ${q.slots
+          .map(
+            (s) => `<div class="ans-slot">
+              <div class="ans-line">
+                ${s.label ? `<span class="ans-label">${esc(s.label)}</span>` : ''}
+                <span class="ans-name">${esc(answers[s.id] ?? '')}</span>
+                <span class="ans-mine">你的答案：${esc(state.solved[s.id]?.typed ?? '')} · ${tries(s.id) ? `答错 ${tries(s.id)} 次` : '一次答对'}</span>
+              </div>
+              <div class="ans-note">${noteBody(notes[s.id] ?? '')}</div>
+            </div>`,
+          )
+          .join('')}
+      </article>`;
+    }
+  }
+  return `${html}</div>`;
 }
 
 function dictionaryHtml(text) {
@@ -518,39 +751,46 @@ function dictionaryHtml(text) {
   return `${html}</div>`;
 }
 
-/** Once every slot is solved: the notes under each question and the dictionary. */
-async function unlockFinal(fresh) {
-  try {
-    const key = await dictionaryKeyOf(SLOT_IDS.map((id) => fromB64(state.solved[id].k)));
-    const { notes, dictionary } = JSON.parse(await openText(key, FINAL));
-    for (const id of SLOT_IDS) {
-      const el = $(`note-${id}`);
-      el.innerHTML = noteHtml(notes[id] ?? '', el.dataset.label);
-      el.hidden = false;
-      el.classList.toggle('is-new', fresh);
-    }
-    $('dict').innerHTML = dictionaryHtml(dictionary);
-    $('dict').classList.toggle('is-new', fresh);
-    if (fresh) toast('全部破译！每道题下面的出题人注和最后的密语词典都已经解锁。');
-    return true;
-  } catch {
-    return false; // stale progress: fall back to the locked sheet
-  }
-}
-
 function lockedHtml(n) {
+  const m = wrongTotal();
   return `<div class="locked">
     <span class="locked-seal" aria-hidden="true">秘</span>
-    <p class="locked-title">出题人注与密语词典</p>
-    <p>${TOTAL} 格全部破译之后，每道题下面会出现出题人注，这里会出现完整的密语词典。</p>
-    <p class="locked-count">${n} / ${TOTAL}</p>
+    <p class="locked-title">题目解析与密语词典</p>
+    <p>${TOTAL} 格全部破译之后，这里会出现你的破译成绩、每道题的答案与解析，以及完整的密语词典。</p>
+    <p class="locked-count">${n} / ${TOTAL}${m ? ` · 答错 ${m} 次` : ''}</p>
   </div>`;
+}
+
+/** The answers, notes and dictionary, sealed with every slot's key together. */
+async function openFinal() {
+  try {
+    const key = await dictionaryKeyOf(SLOT_IDS.map((id) => fromB64(state.solved[id].k)));
+    return JSON.parse(await openText(key, FINAL));
+  } catch {
+    return null; // stale progress
+  }
 }
 
 async function updateProgress(freshId) {
   const done = updateCounts(freshId);
-  if (done && (await unlockFinal(Boolean(freshId)))) return;
-  $('dict').innerHTML = lockedHtml(SLOT_IDS.filter((id) => state.solved[id]).length);
+  const final = done ? await openFinal() : null;
+  if (!final) {
+    unlocked = false;
+    $('dict').innerHTML = lockedHtml(SLOT_IDS.filter((id) => state.solved[id]).length);
+    return;
+  }
+  const isNew = Boolean(freshId);
+  if (isNew && !state.finished) {
+    state.finished = Date.now();
+    save();
+  }
+  unlocked = true;
+  $('dict').innerHTML = reportHtml(isNew) + analysisHtml(final) + dictionaryHtml(final.dictionary);
+  for (const id of SLOT_IDS) renderSlot(id, id === freshId);
+  if (isNew) {
+    toast('全部破译！成绩、题目解析和密语词典都在页面最下面。');
+    setTimeout(() => $('report').scrollIntoView({ behavior: smooth(), block: 'start' }), 1300);
+  }
 }
 
 let toastTimer = 0;
@@ -573,14 +813,25 @@ document.addEventListener('submit', async (e) => {
   if (!norm) return input.focus();
   const wrapped = SLOTS[id]?.checks[await checkOf(id, norm)];
   if (!wrapped) {
+    // (each different wrong answer counts once)
+    const tried = (state.wrong[id] ??= []);
+    const again = tried.includes(norm);
+    if (!again) {
+      tried.push(norm);
+      save();
+    }
     form.classList.remove('is-wrong');
     void form.offsetWidth; // restart the shake
     form.classList.add('is-wrong');
-    form.querySelector('.slot-msg').textContent = '不对';
+    form.querySelector('.slot-msg').textContent = again ? '这个答案已经试过了' : '不对';
+    form.querySelector('.slot-tries').textContent = `已答错 ${tries(id)} 次`;
+    updateCounts();
+    if (!unlocked) $('dict').innerHTML = lockedHtml(SLOT_IDS.filter((s) => state.solved[s]).length);
     return;
   }
   const key = await open(await wrapKeyOf(id, norm), wrapped);
   state.solved[id] = { k: toB64(key), typed: raw };
+  if (!state.started) state.started = Date.now();
   save();
   renderSlot(id, true);
   updateProgress(id);
@@ -597,32 +848,26 @@ document.addEventListener('input', (e) => {
 // ---------------------------------------------------------------- clicks and keys
 
 document.addEventListener('click', (e) => {
+  if (e.target.closest('.forget')) {
+    if (!confirm('遗忘这台设备上的所有答案、错题记录、笔记和拆词，让下一位玩家从头开始？这一步不能撤销。')) return;
+    localStorage.removeItem(STORE);
+    scrollTo(0, 0);
+    location.reload();
+    return;
+  }
   const w = e.target.closest('.q-text .w');
   if (w) return editing?.w === w ? closeEditor() : openEditor(w);
   const letter = e.target.closest('.letter');
   if (letter) return setOpen(letter.dataset.round, !state.open[letter.dataset.round]);
   const fold = e.target.closest('.fold');
   if (fold) return setOpen(fold.dataset.round, false);
-  const item = e.target.closest('.nb-item');
-  if (item) {
-    if (editing) closeEditor();
-    active = { key: item.dataset.key, piece: isPiece(item.dataset.key) };
-    refresh();
-    document.body.classList.remove('nb-open');
-    const first = exactTargets(active.key)[0];
-    if (first) {
-      const r = first.getBoundingClientRect();
-      scrollBy({ top: r.top - innerHeight * 0.3, behavior: still.matches ? 'auto' : 'smooth' });
-    }
-    return;
-  }
   if (e.target.closest('#nbToggle')) return document.body.classList.toggle('nb-open');
-  if (e.target.closest('.nb-close')) return document.body.classList.remove('nb-open');
-  if (e.target.closest('#ed, .nb')) return;
   if (editing) closeEditor();
   else if (active) {
     active = null;
+    shown = null;
     refresh();
+    renderNotebook();
   }
 });
 
@@ -633,12 +878,6 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     openEditor(w);
   }
-});
-
-$('reset').addEventListener('click', () => {
-  if (!confirm('清空所有答题进度、笔记和拆词？这一步不能撤销。')) return;
-  localStorage.removeItem(STORE);
-  location.reload();
 });
 
 // ---------------------------------------------------------------- start
