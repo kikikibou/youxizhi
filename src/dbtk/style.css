@@ -1,0 +1,652 @@
+/*
+ * 大辩题库：一块 2000s 证券营业厅的 LED 行情大屏（见 DESIGN.md）。
+ * 平的黑屏，暗灯珠点阵底，LED 模块缝；红涨绿跌，黄给能点的。全部直角。
+ */
+@font-face {
+  font-family: 'DBTK Round';
+  /* 寒蝉全圆体 F Bold 的子集，内部名字已改（保留字体名），见 fonts.json */
+  src: url('./fonts/dbtk-round.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --screen: #070807;
+  --off: #1b1f1c;
+  --seam: #000;
+  --red: #ff3b30;
+  --red-hi: #ff5a4f;
+  --green: #33d17a;
+  --green-hi: #4fe08d;
+  --yellow: #ffcc33;
+  --white: #f1eedf;
+  --dim: #9a978a;
+  --who: #d2cdbb;
+  --row-line: #1f2320;
+  --rule: #2a2d2a;
+  --frame: #3a3d39;
+  --field: #0c0e0c;
+  --bezel: #3c3f42;
+  --hall: #1c1d21;
+  --sys: -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --round: 'DBTK Round', var(--sys);
+  --dot: 'Doto', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+::selection {
+  background: var(--yellow);
+  color: var(--screen);
+}
+html {
+  background: linear-gradient(to bottom, #15161a 0%, var(--hall) 70%, #121316 70.3%, #0e0f11 100%) fixed;
+  scrollbar-color: #2f3430 var(--screen);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  color: var(--white);
+  font-family: var(--sys);
+  min-height: 100svh;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+/* ---------- the screen ---------- */
+.board {
+  position: relative;
+  width: min(440px, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 0 10px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  /* LED modules: seams, then unlit dots */
+  background:
+    linear-gradient(to right, transparent 0 calc(100% - 1px), var(--seam) calc(100% - 1px)) 0 0 / 97.5px 100%,
+    linear-gradient(to bottom, transparent 0 calc(100% - 1px), var(--seam) calc(100% - 1px)) 0 0 / 100% 105.5px,
+    radial-gradient(circle, var(--off) 1px, transparent 1.4px) 0 0 / 4px 4px,
+    var(--screen);
+}
+.board > * {
+  flex-shrink: 0;
+}
+@media (min-width: 600px) {
+  .board {
+    margin: 40px auto;
+    min-height: calc(100svh - 80px);
+    box-shadow: 0 0 0 10px var(--bezel), 0 0 0 11px #55585b, 0 30px 60px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* LED dot mask: only for big fixed lettering */
+.led {
+  -webkit-mask-image: radial-gradient(circle, #000 1.15px, transparent 1.5px);
+  mask-image: radial-gradient(circle, #000 1.15px, transparent 1.5px);
+  -webkit-mask-size: 3px 3px;
+  mask-size: 3px 3px;
+}
+
+/* ---------- ticker ---------- */
+.ticker {
+  margin: 0 -10px;
+  height: 32px;
+  overflow: hidden;
+  border-bottom: 2px solid #000;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 59, 48, 0.05);
+}
+.ticker .run {
+  white-space: nowrap;
+  width: max-content;
+  font: 700 14px/1 var(--sys);
+  color: var(--red);
+  padding-left: 12px;
+}
+.ticker b {
+  font-family: var(--round);
+  font-weight: 400;
+  color: var(--yellow);
+  margin-right: 6px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ticker .run {
+    animation: tick var(--secs, 24s) linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker .run > span {
+    display: none;
+  }
+}
+@keyframes tick {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- header ---------- */
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 2px 9px;
+}
+.head h1 {
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--yellow);
+  letter-spacing: 0.04em;
+}
+.clock {
+  text-align: right;
+  font: 600 12px/1.5 var(--sys);
+  color: var(--dim);
+}
+.clock b {
+  display: block;
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 19px;
+  color: var(--white);
+  letter-spacing: 0.04em;
+}
+.clock em {
+  font-style: normal;
+  color: var(--red);
+}
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+.tabs button {
+  border: 1px solid var(--frame);
+  background: none;
+  color: var(--dim);
+  font-family: var(--round);
+  font-size: 15px;
+  padding: 5px 12px 4px;
+}
+.tabs button[aria-pressed='true'] {
+  color: var(--screen);
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.tabs .rand {
+  margin-left: auto;
+  color: var(--white);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tabs .rand:hover {
+  border-color: var(--yellow);
+}
+.tabs .rand:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tabs svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- quote table ---------- */
+.table {
+  border-top: 2px solid #000;
+  margin-bottom: 10px;
+}
+.cols,
+.row-head {
+  display: grid;
+  grid-template-columns: 46px 1fr 48px 56px;
+  column-gap: 6px;
+  align-items: center;
+}
+.cols {
+  font: 700 12px/1 var(--sys);
+  color: var(--yellow);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.cols span:nth-child(n + 3) {
+  text-align: right;
+}
+.row {
+  border-bottom: 1px solid var(--row-line);
+}
+.row-head {
+  width: 100%;
+  padding: 7px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.row-head:hover .name {
+  color: #fff;
+}
+.code {
+  font-family: var(--dot);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--dim);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+.code i {
+  display: block;
+  font-style: normal;
+  font-family: var(--round);
+  font-size: 12px;
+  color: var(--yellow);
+}
+.t {
+  display: block;
+  min-width: 0;
+}
+.name {
+  display: block;
+  font: 700 14.5px/1.42 var(--sys);
+  color: var(--white);
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+.who {
+  display: block;
+  font: 500 11.5px/1.3 var(--sys);
+  color: var(--dim);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.who b {
+  font-weight: 600;
+  color: var(--who);
+}
+.num {
+  text-align: right;
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 19px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.chg {
+  text-align: right;
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1;
+}
+.up {
+  color: var(--red);
+}
+.down {
+  color: var(--green);
+}
+.limit {
+  display: inline-block;
+  margin-top: 4px;
+  font: 700 11px/1 var(--sys);
+  color: var(--screen);
+  background: var(--red);
+  padding: 2px 4px;
+}
+.empty {
+  padding: 28px 4px;
+  font: 600 14px/1.6 var(--sys);
+  color: var(--dim);
+}
+
+/* the open row: long / short split, buy = 正方, sell = 反方, and a vote for the topic itself */
+.row.is-open {
+  /* the selected quote: a full yellow frame over a faint tint, like the board's cursor box */
+  background: rgba(255, 204, 51, 0.06);
+  border: 1px solid rgba(255, 204, 51, 0.7);
+  margin: -1px -6px 0;
+  padding: 0 5px 9px;
+}
+.depth {
+  display: grid;
+  grid-template-columns: 1fr 74px;
+  gap: 6px 8px;
+  margin-top: 1px;
+}
+.bar {
+  grid-column: 1;
+  display: flex;
+  height: 18px;
+  font: 700 11.5px/18px var(--sys);
+  color: var(--screen);
+}
+.bar span {
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 6px;
+}
+.bar .long {
+  background: var(--red);
+}
+.bar .short {
+  background: var(--green);
+  text-align: right;
+}
+.bar b {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 13px;
+}
+.bar.is-empty span {
+  width: 100%;
+  color: var(--dim);
+  background: radial-gradient(circle, #2a2f2b 1.2px, transparent 1.5px) 0 0 / 4px 4px;
+}
+.trade {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.trade button {
+  min-height: 48px;
+  border: 0;
+  color: var(--screen);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 6px;
+  min-width: 0;
+}
+.trade .act {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--round);
+  font-size: 17px;
+  line-height: 1;
+}
+.trade small {
+  font: 700 12px/1 var(--sys);
+}
+.trade .pos {
+  max-width: 100%;
+  font: 600 11.5px/1.2 var(--sys);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+.trade .buy {
+  background: var(--red);
+}
+.trade .sell {
+  background: var(--green);
+}
+.trade .buy:hover {
+  background: var(--red-hi);
+}
+.trade .sell:hover {
+  background: var(--green-hi);
+}
+.trade button[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--screen), inset 0 0 0 4px currentColor;
+}
+.rate {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  border: 1.5px solid var(--yellow);
+  background: rgba(255, 204, 51, 0.08);
+  color: var(--yellow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--round);
+  font-size: 18px;
+  line-height: 1;
+}
+.rate small {
+  font: 700 11px/1.2 var(--sys);
+  color: var(--white);
+  text-align: center;
+}
+.rate:hover {
+  background: rgba(255, 204, 51, 0.18);
+}
+.rate[aria-pressed='true'] {
+  background: var(--yellow);
+  color: var(--screen);
+  cursor: default;
+}
+.rate[aria-pressed='true'] small {
+  color: var(--screen);
+}
+
+/* a change on the board: the row blinks, the number flickers like a LED refresh */
+.row.flash {
+  animation: flash 0.6s steps(3);
+}
+@keyframes flash {
+  0%,
+  66% {
+    background-color: rgba(255, 204, 51, 0.2);
+  }
+}
+.num.bump {
+  animation: bump 0.5s steps(4);
+}
+@keyframes bump {
+  0%,
+  50% {
+    opacity: 0.25;
+  }
+  25%,
+  75%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---------- monthly board ---------- */
+.month {
+  margin-bottom: 14px;
+  border-top: 2px solid #000;
+  padding-top: 7px;
+}
+.month h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--yellow);
+  margin-bottom: 5px;
+}
+.month h2 small {
+  font: 600 11.5px var(--sys);
+  color: var(--dim);
+}
+.month ol {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.month li button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 7px;
+  align-items: center;
+  border: 1px solid var(--rule);
+  background: none;
+  padding: 4px 7px;
+  text-align: left;
+}
+.month li button:hover {
+  border-color: var(--yellow);
+}
+.month b {
+  grid-row: 1 / 3;
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--yellow);
+}
+.month .c {
+  font-family: var(--dot);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--white);
+  line-height: 1.2;
+}
+.month .p {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--red);
+  line-height: 1.2;
+}
+
+/* ---------- IPO = submit ---------- */
+.ipo {
+  margin-top: auto;
+  border: 1px solid var(--frame);
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.ipo-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--round);
+  font-size: 18px;
+  color: var(--yellow);
+  margin-bottom: 8px;
+}
+.ipo-title small {
+  font: 600 11.5px var(--sys);
+  color: var(--dim);
+}
+.ipo input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--yellow);
+  border-radius: 0;
+  padding: 0 10px;
+  background: var(--field);
+  color: var(--white);
+  font: 700 15px/1 var(--sys);
+  caret-color: var(--yellow);
+}
+.ipo input::placeholder {
+  color: #8d8a7e;
+  font-weight: 500;
+}
+.ipo .r {
+  display: flex;
+  margin-top: 8px;
+}
+.ipo .pre {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid #5a5a4c;
+  border-right: 0;
+  font-family: var(--round);
+  font-size: 15px;
+  color: var(--yellow);
+}
+.ipo .r input {
+  flex: 1;
+  border-color: #5a5a4c;
+}
+.ipo .go {
+  flex: none;
+  margin-left: 8px;
+  border: 0;
+  background: var(--yellow);
+  color: var(--screen);
+  font-family: var(--round);
+  font-size: 17px;
+  padding: 0 12px;
+}
+.ipo .go:hover {
+  background: #ffd75c;
+}
+.ipo .note {
+  min-height: 0;
+  font: 600 12.5px/1.4 var(--sys);
+  color: var(--yellow);
+}
+.ipo .note:not(:empty) {
+  margin-top: 8px;
+}
+.ipo.has-error .note {
+  color: var(--red);
+}
+.ipo.has-error #ipo-t {
+  border-color: var(--red);
+}
+
+/* ---------- footer ---------- */
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 9px;
+}
+.foot small {
+  font: 600 11.5px/1.4 var(--sys);
+  color: var(--dim);
+}
+.share {
+  border: 0;
+  background: none;
+  color: var(--white);
+  font-family: var(--round);
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+.share:hover {
+  color: var(--yellow);
+}
+.share svg {
+  width: 15px;
+  height: 15px;
+}

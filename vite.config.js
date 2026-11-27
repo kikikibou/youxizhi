@@ -22,6 +22,8 @@ export default defineConfig({
         dgxgBPreview: 'dgxg/b/preview.html',
         // 解码与三国知识问答: a page of its own at /sgjm/ (no three.js, no passphrase gate)
         sgjm: 'sgjm/index.html',
+        // 大辩题库: a page of its own at /dbtk/ (no three.js, no passphrase gate)
+        dbtk: 'dbtk/index.html',
       },
     },
   },

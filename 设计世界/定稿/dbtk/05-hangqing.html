@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大辩题库 · 05 营业厅行情屏</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chinese-fonts/hcqyt@2.0.0/dist/ChillRoundFBold/result.css">
+<style>
+@font-face { font-family: "Doto"; font-weight: 900; font-display: swap;
+  src: url(https://cdn.jsdelivr.net/fontsource/fonts/doto@latest/latin-900-normal.woff2) format("woff2"); }
+@font-face { font-family: "Doto"; font-weight: 700; font-display: swap;
+  src: url(https://cdn.jsdelivr.net/fontsource/fonts/doto@latest/latin-700-normal.woff2) format("woff2"); }
+
+:root {
+  --screen: #070807;
+  --off: #1b1f1c;
+  --seam: #000;
+  --red: #ff3b30;
+  --green: #33d17a;
+  --yellow: #ffcc33;
+  --white: #f1eedf;
+  --dim: #9a978a;
+  --bezel: #3c3f42;
+  --sys: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --round: "寒蝉全圆体 Bold", var(--sys);
+  --dot: "Doto", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+::selection { background: var(--yellow); color: var(--screen); }
+html, body { height: 100%; }
+body {
+  background:
+    linear-gradient(to bottom, #15161a 0%, #1c1d21 70%, #121316 70.3%, #0e0f11 100%);
+  color: var(--white); font-family: var(--sys);
+  display: grid; place-items: center; overflow: hidden;
+}
+.board {
+  position: relative; width: 390px; height: 844px;
+  display: flex; flex-direction: column;
+  /* LED modules: unlit dots + module seams */
+  background:
+    linear-gradient(to right, transparent 0 calc(100% - 1px), var(--seam) calc(100% - 1px)) 0 0 / 97.5px 100%,
+    linear-gradient(to bottom, transparent 0 calc(100% - 1px), var(--seam) calc(100% - 1px)) 0 0 / 100% 105.5px,
+    radial-gradient(circle, var(--off) 1px, transparent 1.4px) 0 0 / 4px 4px,
+    var(--screen);
+  padding: 0 10px 12px;
+}
+@media (min-width: 600px) {
+  .board { box-shadow: 0 0 0 10px var(--bezel), 0 0 0 11px #55585b, 0 30px 60px rgba(0,0,0,.6); }
+}
+@media (max-width: 599px) { body { display: block; } .board { width: 100vw; height: 100svh; min-height: 844px; } }
+.board > * { flex-shrink: 0; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+
+/* LED dot mask for big fixed lettering */
+.led { -webkit-mask-image: radial-gradient(circle, #000 1.15px, transparent 1.5px); mask-image: radial-gradient(circle, #000 1.15px, transparent 1.5px); -webkit-mask-size: 3px 3px; mask-size: 3px 3px; }
+
+/* ---------- ticker ---------- */
+.ticker { margin: 0 -10px; height: 32px; overflow: hidden; border-bottom: 2px solid #000; display: flex; align-items: center; background: rgba(255,59,48,.05); }
+.ticker .run { white-space: nowrap; font: 700 14px/1 var(--sys); color: var(--red); padding-left: 12px; }
+.ticker .run b { font-family: var(--round); font-weight: 400; color: var(--yellow); margin-right: 6px; }
+@media (prefers-reduced-motion: no-preference) {
+  .ticker .run { animation: tick 22s linear infinite; }
+}
+@keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ---------- header ---------- */
+.head { display: flex; justify-content: space-between; align-items: flex-end; padding: 12px 2px 9px; }
+.head h1 { font-family: var(--round); font-weight: 400; font-size: 40px; line-height: 1; color: var(--yellow); letter-spacing: .04em; }
+.head .clock { text-align: right; font: 600 12px/1.5 var(--sys); color: var(--dim); }
+.head .clock b { display: block; font-family: var(--dot); font-weight: 900; font-size: 19px; color: var(--white); letter-spacing: .04em; }
+.head .clock em { font-style: normal; color: var(--red); }
+
+.tabs { display: flex; gap: 6px; padding-bottom: 8px; }
+.tabs button {
+  border: 1px solid #3a3d39; background: none; cursor: pointer; color: var(--dim);
+  font-family: var(--round); font-size: 15px; padding: 5px 12px 4px;
+}
+.tabs button[aria-pressed="true"] { color: var(--screen); background: var(--yellow); border-color: var(--yellow); }
+.tabs .rand { margin-left: auto; color: var(--white); display: inline-flex; align-items: center; gap: 6px; }
+.tabs svg { width: 14px; height: 14px; }
+
+/* ---------- quote table ---------- */
+.table { border-top: 2px solid #000; }
+.cols, .row { display: grid; grid-template-columns: 46px 1fr 48px 56px; column-gap: 6px; align-items: center; }
+.cols { font: 700 12px/1 var(--sys); color: var(--yellow); padding: 7px 0 7px; border-bottom: 1px solid #2a2d2a; }
+.cols span:nth-child(n+3) { text-align: right; }
+.row { padding: 7px 0; border-bottom: 1px solid #1f2320; cursor: pointer; }
+.code { font-family: var(--dot); font-weight: 700; font-size: 13px; color: var(--dim); letter-spacing: .02em; line-height: 1.2; }
+.code i { display: block; font-style: normal; font-family: var(--round); font-size: 12px; color: var(--yellow); }
+.name { font: 700 14.5px/1.42 var(--sys); color: var(--white); letter-spacing: .01em; }
+.who { font: 500 11.5px/1.3 var(--sys); color: var(--dim); margin-top: 2px; }
+.who b { font-weight: 600; color: #d2cdbb; }
+.num { text-align: right; font-family: var(--dot); font-weight: 900; font-size: 19px; line-height: 1; }
+.chg { text-align: right; font-family: var(--dot); font-weight: 900; font-size: 16px; line-height: 1; }
+.up { color: var(--red); } .down { color: var(--green); }
+.limit { display: inline-block; margin-top: 4px; font: 700 11px/1 var(--sys); color: var(--screen); background: var(--red); padding: 2px 4px; }
+
+/* expanded row: long / short split, buy = 正方, sell = 反方, and a separate vote for the topic */
+.row.open { background: rgba(255,204,51,.06); border-left: 3px solid var(--yellow); margin-left: -10px; padding-left: 7px; margin-right: -10px; padding-right: 10px; }
+.depth { grid-column: 1 / -1; margin-top: 8px; display: grid; grid-template-columns: 1fr 74px; gap: 6px 8px; }
+.bar { grid-column: 1; display: flex; height: 18px; font: 700 11.5px/18px var(--sys); color: var(--screen); }
+.bar span { white-space: nowrap; overflow: hidden; padding: 0 6px; }
+.bar .long { width: 58%; background: var(--red); }
+.bar .short { width: 42%; background: var(--green); text-align: right; }
+.bar b { font-family: var(--dot); font-weight: 900; font-size: 13px; }
+.trade { grid-column: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.trade button {
+  height: 38px; border: 0; cursor: pointer; color: var(--screen);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: var(--round); font-size: 17px;
+}
+.trade small { font: 700 12px/1 var(--sys); }
+.trade .buy { background: var(--red); }
+.trade .sell { background: var(--green); }
+.trade .buy:hover { background: #ff5a4f; } .trade .sell:hover { background: #4fe08d; }
+.rate {
+  grid-column: 2; grid-row: 1 / 3;
+  border: 1.5px solid var(--yellow); background: rgba(255,204,51,.08); color: var(--yellow); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--round); font-size: 18px; line-height: 1;
+}
+.rate small { font: 700 11px/1.2 var(--sys); color: var(--white); text-align: center; }
+.rate:hover { background: rgba(255,204,51,.18); }
+
+/* ---------- monthly board ---------- */
+.month { margin-top: 10px; border-top: 2px solid #000; padding-top: 7px; }
+.month h2 { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--round); font-weight: 400; font-size: 16px; color: var(--yellow); margin-bottom: 5px; }
+.month h2 small { font: 600 11.5px var(--sys); color: var(--dim); }
+.month ol { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.month li { display: grid; grid-template-columns: auto 1fr; column-gap: 7px; align-items: center; border: 1px solid #2a2d2a; padding: 4px 7px; }
+.month li > b { grid-row: 1 / 3; font-family: var(--dot); font-weight: 900; font-size: 24px; line-height: 1; color: var(--yellow); }
+.month .c { font-family: var(--dot); font-weight: 700; font-size: 12px; color: var(--white); line-height: 1.2; }
+.month .p { font-family: var(--dot); font-weight: 900; font-size: 14px; color: var(--red); line-height: 1.2; }
+
+/* ---------- IPO = submit ---------- */
+.ipo { margin-top: auto; border: 1px solid #3a3d39; padding: 10px 10px 10px; background: rgba(0,0,0,.55); }
+.ipo > label { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--round); font-size: 18px; color: var(--yellow); margin-bottom: 8px; }
+.ipo label small { font: 600 11.5px var(--sys); color: var(--dim); }
+.ipo .r { display: flex; gap: 8px; margin-top: 8px; }
+.ipo .pre { flex: none; display: flex; align-items: center; padding: 0 10px; border: 1px solid #5a5a4c; border-right: 0; font-family: var(--round); font-size: 15px; color: var(--yellow); margin-right: -8px; }
+.ipo .r input { border-color: #5a5a4c; }
+.ipo input {
+  width: 100%; flex: 1; min-width: 0; height: 42px; border: 1px solid var(--yellow); border-radius: 0; padding: 0 10px;
+  background: #0c0e0c; color: var(--white); font: 700 15px/1 var(--sys); caret-color: var(--yellow);
+}
+.ipo input::placeholder { color: #8d8a7e; font-weight: 500; }
+.ipo .go { border: 0; cursor: pointer; background: var(--yellow); color: var(--screen); font-family: var(--round); font-size: 17px; padding: 0 12px; }
+.foot { display: flex; justify-content: space-between; align-items: center; padding-top: 9px; }
+.foot small { font: 600 11.5px/1.4 var(--sys); color: var(--dim); }
+.share { border: 0; background: none; cursor: pointer; color: var(--white); font-family: var(--round); font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.share svg { width: 15px; height: 15px; }
+</style>
+</head>
+<body>
+<main class="board">
+  <div class="ticker" aria-label="快讯">
+    <p class="run"><b>快讯</b>周一应当被开除出一周　今日涨停　　题库人「西天财务部」回应：报销流程正在走　　题库人「小区保安老李」：我随时有空　　<b>快讯</b>周一应当被开除出一周　今日涨停　　题库人「西天财务部」回应：报销流程正在走　　题库人「小区保安老李」：我随时有空　　</p>
+  </div>
+
+  <header class="head">
+    <h1 class="led">大辩题库</h1>
+    <div class="clock"><b>11-27 14:32</b>十一月榜 <em>3</em> 天后收盘</div>
+  </header>
+
+  <nav class="tabs" aria-label="排序">
+    <button aria-pressed="true">最热</button>
+    <button aria-pressed="false">最新</button>
+    <button class="rand"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 4h3.5c2 0 3 1 4 3l1 2c1 2 2 3 4 3H15M12.5 9.5 15 12l-2.5 2.5M1 12h3.5c1.2 0 2-.4 2.6-1.1M9.3 5.1C9.9 4.4 10.7 4 12 4h3M12.5 1.5 15 4l-2.5 2.5"/></svg>随机抽一只</button>
+  </nav>
+
+  <section class="table" aria-label="辩题行情">
+    <div class="cols"><span>代码</span><span>辩题</span><span>票数</span><span>今日涨幅</span></div>
+
+    <article class="row open">
+      <span class="code">DB0001</span>
+      <div class="t"><p class="name">手机掉进马桶，应该先捞手机还是先提裤子</p><p class="who">题库人 <b>匿名二辩</b></p></div>
+      <span class="num up">1284</span>
+      <span class="chg up">+12.6%</span>
+      <div class="depth">
+        <div class="bar"><span class="long">多方 先捞手机 <b>58%</b></span><span class="short">先提裤子 空方 <b>42%</b></span></div>
+        <div class="trade">
+          <button class="buy">买入<small>支持正方</small></button>
+          <button class="sell">卖出<small>支持反方</small></button>
+        </div>
+        <button class="rate">看涨<small>给这题<br>投一票</small></button>
+      </div>
+    </article>
+    <article class="row">
+      <span class="code">DB0002</span>
+      <div class="t"><p class="name">周一应当被开除出一周</p><p class="who">题库人 <b>不想上班的一辩</b></p></div>
+      <span class="num up">963</span>
+      <span class="chg up">+10.0%<br><span class="limit">涨停</span></span>
+    </article>
+    <article class="row">
+      <span class="code">DB0003</span>
+      <div class="t"><p class="name">孙悟空打妖怪的开销，能不能找唐僧报销</p><p class="who">题库人 <b>西天财务部</b></p></div>
+      <span class="num up">731</span>
+      <span class="chg up">+4.2%</span>
+    </article>
+    <article class="row">
+      <span class="code">DB0004</span>
+      <div class="t"><p class="name">外星人降落地球，应该先见联合国秘书长还是先见小区保安</p><p class="who">题库人 <b>小区保安老李</b></p></div>
+      <span class="num down">402</span>
+      <span class="chg down">-1.8%</span>
+    </article>
+    <article class="row">
+      <span class="code">DB0005<i>新上市</i></span>
+      <div class="t"><p class="name">半夜想到绝妙论点，该不该打电话叫醒队友</p><p class="who">题库人 <b>凌晨三点的四辩</b></p></div>
+      <span class="num up">188</span>
+      <span class="chg up">+88.0%</span>
+    </article>
+  </section>
+
+  <section class="month" aria-label="十一月榜">
+    <h2>十一月 月度涨幅榜<small>按本月票数，30 日收盘</small></h2>
+    <ol>
+      <li><b>1</b><span class="c">DB0001</span><span class="p">+1284</span></li>
+      <li><b>2</b><span class="c">DB0002</span><span class="p">+963</span></li>
+      <li><b>3</b><span class="c">DB0003</span><span class="p">+731</span></li>
+    </ol>
+  </section>
+
+  <form class="ipo" onsubmit="return false">
+    <label for="t">申请上市<small>通过后从 DB0006 开始编号</small></label>
+    <input id="t" placeholder="写下你的离谱辩题" autocomplete="off">
+    <div class="r"><label class="pre" for="w">题库人</label><input id="w" placeholder="署个名，不写就是匿名" autocomplete="off"><button class="go">递交</button></div>
+  </form>
+  <div class="foot">
+    <small>行情仅供娱乐，不构成辩论建议</small>
+    <button class="share"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h5v5M14 2 7 9M12 10v4H2V4h4"/></svg>甩到群里</button>
+  </div>
+</main>
+</body>
+</html>

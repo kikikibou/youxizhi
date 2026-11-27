@@ -8,6 +8,123 @@
         "value": "segoe ui symbol",
         "createdAt": "2026-11-27T09:21:53.808Z",
         "reason": "Claude: symbol-font fallback so the footer badge's ★ stars render (.strip-stars), not a text face; predates this session"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "zcool qingke huangyou",
+        "files": [
+          "设计世界/样张/dbtk/01-jiantou.html"
+        ],
+        "createdAt": "2026-11-27T10:39:55.361Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "bungee",
+        "files": [
+          "设计世界/样张/dbtk/01-jiantou.html"
+        ],
+        "createdAt": "2026-11-27T10:39:55.576Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "smiley sans oblique",
+        "files": [
+          "设计世界/样张/dbtk/02-youguo.html"
+        ],
+        "createdAt": "2026-11-27T10:42:05.859Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "alfa slab one",
+        "files": [
+          "设计世界/样张/dbtk/02-youguo.html"
+        ],
+        "createdAt": "2026-11-27T10:42:06.069Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "zcool xiaowei",
+        "files": [
+          "设计世界/样张/dbtk/03-huangli.html"
+        ],
+        "createdAt": "2026-11-27T10:44:11.724Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "bodoni moda",
+        "files": [
+          "设计世界/样张/dbtk/03-huangli.html"
+        ],
+        "createdAt": "2026-11-27T10:44:11.930Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "zhuque fangsong (technical preview)",
+        "files": [
+          "设计世界/样张/dbtk/04-shili.html"
+        ],
+        "createdAt": "2026-11-27T10:46:15.916Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "barlow",
+        "files": [
+          "设计世界/样张/dbtk/04-shili.html"
+        ],
+        "createdAt": "2026-11-27T10:46:16.111Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "寒蝉全圆体 bold",
+        "files": [
+          "设计世界/样张/dbtk/05-hangqing.html"
+        ],
+        "createdAt": "2026-11-27T10:47:54.714Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "doto",
+        "files": [
+          "设计世界/样张/dbtk/05-hangqing.html"
+        ],
+        "createdAt": "2026-11-27T10:47:54.902Z",
+        "reason": "/new-world sample for a new sub-site world (dbtk); root DESIGN.md governs only the town, fonts are the sample's own direction"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "src/dbtk/style.css"
+        ],
+        "createdAt": "2026-11-27T11:20:57.735Z",
+        "reason": "The scrolling 快讯 strip is one of the three borrowed features of the direction the site owner chose (src/dbtk/DESIGN.md); it stops under prefers-reduced-motion"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "寒蝉全圆体 bold",
+        "files": [
+          "设计世界/定稿/dbtk/05-hangqing.html"
+        ],
+        "createdAt": "2026-11-27T11:20:58.160Z",
+        "reason": "Archived approved /new-world sample; it sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "doto",
+        "files": [
+          "设计世界/定稿/dbtk/05-hangqing.html"
+        ],
+        "createdAt": "2026-11-27T11:20:58.595Z",
+        "reason": "Archived approved /new-world sample; it sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
       }
     ]
   }

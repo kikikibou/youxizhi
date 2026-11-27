@@ -206,7 +206,8 @@ export const PAGES = [
         },
       },
       // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
-      { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', ready: false },
+      // (a page of its own, /dbtk/: src/dbtk/; its close-up and boarding pass come later)
+      { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', href: 'dbtk/', ready: true },
       { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑的新型赛制', ready: false },
       { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了动效更多之外没有什么提升点的辩论计时器', ready: false },
     ],
