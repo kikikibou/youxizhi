@@ -435,16 +435,23 @@ function debate(b, k, site, R) {
 
 /* ---------------------------------------------------------------- puzzle */
 // A small hedge maze on the plaza in front of the cube (one way through),
-// and clipped cubes on the cube's roof.
+// laid out as a garden: a gravel bed in a stone kerb, a gate at the way in
+// and the way out, lanterns, planting round it; and clipped cubes on the
+// cube's roof. (The 问答 close-up looks down on it: its route, World.)
 function puzzle(b, k, site, R) {
   const { cols, rows, s, x0 } = MAZE_AT;
   const z0 = MAZE_AT.z0; // back edge (row 0); rows run towards the plaza (+z)
   const t = 0.21; // half a hedge's thickness
   const h = 0.8;
   const [right, down] = [MAZE.right, MAZE.down].map((rows) => rows.map((row) => [...row].map((c) => c === '1')));
-  // (one shade for every wall: where two meet, their tops share a plane)
-  const wallX = (x, za, zb) => k.hedge([x - t, 0, za - t], [x + t, h, zb + t], 1.25);
-  const wallZ = (z, xa, xb) => k.hedge([xa - t, 0, z - t], [xb + t, h, z + t], 1.25);
+  // (one shade for every wall: where two meet, their tops share a plane; a
+  // narrower, lighter top on each, as if fresh from the shears)
+  const hedge = (a, c) => {
+    k.hedge(a, c, 1.12);
+    k.hedge([a[0] + 0.06, h, a[2] + 0.06], [c[0] - 0.06, h + 0.08, c[2] - 0.06], 1.42);
+  };
+  const wallX = (x, za, zb) => hedge([x - t, 0, za - t], [x + t, h, zb + t]);
+  const wallZ = (z, xa, xb) => hedge([xa - t, 0, z - t], [xb + t, h, z + t]);
   for (let c = 0; c < cols; c++) {
     if (c !== MAZE_AT.out) wallZ(z0, x0 + c * s, x0 + (c + 1) * s); // back, the way out
     if (c !== MAZE_AT.in) wallZ(z0 + rows * s, x0 + c * s, x0 + (c + 1) * s); // front, the way in
@@ -457,6 +464,8 @@ function puzzle(b, k, site, R) {
       if (down[r][c] && r < rows - 1) wallZ(z0 + (r + 1) * s, x0 + c * s, x0 + (c + 1) * s);
     }
   }
+  mazeGarden(b, { x0, z0, s, cols, rows });
+
   // Clipped cubes in square planters: two big ones beside the maze, and a
   // row on the roof (top at 20.4; seen from above, during flights).
   const cube = (x, y, z, s, shade) => {
@@ -472,6 +481,86 @@ function puzzle(b, k, site, R) {
     for (let i = 0; i < 5; i++) k.tuft(x + (R() - 0.5) * 0.6, 0.6, 1.5 + (R() - 0.5) * 0.6, 0.7 + R() * 0.4, null, 0.3);
   }
   for (const [x, z] of site.page.scene.trees) k.pit(x, z);
+}
+
+/**
+ * Round the hedge maze: its bed of gravel in a low stone kerb (open at the
+ * ways in and out, stepping stones up to the way in), a gate at each way (two
+ * posts in the accent, a tie beam, a white beam and a dark cap over them, a
+ * lantern hung in it), stone lanterns at its corners, and low planting along
+ * its front and sides. On a random sequence of its own, so the other pages'
+ * planting (which shares one) stays as it was.
+ */
+function mazeGarden(b, { x0, z0, s, cols, rows }) {
+  const R = rng(20261128);
+  const k = kit(meshes(b, R), pieces(b, R), R);
+  const x1 = x0 + cols * s;
+  const z1 = z0 + rows * s;
+  const bed = { x0: x0 - 0.6, x1: x1 + 0.6, z0: z0 - 0.42, z1: z1 + 0.6 };
+  const way = (c) => [x0 + c * s, x0 + (c + 1) * s];
+  const [in0, in1] = way(MAZE_AT.in);
+  const [out0, out1] = way(MAZE_AT.out);
+
+  // The bed: gravel, and its kerb (open where the ways are).
+  b.box('gravel', [bed.x0, 0, bed.z0], [bed.x1, 0.035, bed.z1]);
+  const kw = 0.2;
+  const kh = 0.15;
+  const kerbZ = (za, zb, gap) => {
+    b.box('concrete', [bed.x0, 0, za], [gap[0], kh, zb]);
+    b.box('concrete', [gap[1], 0, za], [bed.x1, kh, zb]);
+  };
+  kerbZ(bed.z1 - kw, bed.z1, [in0, in1]);
+  kerbZ(bed.z0, bed.z0 + kw, [out0, out1]);
+  b.box('concrete', [bed.x0, 0, bed.z0], [bed.x0 + kw, kh, bed.z1]);
+  b.box('concrete', [bed.x1 - kw, 0, bed.z0], [bed.x1, kh, bed.z1]);
+  // Stepping stones up to the way in.
+  const mid = (in0 + in1) / 2;
+  for (const [i, z] of [bed.z1 + 0.45, bed.z1 + 1.15, bed.z1 + 1.85].entries()) {
+    const dx = (i % 2 ? 1 : -1) * 0.12;
+    b.box('concrete', [mid + dx - 0.36, 0, z - 0.26], [mid + dx + 0.36, 0.05, z + 0.26]);
+  }
+
+  // A gate at each way: the posts in the accent, a tie beam, a white beam
+  // and a dark cap over them, and (at the way in) a lantern hung in it.
+  const gate = (xa, xb, z, lamp = true) => {
+    const [pa, pb] = [xa + 0.3, xb - 0.3];
+    for (const x of [pa, pb]) b.box('orange', [x - 0.08, 0, z - 0.08], [x + 0.08, 1.98, z + 0.08]);
+    b.box('orange', [pa - 0.16, 1.72, z - 0.06], [pb + 0.16, 1.82, z + 0.06]);
+    b.box('white', [pa - 0.36, 1.98, z - 0.12], [pb + 0.36, 2.1, z + 0.12]);
+    b.box('metal', [pa - 0.46, 2.1, z - 0.19], [pb + 0.46, 2.17, z + 0.19]);
+    const m = (pa + pb) / 2;
+    if (lamp) {
+      b.box('metal', [m - 0.012, 1.58, z - 0.012], [m + 0.012, 1.72, z + 0.012]);
+      b.box('strip', [m - 0.08, 1.38, z - 0.08], [m + 0.08, 1.58, z + 0.08]);
+    }
+    for (const x of [pa, pb]) k.tuft(x, 0.035, z + (z > z0 + 1 ? 0.3 : -0.3), 0.55, null, 0.5);
+  };
+  gate(in0, in1, z1);
+  gate(out0, out1, z0, false); // (no lantern: the close-up's last look goes through it, at the door)
+
+  // Stone lanterns at the bed's corners: a post, a light, a cap.
+  const lantern = (x, z) => {
+    b.box('concrete', [x - 0.14, 0, z - 0.14], [x + 0.14, 0.58, z + 0.14]);
+    b.box('strip', [x - 0.13, 0.58, z - 0.13], [x + 0.13, 0.84, z + 0.13]);
+    b.box('concrete', [x - 0.24, 0.84, z - 0.24], [x + 0.24, 0.92, z + 0.24]);
+    b.box('concrete', [x - 0.07, 0.92, z - 0.07], [x + 0.07, 1.02, z + 0.07]);
+  };
+  for (const [x, z] of [[bed.x0 - 0.42, bed.z1 + 0.42], [bed.x1 + 0.42, bed.z1 + 0.42], [bed.x0 - 0.25, bed.z0 - 0.2], [bed.x1 + 0.4, bed.z0 - 0.2]]) lantern(x, z);
+
+  // Low planting along the front (but the way in) and the sides.
+  const along = (xa, xb, z) => {
+    for (let x = xa; x < xb; x += 0.7 + R() * 0.35) {
+      if (x > in0 - 1.1 && x < in1 + 1.1) continue;
+      k.mound(x, 0, z + (R() - 0.5) * 0.2, 0.3 + R() * 0.16, R() < 0.45 ? pick(R, FLOWERS) : null);
+    }
+  };
+  along(bed.x0 + 0.3, bed.x1 - 0.3, bed.z1 + 0.42);
+  for (const x of [bed.x0 - 0.42, bed.x1 + 0.42]) {
+    for (let z = bed.z0 + 0.6; z < bed.z1 - 0.2; z += 0.75 + R() * 0.3) {
+      if (Math.abs(z - 5.2) < 1.1) continue; // (the clipped cubes' planters, see puzzle)
+      k.mound(x + (R() - 0.5) * 0.15, 0, z, 0.28 + R() * 0.14, R() < 0.35 ? pick(R, FLOWERS) : null);
+    }
+  }
 }
 
 /* ----------------------------------------------------------------- games */

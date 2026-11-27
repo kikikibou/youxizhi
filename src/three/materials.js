@@ -100,10 +100,13 @@ export function createMaterials() {
   // The pad's rim lights: a pale gold by day, lit at night.
   const padLight = new THREE.MeshStandardMaterial({ color: 0xf3d79a, roughness: 0.4, emissive: new THREE.Color(0xffc45e), emissiveIntensity: 0 });
 
+  // Gravel for garden paths (the 问答 hedge maze's bed, details.js): a warm sand, not in the schemes.
+  const gravel = new THREE.MeshStandardMaterial({ color: 0xcdb994, roughness: 1 });
+
   // (the lamps stand over the titles, which are drawn sharp in a pass of their own)
   [lampHead, lampPole, bulb].forEach(overTitles);
 
-  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit, gold, stone, bone, padLight };
+  return { white, whiteShade, concrete, glass, glassDark, warm, strip, metal, lampPole, lampHead, bulb, orange, tube, leaf, trunk, pot, soil, bush, grass, flower, paneNight, blind, beacon, skyWin, skyWinLit, gold, stone, bone, padLight, gravel };
 }
 
 /** Blades and petals sway in the wind, as far as their uv.y says (0 at the root). */

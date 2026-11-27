@@ -280,16 +280,17 @@ export const PAGES = [
         // reads PEDO MELLON A MINNO ("say 'friend' and enter": the password
         // is in the riddle); a pass (过所) opens. 入关 draws the way through
         // the maze in vermilion like a campaign arrow (route: World.drawRoute),
-        // the camera swoops down along it to the door (diveVia: low over the
-        // maze; diveAt: under the canopy), and the page's map paper spreads
+        // the camera swoops down along it (diveVia: low over the maze's way
+        // in; diveAt: in the maze, looking through its way out at the door),
+        // and the page's map paper spreads
         // from the door like ink, its seal stamped on it (takeoff 'ink').
         // (view / portrait / dive / diveAt / diveVia: in the building's frame)
         spot: {
-          view: { pos: [-7, 17, 17], target: [-1.5, 0, 1], fov: 44 },
+          view: { pos: [-15, 15, 15], target: [-9, 0, 1.5], fov: 44 }, // (the gates, the door and the route clear of the pass, the maze running off to the right)
           portrait: { pos: [-1.5, 14, 19], target: [-1, 0, 12.5], fov: 44 }, // (the maze and the door above the pass)
           dive: [-4.25, 1.6, -4.9], // (the lobby's glass, under the sign, straight on from the maze's way out)
-          diveAt: [-4.25, 1.5, 0.6],
-          diveVia: [-4.25, 2.4, 9.5],
+          diveAt: [-4.25, 1.45, 4.3], // (inside the maze, looking through its back gate at the door)
+          diveVia: [-4.25, 2.6, 10],
           route: 'maze',
           keepTexts: true, // (the door's sign stays lit, see World.update)
           pass: {
@@ -302,9 +303,11 @@ export const PAGES = [
             seal: '密',
             scroll: '解码与三国',
             board: '入关',
-            text: '这是一份用虚构「密语」写成的三国知识问答：先破译题目，再回答问题。每题的答案都是一个人物，正史、演义都算，可以使用搜索引擎。',
+            text: '很早之前的旧作，100%基于个人兴趣的小品级谜题。一份用虚构「密语」写成的三国知识问答：可以一边试着答题一边推理这门语言的编码。',
             fields: [['SETS', '基础 · 进阶'], ['QUESTIONS', '24 题'], ['ANSWERS', '都是人物']],
-            motto: 'Mellon.', // (the door's password: "friend", in the sign's own Sindarin)
+            // (divide and rule: the realm split three ways, and the 密语's
+            // words, which the player cuts into pieces)
+            motto: 'Divide et impera.',
           },
         },
       },
