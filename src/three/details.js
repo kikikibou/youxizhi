@@ -325,6 +325,17 @@ export function mazeRoute(door) {
   return [[at(start)[0], z0 + rows * s + 1.8], ...cells.map(at), ...along, door];
 }
 
+/**
+ * Where the treasure chest stands in the hedge maze (chest.js; shown only at
+ * the 问答 close-up, World): in its far dead end, the back cell of the last
+ * column, against the outer hedge and facing back along the maze, towards
+ * the close-up's camera. ([x, z] in the 问答 building's frame, and its turn)
+ */
+export function mazeChest() {
+  const { cols, s, x0, z0 } = MAZE_AT;
+  return { x: x0 + cols * s - 0.21 - 0.27 - 0.07, z: z0 + s / 2, rotY: -Math.PI / 2 };
+}
+
 /** Shared helpers on top of the plants and the pieces. */
 function kit(p, g, R) {
   /** A planted bed: a low kerb, soil, and grass with flowers (and a few bushes). */

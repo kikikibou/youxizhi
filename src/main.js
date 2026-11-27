@@ -17,7 +17,6 @@ import rounded from './fonts/loader/rounded.woff2?url';
 import shade from './fonts/loader/shade.woff2?url';
 import './style.css';
 
-import { gate } from './gate.js';
 import { paletteById, paletteCss, initialPaletteId } from './palettes.js';
 
 // The Chinese fonts set the middle dot (·) a full em wide, which leaves wide
@@ -32,7 +31,7 @@ document.fonts.add(new FontFace('Anton Extra', `url(${antonExtra}) format('woff2
  * While the street loads, the loading word (PAMPLEMOUSSE) runs through faces
  * the site doesn't otherwise use, each in a spirit of its own (only its
  * letters: scripts/loader-faces.py), and settles on the site's own Anton when
- * the street is ready, or while the passphrase is asked. (scale: evens out
+ * the street is ready. (scale: evens out
  * how wide they set the word, about as wide as Space Mono's; a face joins
  * once its file has loaded)
  */
@@ -68,8 +67,7 @@ function loaderFaces() {
     if (loader.classList.contains('is-done')) {
       show(null);
       clearInterval(timer);
-    } else if (loader.classList.contains('is-gated')) show(null);
-    else {
+    } else {
       // (the next face in turn that has loaded)
       for (let i = 0; i < LOADER_FACES.length; i++) {
         const f = LOADER_FACES[k++ % LOADER_FACES.length];
@@ -80,12 +78,12 @@ function loaderFaces() {
 }
 loaderFaces();
 
-// Page colours for the chosen scheme before anything is shown (the
-// passphrase screen too); app.js reuses this element when switching.
+// Page colours for the chosen scheme before anything is shown (the loading
+// screen too); app.js reuses this element when switching.
 const paletteStyle = document.createElement('style');
 paletteStyle.id = 'palette-css';
 paletteStyle.textContent = paletteCss(paletteById(initialPaletteId()));
 document.head.appendChild(paletteStyle);
 
-// The passphrase gate comes first; the 3D app (and three.js) loads only after it.
-gate().then(() => import('./app.js'));
+// The 3D app (and three.js) loads after this, behind the loading screen.
+import('./app.js');

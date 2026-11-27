@@ -158,26 +158,27 @@ export const PAGES = [
           // Over the roof, the ground behind the tower as a poster: Touchstone,
           // the clown of As You Like It (V. iv), on the seven degrees of the
           // lie, all avoidable "with an If". Decoration: it may run off the
-          // screen or behind the tower. (p: [x, z] on the ground, r: turned to
-          // face the camera, scale: all of it larger; items at [across, away]
+          // screen or behind the tower. (p: [x, z] on the ground, r: how it's
+          // turned, scale: all of it larger; items at [across, away]
           // in metres; under: drawn beneath the others, a watermark; alpha:
           // how strongly printed, the dark ink kept light so it doesn't pull
           // the eye from the pass)
           ground: {
-            // (high and large enough that the title runs off the top, under the
-            // top bar, and the script off the right)
-            p: [-28.5, -67.3],
-            r: 0.29,
+            // (its lines run with the roof's back edge, read from below and a
+            // little to the left; high and large enough that the title runs
+            // off the top, under the top bar, and the script off the right)
+            p: [-25, -62],
+            r: 0,
             scale: 1.15,
-            portrait: { p: [-12.5, -59.5], r: 0.02, scale: 0.62 }, // (only the title, just under the nav: the rest would fall behind the roof)
+            portrait: { p: [-8.8, -57.9], r: 0.02, scale: 0.62 }, // (only the title, just under the nav: the rest would fall behind the roof)
             items: [
               { t: 'IF', f: 'display', s: 50, at: [-27, -19], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
-              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [3, -0.4], c: 'orange', alpha: 0.85 },
+              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [-3, 2.2], c: 'orange', alpha: 0.85 },
               {
                 t: 'I. THE RETORT COURTEOUS\nII. THE QUIP MODEST\nIII. THE REPLY CHURLISH\nIV. THE REPROOF VALIANT\nV. THE COUNTERCHECK QUARRELSOME\nVI. THE LIE WITH CIRCUMSTANCE\nVII. THE LIE DIRECT',
                 f: 'caps',
                 s: 2,
-                at: [-47.5, -15.4],
+                at: [-44.5, -15.4],
                 anchor: 'left',
                 c: 'ink',
                 alpha: 0.42,
@@ -187,14 +188,14 @@ export const PAGES = [
                 t: 'ALL THESE YOU MAY AVOID BUT THE LIE DIRECT;\nAND YOU MAY AVOID THAT TOO, WITH AN IF.',
                 f: 'caps',
                 s: 1.5,
-                at: [-44.5, -28.4],
+                at: [-42, -28.4],
                 anchor: 'left',
                 c: 'orange',
                 alpha: 0.75,
                 portrait: false,
               },
-              { t: 'We quarrel in print, by the book.', f: 'script', s: 4.9, at: [26.5, -7.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, alpha: 0.6, portrait: false },
-              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.4, at: [47, -12.4], anchor: 'right', c: 'ink', alpha: 0.42, portrait: false },
+              { t: 'We quarrel in print, by the book.', f: 'script', s: 4.9, at: [21, -6.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, alpha: 0.6, portrait: false },
+              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.4, at: [-38.5, -32.3], anchor: 'left', c: 'ink', alpha: 0.42, portrait: false },
             ],
           },
           pass: {
@@ -291,12 +292,16 @@ export const PAGES = [
         // from the door like ink, its seal stamped on it (takeoff 'ink').
         // (view / portrait / dive / diveAt / diveVia: in the building's frame)
         spot: {
-          view: { pos: [-15, 15, 15], target: [-9, 0, 1.5], fov: 44 }, // (the gates, the door and the route clear of the pass, the maze running off to the right)
+          view: { pos: [-15, 15, 15], target: [-6.5, 0, 1.1], fov: 44 }, // (the gates, the door and the route clear of the pass, the maze's far end, and its chest, in at the right)
           portrait: { pos: [-1.5, 14, 19], target: [-1, 0, 12.5], fov: 44 }, // (the maze and the door above the pass)
           dive: [-4.25, 1.6, -4.9], // (the lobby's glass, under the sign, straight on from the maze's way out)
           diveAt: [-4.25, 1.1, 5.9], // (over the maze, the back portal's frame round the door)
           diveVia: [-4.25, 2.6, 10],
           route: 'maze',
+          // (a treasure chest in the maze's far dead end, there only at this
+          // close-up: a click opens it, and the 问答 "Q"'s rainbow rises from
+          // it; chest.js, mazeChest in details.js)
+          chest: 'maze',
           keepTexts: true, // (the door's sign stays lit, see World.update)
           // On the plaza beside the cube, the ground as a poster (as at
           // 攻错's helipad), quiet: Legrand in Poe's The Gold-Bug, the first
@@ -337,7 +342,6 @@ export const PAGES = [
             flight: 'SGJM-01',
             mark: '密',
             seal: '密',
-            scroll: '解码与三国',
             board: '入关',
             text: '很早之前的旧作，100%基于个人兴趣的小品级谜题。一份用虚构「密语」写成的三国知识问答：可以一边试着答题一边推理这门语言的编码。',
             fields: [['SETS', '基础 · 进阶'], ['QUESTIONS', '24 题'], ['ANSWERS', '都是人物']],

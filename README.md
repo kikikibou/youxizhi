@@ -11,13 +11,13 @@ npm run dev
 
 打开 http://localhost:5173 。构建静态文件：`npm run build`（输出在 `dist/`，可部署到任意静态托管）。
 
-## 上线与口令门
+## 上线
 
 推送到 `main` 分支后，GitHub Actions 会自动构建并发布到 GitHub Pages（见 `.github/workflows/deploy.yml`），网址是 https://yxzzxy.com 。
 
 域名在 Cloudflare 注册，DNS 也在 Cloudflare：根域名的四条 A 记录指向 GitHub Pages（185.199.108–111.153），`www` 是指向 `kikikibou.github.io` 的 CNAME，都设为「DNS only」（灰色云朵），GitHub 才能自己签发 HTTPS 证书。自定义域名填在仓库的 Settings → Pages 里（构建用相对路径 `base: './'`，所以不需要 CNAME 文件，也不用改代码）。旧地址 kikikibou.github.io/youxizhi/ 会跳转过来。
 
-目前站点前有一道口令门（`src/gate.js`），并设置了 `noindex` 不让搜索引擎收录。它只是"软门槛"：静态网站无法真正保密，懂行的人看源码就能绕过。正式公开时，把 `GATE_HASH` 设为 `''`，并删掉 `index.html` 里的 `robots` meta。
+站点已公开（2026-11-27 去掉了上线前的口令门和首页的 `noindex`）。
 
 ## 结构
 

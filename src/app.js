@@ -46,7 +46,7 @@ try {
 // A switcher for comparing colour schemes (palettes.js); the choice is
 // remembered on this device. P cycles through them. Visitors only ever see
 // the default scheme (西柚): the switcher shows in debug mode only.
-// (main.js already applied the page colours before the passphrase screen)
+// (main.js already applied the page colours before the loading screen)
 let paletteStyle = document.getElementById('palette-css');
 if (!paletteStyle) {
   paletteStyle = document.createElement('style');
@@ -574,6 +574,11 @@ window.addEventListener(
 
 window.addEventListener('pointermove', (e) => {
   world.pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  // (over a close-up's hidden chest, a hand: it opens to a click)
+  world.canvas.style.cursor = spot?.landed && world.chestAt(e.clientX, e.clientY) ? 'pointer' : '';
+});
+world.canvas.addEventListener('click', (e) => {
+  if (spot?.landed) world.chestAt(e.clientX, e.clientY, true);
 });
 
 stage.addEventListener('click', (e) => {

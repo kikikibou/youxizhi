@@ -1,23 +1,26 @@
+/* The page colours before main.js sets the chosen scheme's (palettes.js,
+   paletteCss): the default scheme's own (西柚), so the first paint (the
+   loading screen, on a slow phone for a while) is already in them. */
 :root {
-  --orange: #ff7a0d;
-  --orange-deep: #f06a00;
-  --orange-ink: var(--orange-deep); /* v2: fills that carry small white text */
+  --orange: #f2545b;
+  --orange-deep: #d93d47;
+  --orange-ink: #cc3642; /* v2: fills that carry small white text */
   --strip-line: rgba(255, 255, 255, 0.8); /* v2: hairlines of the footer strip */
   --panel-gap: 41px; /* content panel to footer strip */
-  --accent-rgb: 255, 122, 13;
-  --cream: #f4ecdf;
-  --bg: #0b1a38;
-  --shade-rgb: 8, 16, 34;
-  --drawer: #f6f2ea;
-  --drawer-night: #0b1834;
-  --moon-shade: #c9d4ec;
-  --navy: #0d1f3c;
-  --ink: #0d1f3c;
-  --ink-soft: rgba(13, 31, 60, 0.72);
+  --accent-rgb: 242, 84, 91;
+  --cream: #ffe9de;
+  --bg: #2a1324;
+  --shade-rgb: 34, 14, 30;
+  --drawer: #fdf3ec;
+  --drawer-night: #2a1324;
+  --moon-shade: #e8c6dc;
+  --navy: #3b1b2e;
+  --ink: #3b1b2e;
+  --ink-soft: rgba(59, 27, 46, 0.72);
   --line: rgba(255, 255, 255, 0.85);
-  --paper: rgba(255, 255, 255, 0.92);
-  --paper-ink: #0d1f3c;
-  --paper-line: rgba(13, 31, 60, 0.14);
+  --paper: rgba(255, 247, 240, 0.92);
+  --paper-ink: #3b1b2e;
+  --paper-line: rgba(59, 27, 46, 0.14);
   --shadow: 0 1px 14px rgba(5, 15, 35, 0.35);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --display: 'Anton', 'Oswald', Impact, sans-serif;
@@ -28,11 +31,11 @@
 }
 
 html[data-theme='night'] {
-  --ink: #f4ecdf;
-  --ink-soft: rgba(244, 236, 223, 0.75);
-  --paper: rgba(8, 18, 40, 0.88);
-  --paper-ink: #f4ecdf;
-  --paper-line: rgba(255, 190, 120, 0.2);
+  --ink: #ffe9de;
+  --ink-soft: rgba(255, 233, 222, 0.75);
+  --paper: rgba(34, 14, 30, 0.88);
+  --paper-ink: #ffe9de;
+  --paper-line: rgba(255, 160, 150, 0.2);
 }
 
 * {
@@ -90,7 +93,7 @@ a {
   justify-items: center;
 }
 /* (its face changes while loading, see loaderFaces in main.js: a box of its
-   own height, so the bar and the passphrase below stay put) */
+   own height, so the bar below stays put) */
 .loader-word {
   --size: clamp(48px, 9vw, 120px);
   display: grid;
@@ -122,70 +125,6 @@ a {
   }
   to {
     transform: translateX(260%);
-  }
-}
-
-/* Pre-launch passphrase gate (lives inside the loader screen) */
-.gate {
-  display: none;
-  justify-items: center;
-  gap: 10px;
-  margin-top: 6px;
-}
-.loader.is-gated .gate {
-  display: grid;
-}
-.loader.is-gated .loader-bar {
-  display: none;
-}
-.gate-label {
-  font-family: var(--caps);
-  font-size: 11px;
-  letter-spacing: 0.24em;
-  color: rgba(255, 255, 255, 0.7);
-}
-.gate-row {
-  display: flex;
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
-}
-.gate input {
-  width: min(200px, 52vw);
-  padding: 11px 14px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: #fff;
-  font: 500 16px var(--caps);
-  letter-spacing: 0.2em;
-}
-.gate input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.1em;
-}
-.gate button {
-  padding: 0 18px;
-  border: 0;
-  background: var(--orange);
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
-}
-.gate-msg {
-  min-height: 18px;
-  font-size: 13px;
-  color: var(--orange);
-}
-.gate.is-wrong .gate-row {
-  animation: shake 0.42s var(--ease);
-}
-@keyframes shake {
-  20%,
-  60% {
-    transform: translateX(-7px);
-  }
-  40%,
-  80% {
-    transform: translateX(7px);
   }
 }
 
@@ -2427,13 +2366,17 @@ html[data-theme='night'] .pass-head {
   box-shadow: inset 0 0 0 1px rgba(80, 60, 30, 0.2), inset 0 0 18px rgba(170, 140, 90, 0.22);
   color: #2b2622;
 }
-.pass-scroll-paper b {
-  writing-mode: vertical-rl;
+.pass-map {
+  display: block;
+  width: 66px;
+  height: auto;
+}
+.pass-map-names {
   font-family: var(--cn);
   font-weight: 900;
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: 0.2em;
+  font-size: 2.7px;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 .pass-seal {
   display: grid;

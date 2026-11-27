@@ -114,13 +114,70 @@ export function foldCoverHtml(c) {
 }
 
 /**
+ * A small map of the Three Kingdoms (around 220–230) for 解码与三国知识问答's
+ * stub, after the campaign map behind its page (src/sgjm/map.js, the same
+ * borders, coast, rivers and colours, fewer points): the realms in soft
+ * washes on the land, the sea tinted, the Yellow River and the Yangtze, each
+ * realm's name and a vermilion dot at its capital, in a ruled frame.
+ * (Degrees straight onto the plane: x = (lon - 101) * cos 31°, y = 41.5 - lat.)
+ */
+const SANGUO_MAP = (() => {
+  const P = ([lon, lat]) => `${((lon - 101) * 0.857).toFixed(2)},${(41.5 - lat).toFixed(2)}`;
+  const line = (pts) => pts.map(P).join(' ');
+  const WEI_SHU = [[97, 36.6], [100.5, 35.8], [102.5, 35.2], [104.0, 34.3], [105.2, 33.9], [106.3, 33.6], [107.8, 33.5], [109.4, 33.2]];
+  const WEI_WU = [[109.4, 33.2], [110.6, 32.6], [111.6, 31.9], [112.6, 31.4], [113.8, 31.2], [115.0, 31.3], [116.3, 31.2], [117.4, 31.35], [118.3, 31.7], [119.2, 32.5], [120.5, 33.5]];
+  const SHU_WU = [[109.4, 33.2], [109.8, 32.3], [109.9, 31.2], [109.6, 30.0], [109.0, 28.8], [108.3, 27.2], [107.0, 25.5], [105.5, 24.5], [103.5, 23.5], [101.5, 23.0], [97, 22.6]];
+  const COAST = [
+    [123.5, 39.95], [122.0, 39.2], [121.3, 38.85], [121.9, 40.2], [121.0, 40.9], [120.4, 40.3], [119.6, 39.9], [118.8, 39.2],
+    [117.8, 38.9], [117.7, 38.4], [118.9, 37.6], [119.6, 37.15], [120.4, 37.55], [121.4, 37.6], [122.5, 37.25], [120.8, 36.4],
+    [119.3, 35.1], [119.6, 34.5], [120.3, 33.6], [120.8, 32.7], [121.9, 31.7], [121.9, 31.0], [121.3, 30.6], [122.0, 29.6],
+    [121.2, 28.2], [120.2, 26.8], [119.2, 25.4], [117.9, 24.2], [116.3, 23.1], [114.3, 22.4], [113.0, 22.0], [111.0, 21.5], [110.4, 21.0],
+  ];
+  const LAND = [[124, 43], ...COAST, [96, 20], [96, 43]];
+  const ISLAND = [[121.0, 25.3], [121.9, 25.0], [121.2, 22.8], [120.8, 21.9], [120.1, 23.6], [120.6, 24.6]];
+  const HE = [[100.5, 36.1], [103.8, 36.1], [104.8, 37.0], [105.9, 37.6], [106.8, 39.6], [107.8, 40.5], [110.4, 40.4], [111.1, 39.8], [110.4, 37.3], [110.4, 34.6], [112.5, 34.85], [114.6, 35.3], [116.3, 36.5], [118.2, 37.6], [118.9, 37.65]];
+  const JIANG = [[100.5, 26.8], [102.9, 27.0], [103.7, 28.3], [105.5, 28.9], [107.5, 29.9], [108.4, 30.8], [110.4, 30.95], [112.2, 30.3], [113.2, 29.4], [114.3, 30.6], [116.0, 29.8], [117.8, 31.0], [118.8, 32.1], [120.3, 32.0], [121.9, 31.4]];
+  const REALMS = [
+    ['魏', '63, 95, 143', [97, 45], [[127, 45], [127, 37], ...WEI_WU.slice().reverse(), ...WEI_SHU.slice().reverse()], [113.6, 37.6]],
+    ['蜀', '77, 122, 73', null, [...WEI_SHU, ...SHU_WU], [104.3, 29.4]],
+    ['吴', '176, 85, 58', null, [...WEI_WU, [127, 37], [127, 18], [97, 18], ...SHU_WU.slice().reverse()], [115.4, 27.0]],
+  ];
+  const fills = REALMS.map(([, rgb, first, pts]) => `<polygon points="${line(first ? [first, ...pts] : pts)}" fill="rgba(${rgb}, 0.36)"/>`).join('');
+  const names = REALMS.map(([n, rgb, , , at]) => {
+    const [x, y] = P(at).split(',');
+    return `<text x="${x}" y="${y}" fill="rgb(${rgb})">${n}</text>`;
+  }).join('');
+  const capitals = [[112.45, 34.62], [104.07, 30.67], [118.78, 32.04]].map((c) => {
+    const [x, y] = P(c).split(',').map(Number);
+    return `<rect x="${(x - 0.32).toFixed(2)}" y="${(y - 0.32).toFixed(2)}" width="0.64" height="0.64"/>`;
+  }).join('');
+  return `<svg class="pass-map" viewBox="0 0 18 20" aria-hidden="true">
+    <defs><clipPath id="pass-map-land"><polygon points="${line(LAND)}"/><polygon points="${line(ISLAND)}"/></clipPath></defs>
+    <rect width="18" height="20" fill="rgba(112, 150, 165, 0.28)"/>
+    <g clip-path="url(#pass-map-land)"><rect width="18" height="20" fill="#f4ecd8"/>${fills}</g>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="${line(WEI_SHU)}" stroke="rgba(46, 40, 34, 0.45)" stroke-width="0.12" stroke-dasharray="0.45 0.3"/>
+      <polyline points="${line(WEI_WU)}" stroke="rgba(46, 40, 34, 0.45)" stroke-width="0.12" stroke-dasharray="0.45 0.3"/>
+      <polyline points="${line(SHU_WU)}" stroke="rgba(46, 40, 34, 0.45)" stroke-width="0.12" stroke-dasharray="0.45 0.3"/>
+      <polyline points="${line(HE)}" stroke="rgb(196, 160, 98)" stroke-width="0.3"/>
+      <polyline points="${line(JIANG)}" stroke="rgb(112, 150, 165)" stroke-width="0.34"/>
+      <polyline points="${line(COAST)}" stroke="rgba(46, 40, 34, 0.7)" stroke-width="0.14"/>
+      <polygon points="${line(ISLAND)}" stroke="rgba(46, 40, 34, 0.7)" stroke-width="0.14"/>
+    </g>
+    <g fill="#b5321f">${capitals}</g>
+    <g class="pass-map-names">${names}</g>
+    <rect x="0.25" y="0.25" width="17.5" height="19.5" fill="none" stroke="rgba(46, 40, 34, 0.75)" stroke-width="0.16"/>
+  </svg>`;
+})();
+
+/**
  * 解码与三国知识问答's stub: a small hanging scroll (its page's title hangs on
- * one), its name down the paper and its seal under it.
+ * one), a map of the Three Kingdoms on the paper and its seal under it.
  */
 function sealStubHtml(c, p) {
   return `<div class="pass-emblem pass-scroll" aria-hidden="true">
     <i class="pass-rod"></i>
-    <span class="pass-scroll-paper"><b>${esc(p.scroll || c.title)}</b><span class="pass-seal">${esc(p.seal || '')}</span></span>
+    <span class="pass-scroll-paper">${SANGUO_MAP}<span class="pass-seal">${esc(p.seal || '')}</span></span>
     <i class="pass-rod"></i>
   </div>`;
 }

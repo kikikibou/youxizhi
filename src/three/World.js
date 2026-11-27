@@ -12,8 +12,9 @@ import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL, TEXT_LAYER, CRISP } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
-import { buildDetails, WIND, rng, mazeRoute } from './details.js';
+import { buildDetails, WIND, rng, mazeRoute, mazeChest } from './details.js';
 import { createRoute } from './route.js';
+import { createChest } from './chest.js';
 
 const PLAZA_RADIUS = 56;
 const GRASS = new THREE.Color(0xb5d77a);
@@ -369,8 +370,21 @@ export class World {
         group.add(route.group);
         routes.push({ spot: card.spot, route, t: 0, speed: 0 });
       }
+      // A close-up's hidden treasure (spot.chest): for now the one, a chest
+      // in the 问答 maze's far dead end, there only while the camera is.
+      const chests = [];
+      for (const card of page.cards) {
+        if (card.spot?.chest !== 'maze') continue;
+        const chest = createChest(this.mats);
+        const at = mazeChest();
+        chest.group.position.set(at.x, 0.035, at.z);
+        chest.group.rotation.y = at.rotY;
+        chest.group.visible = false;
+        group.add(chest.group);
+        chests.push({ spot: card.spot, chest });
+      }
 
-      this.sites.push({ page, group, device, ribbon, plane, routes, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
+      this.sites.push({ page, group, device, ribbon, plane, routes, chests, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
     });
   }
 
@@ -925,6 +939,20 @@ export class World {
       r.t = 0; // (from its start again, if it was left drawn: back from the card's site)
       r.speed = 1 / duration;
     }
+  }
+
+  /**
+   * Whether the screen point (CSS pixels) is on the chest of the close-up
+   * the camera is at (spot.chest); with `poke`, it opens (or shuts) too.
+   */
+  chestAt(x, y, poke = false) {
+    const c = this.closeUp && this.sites[this.active].chests.find((c) => c.spot === this.closeUp.spot);
+    if (!c) return false;
+    this._ray ||= new THREE.Raycaster();
+    this._ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), this.camera);
+    const on = this._ray.intersectObject(c.chest.hit, false).length > 0;
+    if (on && poke) c.chest.toggle();
+    return on;
   }
 
   /** Where a close-up's dive point is on the screen now, in CSS pixels (for the leaving's own effects). */
@@ -1543,6 +1571,15 @@ export class World {
         else if (r.speed) r.t = Math.min(1, r.t + dt * r.speed);
         const e = r.t < 0.5 ? 2 * r.t * r.t : 1 - (-2 * r.t + 2) ** 2 / 2;
         r.route.setProgress(e);
+      }
+      // (a close-up's chest: there while the camera is, shut again once it leaves)
+      for (const c of site.chests) {
+        const here = this.closeUp?.spot === c.spot;
+        if (!here && c.chest.group.visible) c.chest.reset();
+        c.chest.group.visible = here;
+        if (!here) continue;
+        const px = this.sceneRT.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+        if (c.chest.update(dt, this.time, this.night, px)) this.shadowDirty = true;
       }
       // (a close-up's ground lettering: in as the camera rises to it, out as it leaves)
       for (const g of site.grounds || []) {
