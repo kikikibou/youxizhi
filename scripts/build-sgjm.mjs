@@ -22,12 +22,20 @@ for (const line of readFileSync(SRC, 'utf8').replace(/\r\n/g, '\n').split('\n'))
   else if (current) blocks.get(current).push(line);
 }
 
+// "{甲|乙}丙" stands for 甲丙 and 乙丙; an empty choice makes the part optional.
+function expand(spelling) {
+  const m = /\{([^{}]*)\}/.exec(spelling);
+  if (!m) return [spelling];
+  const [before, after] = [spelling.slice(0, m.index), spelling.slice(m.index + m[0].length)];
+  return m[1].split(/[|｜]/).flatMap((choice) => expand(before + choice + after));
+}
+
 function parseSlot(id) {
   const body = blocks.get(id)?.join('\n');
   if (body == null) throw new Error(`答案表里没有「# ${id}」`);
   const a = /^答案[：:](.*)$/m.exec(body);
   if (!a) throw new Error(`${id}: 没有「答案：」这一行`);
-  const names = a[1].split(/[/／]/).map((s) => s.trim()).filter(Boolean);
+  const names = a[1].split(/[/／]/).map((s) => s.trim()).filter(Boolean).flatMap(expand);
   const norms = [...new Set(names.map(normalizeAnswer).filter(Boolean))];
   if (!norms.length) throw new Error(`${id}: 答案是空的`);
   const n = /^解析[：:](.*)$/m.exec(body);

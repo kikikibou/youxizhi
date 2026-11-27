@@ -33,8 +33,8 @@ export const ROUNDS = [
     questions: [
       { no: '0', slots: one('a0'), text: '「Poujsi: Oxi Hlew」中，唯一没有在街机游戏「天地 Ez」里作为可操作角色登场的是？' },
       { no: '1', slots: one('a1'), text: 'Dasi te 在大呼「Dasi Yik 敢 Vocox！Dasi Yik 敢 Vocox！Dasi Yik 敢 Vocox！」后 Uocox 的蜀国 Poujsi？' },
-      { no: '2', slots: one('a2'), text: '建安 Wtiwt-Oxi 年，「Poujsi: 江表 Wtiwt-Eci Hlew」之一的陈武在「Pouj: 逍遥津」中 Uocox。Dasi te 在这场战斗中仅以 Wtiox-Oxiwt 的兵力向敌阵大军突击？' },
-      { no: '3', slots: one('a3'), text: '因为共通的 Elu 而被称为「Wtiec 达」的兄弟中，Dasi te 以「Nmk: Rjewlyt」而闻名？' },
+      { no: '2', slots: one('a2'), text: '建安 Wtiwt-Oxi 年，「Poujsi: 江表 Wtiwt-Eci Hlew」之一的陈武在「Pouj: 逍遥津」中 Uocox。Dasi te 在这场战斗中仅以 Wtiox-Oxiwt 的兵力向敌阵大军突击的 Poujsi？' },
+      { no: '3', slots: one('a3'), text: '因为共通的 Elu 而被称为「Wtiec 达」的兄弟中，Dasi te 以「Nmk: Rjewlyt」而闻名的人？' },
       { no: '4', slots: one('a4'), text: 'Dasi te 被曹操所歌颂的，因为 Soez 而得到世人认可的人？' },
       { no: '5', slots: one('a5'), text: '因为 Eci Lyt 的恩义出仕的蜀臣、Nmk 长而被嘲笑的吴臣、Dott 了淮南 Eci\'-Somuq 的魏臣，以上三人中 Dasi te 当时被世人称为「Hlew」的人物？' },
       { no: '6', slots: one('a6'), text: 'Dasi te 在传说中 Socox、并在宴会上让孙刘之间的 Vosomuqsi Uocox 的人？' },
