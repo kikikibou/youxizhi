@@ -203,6 +203,23 @@ input:focus-visible {
   background: var(--yellow);
   border-color: var(--yellow);
 }
+.tabs .tabs-rec {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+.tabs .tabs-rec:hover {
+  background: rgba(255, 204, 51, 0.14);
+}
+.tabs .tabs-rec svg,
+.ipo-name svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
 
 /* ---------- quote table ---------- */
 .table {
@@ -943,12 +960,24 @@ body.has-sheet {
 .ipo-title {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-family: var(--round);
-  font-size: 18px;
+  font-size: 20px;
   color: var(--yellow);
-  margin-bottom: 8px;
+  margin-bottom: 9px;
+}
+.ipo-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.ipo-name svg {
+  width: 20px;
+  height: 20px;
+}
+.ipo.flash {
+  animation: flash 0.6s steps(3);
 }
 .ipo-title small {
   font: 600 11.5px var(--sys);

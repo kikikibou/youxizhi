@@ -49,6 +49,9 @@ const icon = {
     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 4h3.5c2 0 3 1 4 3l1 2c1 2 2 3 4 3H15M12.5 9.5 15 12l-2.5 2.5M1 12h3.5c1.2 0 2-.4 2.6-1.1M9.3 5.1C9.9 4.4 10.7 4 12 4h3M12.5 1.5 15 4l-2.5 2.5"/></svg>',
   share:
     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2h5v5M14 2 7 9M12 10v4H2V4h4"/></svg>',
+  // 上市敲的那口钟（申请上市 / 推荐辩题）
+  bell:
+    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5v1.2M4.2 11.5V7.4a3.8 3.8 0 0 1 7.6 0v4.1l1.4 1.6H2.8z"/><path d="M6.5 13.6a1.6 1.6 0 0 0 3 0" stroke-linecap="round"/><path d="M13.4 3.2l1.2-.9M2.6 3.2l-1.2-.9" stroke-linecap="round"/></svg>',
 };
 
 /* ---------- time (Beijing) ---------- */
@@ -262,11 +265,12 @@ function shell() {
     <nav class="tabs" aria-label="排序">
       <button data-sort="hot" aria-pressed="true">最热</button>
       <button data-sort="new" aria-pressed="false">最新</button>
+      <button class="tabs-rec" type="button" data-rec>${icon.bell}推荐辩题</button>
     </nav>
     <section class="table" aria-label="辩题行情" data-part="table"></section>
     <section class="month" aria-label="月度涨幅榜" data-part="month"></section>
     <form class="ipo" novalidate>
-      <label class="ipo-title" for="ipo-t">申请上市<small>AI 初筛，通过就上市</small></label>
+      <label class="ipo-title" for="ipo-t"><span class="ipo-name">${icon.bell}申请上市</span><small>AI 初筛，通过就上市</small></label>
       <input id="ipo-t" name="topic" placeholder="写下你推荐的大辩题" autocomplete="off" maxlength="80" enterkeyhint="next" />
       <div class="r">
         <label class="pre" for="ipo-w">题库人</label>
@@ -434,6 +438,14 @@ async function pick(code, side) {
     toast(r.error);
     update();
   }
+}
+
+/** 「推荐辩题」：滚到申请上市，光标放进辩题输入框，框闪一下。 */
+function goSubmit() {
+  const form = app.querySelector('.ipo');
+  form.scrollIntoView({ block: 'center', behavior: reduced.matches ? 'auto' : 'smooth' });
+  setTimeout(() => form.querySelector('#ipo-t').focus({ preventScroll: true }), reduced.matches ? 0 : 450);
+  flash(form);
 }
 
 function randomPick() {
@@ -628,6 +640,7 @@ app.addEventListener('click', (e) => {
     return refocus(`[data-sort="${sort}"]`);
   }
   if ('rand' in t.dataset) return randomPick();
+  if ('rec' in t.dataset) return goSubmit();
   if ('retry' in t.dataset) return load();
   if ('past' in t.dataset) return togglePast();
   if (t.dataset.jump) return feature(t.dataset.jump, { scroll: true });
