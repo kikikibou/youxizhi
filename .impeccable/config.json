@@ -161,6 +161,15 @@
         ],
         "createdAt": "2026-11-27T13:29:34.837Z",
         "reason": "/new-world style mockup for the dbtk main window; sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "设计世界/*/dbtk/*.html"
+        ],
+        "createdAt": "2026-11-27T17:39:29.971Z",
+        "reason": "User confirmed (2026-11-28): the scrolling LED 快讯 ticker belongs to the dbtk world the owner chose (src/dbtk/DESIGN.md); these are its /new-world samples"
       }
     ]
   }
