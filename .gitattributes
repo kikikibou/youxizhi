@@ -1,0 +1,2 @@
+# impeccable 的启动脚本由 sh 执行，换成 CRLF 会坏（检出到新工作区时）
+.claude/skills/impeccable/scripts/impeccable text eol=lf

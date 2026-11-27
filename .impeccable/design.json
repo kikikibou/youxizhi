@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-27T18:00:00+08:00",
+  "title": "Design System: 游戏之致西柚 · 小镇索引",
+  "extensions": {
+    "colorMeta": {
+      "grapefruit": { "role": "primary", "displayName": "西柚红", "canonical": "oklch(66.2% 0.193 21.7)", "tonalRamp": ["#1f0002", "#4c000b", "#791620", "#a82f37", "#da484f", "#ff7273", "#ffb2af", "#fee9e7"] },
+      "grapefruit-deep": { "role": "primary", "displayName": "深西柚", "canonical": "oklch(59.4% 0.192 22.0)", "tonalRamp": ["#1f0002", "#4c000b", "#7e091b", "#ad2632", "#dd444c", "#fb7575", "#ffb2af", "#ffe9e7"] },
+      "grapefruit-ink": { "role": "primary", "displayName": "西柚印色", "canonical": "oklch(56.4% 0.186 21.4)", "tonalRamp": ["#1f0002", "#4c000c", "#7e061b", "#ad2533", "#d84a51", "#f6797a", "#ffb2af", "#ffe9e7"] },
+      "plum-ink": { "role": "secondary", "displayName": "李子墨", "canonical": "oklch(27.5% 0.058 345.0)", "tonalRamp": ["#190310", "#38192b", "#563748", "#745767", "#937a87", "#b39ea9", "#d4c4cc", "#f6ebf1"] },
+      "rind-cream": { "role": "tertiary", "displayName": "果皮奶油", "canonical": "oklch(94.9% 0.028 48.4)", "tonalRamp": ["#0d0b0a", "#282422", "#47403d", "#685f5a", "#8c7f79", "#b1a19a", "#d7c5bb", "#feeae0"] },
+      "plum-night": { "role": "neutral", "displayName": "李子夜", "canonical": "oklch(22.7% 0.047 337.6)", "tonalRamp": ["#160411", "#331c2d", "#503a49", "#6e5a68", "#8e7c88", "#aea0aa", "#d0c6cd", "#f3ecf1"] },
+      "drawer-day": { "role": "neutral", "displayName": "抽屉纸", "canonical": "oklch(97.0% 0.014 57.6)", "tonalRamp": ["#0c0b0a", "#262524", "#44413f", "#64605e", "#86817d", "#aaa49f", "#d0c7c2", "#f6ece6"] },
+      "sky-day-top": { "role": "neutral", "displayName": "白天天顶（仅 3D 场景）", "canonical": "oklch(65.1% 0.138 245.6)", "tonalRamp": ["#000c1a", "#002743", "#004571", "#18669d", "#2f88cc", "#5aacf0", "#9acffe", "#e2f1fe"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "抽屉标题、加载词、计时器读数；每页大标题是 3D 字。" },
+      "headline": { "displayName": "Headline", "purpose": "票根标题、登机牌目的地（30px）。" },
+      "poem": { "displayName": "Poem", "purpose": "每页的诗，右对齐，每行不折行。" },
+      "title": { "displayName": "Title", "purpose": "卡片标题、导航中文名，后接 EB Garamond 斜体英文名。" },
+      "body": { "displayName": "Body", "purpose": "简介、登机牌正文。" },
+      "eyebrow": { "displayName": "Eyebrow", "purpose": "诗上方的小标，前面一条 56px 细线。" },
+      "label": { "displayName": "Label", "purpose": "卡片标签、票根小字、开关、抽屉 kicker。" },
+      "script": { "displayName": "Script", "purpose": "只做装饰：底栏标题、票根水印。" }
+    },
+    "shadows": [
+      { "name": "sky-halo", "value": "0 1px 14px rgba(5,15,35,0.35)", "purpose": "白色元素压在天空上时的可读性柔光（--shadow）。" },
+      { "name": "ticket-lift", "value": "drop-shadow(0 6px 12px rgba(34,14,30,0.35))", "purpose": "票根（filter）。" },
+      { "name": "pass-lift", "value": "drop-shadow(0 10px 22px rgba(34,14,30,0.4))", "purpose": "登机牌（filter）。" },
+      { "name": "print-lift", "value": "0 3px 12px rgba(5,15,35,0.32)", "purpose": "拍立得发出的画质照片。" },
+      { "name": "printed-frame", "value": "inset 0 0 0 3px #cc3642, inset 0 0 0 4px rgba(255,233,222,0.5)", "purpose": "票根的印刷细线内框。" }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "几乎所有过渡（--ease）。" },
+      { "name": "spring", "value": "cubic-bezier(0.34, 1.5, 0.64, 1)", "purpose": "引号摆入、答对时字弹出。" },
+      { "name": "exit", "value": "cubic-bezier(0.55, 0, 0.8, 0.25)", "purpose": "底栏文字退场等加速离开。" },
+      { "name": "reveal", "value": "translateY(24px) → 0；opacity 1s，transform 1.2s，错开 90ms", "purpose": "页面元素进场。" },
+      { "name": "day-night", "value": "1.2s", "purpose": "纸面昼夜换色。" }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "860px" },
+      { "name": "portrait-camera", "value": "aspect < 0.9（3D 镜头换竖屏构图）" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "抽屉工具里的主操作：西柚红直角块。",
+      "html": "<button class=\"ds-btn-main\">开始</button>",
+      "css": ".ds-btn-main{min-width:96px;padding:11px 20px;border:1.5px solid var(--orange,#f2545b);background:var(--orange,#f2545b);color:#fff;font:700 15px 'Noto Sans SC Variable','PingFang SC',sans-serif;border-radius:0;cursor:pointer;transition:background .3s cubic-bezier(.22,1,.36,1)}.ds-btn-main:hover{background:var(--orange-deep,#d93d47);border-color:var(--orange-deep,#d93d47)}.ds-btn-main:focus-visible{outline:2px solid var(--orange,#f2545b);outline-offset:3px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "次要操作：1.5px currentColor 描边，随纸面变色。",
+      "html": "<button class=\"ds-btn\">重置</button>",
+      "css": ".ds-btn{min-width:96px;padding:11px 20px;border:1.5px solid currentColor;background:none;color:var(--navy,#3b1b2e);font:700 15px 'Noto Sans SC Variable','PingFang SC',sans-serif;border-radius:0;cursor:pointer}.ds-btn:hover{color:var(--orange-deep,#d93d47)}.ds-btn:focus-visible{outline:2px solid var(--orange,#f2545b);outline-offset:3px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "seg-on",
+      "description": "抽屉里的分段选择，选中项西柚红底。",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-btn is-on\">正方</button><button class=\"ds-seg-btn\">反方</button></div>",
+      "css": ".ds-seg{display:inline-flex;border:1.5px solid currentColor;color:var(--navy,#3b1b2e)}.ds-seg-btn{padding:8px 16px;border:0;background:none;color:inherit;font:700 14px 'Noto Sans SC Variable',sans-serif;opacity:.6;cursor:pointer}.ds-seg-btn:hover{opacity:.85}.ds-seg-btn.is-on{background:var(--orange,#f2545b);color:#fff;opacity:1}.ds-seg-btn:focus-visible{outline:2px solid var(--orange,#f2545b);outline-offset:2px}"
+    },
+    {
+      "name": "Ticket",
+      "kind": "custom",
+      "refersTo": "ticket",
+      "description": "每页面板上方的票根：存根、虚线撕口、票面。",
+      "html": "<div class=\"ds-ticket\"><div class=\"ds-ticket-stub\"><b>02</b><small>QUIZ</small></div><div class=\"ds-ticket-main\"><b>问答</b><small>QUIZ · 谜宫</small></div></div>",
+      "css": ".ds-ticket{display:flex;color:#fff;filter:drop-shadow(0 6px 12px rgba(34,14,30,.35))}.ds-ticket-stub,.ds-ticket-main{background:var(--orange-ink,#cc3642);box-shadow:inset 0 0 0 3px var(--orange-ink,#cc3642),inset 0 0 0 4px rgba(255,233,222,.5)}.ds-ticket-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 11px;border-radius:4px 9px 9px 4px}.ds-ticket-stub b{font:400 24px/1 Anton,Oswald,Impact,sans-serif}.ds-ticket-stub small{font:600 9px Oswald,sans-serif;letter-spacing:.2em}.ds-ticket-main{position:relative;flex:1;display:grid;gap:2px;padding:9px 16px 10px;border-radius:9px 4px 4px 9px}.ds-ticket-main::before{content:'';position:absolute;left:0;top:9px;bottom:9px;border-left:2px dashed rgba(255,233,222,.8)}.ds-ticket-main b{font:900 22px/1.15 'Noto Sans SC Variable',sans-serif;letter-spacing:.04em}.ds-ticket-main small{font:600 10px Oswald,sans-serif;letter-spacing:.115em}"
+    },
+    {
+      "name": "Card Row",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "卡片清单里的一行：Anton 编号、中文标题加斜体英文名、右侧标签。悬停右移 8px。",
+      "html": "<div class=\"ds-sheet\"><button class=\"ds-card\"><span class=\"ds-card-no\">01</span><span class=\"ds-card-title\">大国小国 <i>Big &amp; Small</i></span><span class=\"ds-card-tag is-ready\">PLAY →</span></button></div>",
+      "css": ".ds-sheet{background:rgba(255,247,240,.92);border-top:3px solid var(--orange-ink,#cc3642);padding:16px 18px 8px;color:var(--paper-ink,#3b1b2e)}.ds-card{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;width:100%;padding:8px 2px;border:0;border-top:1px solid rgba(59,27,46,.14);background:none;text-align:left;color:inherit;cursor:pointer;transition:padding .35s cubic-bezier(.22,1,.36,1),color .3s}.ds-card:hover{padding-left:8px;color:var(--orange-deep,#d93d47)}.ds-card:focus-visible{outline:2px solid var(--orange,#f2545b);outline-offset:3px}.ds-card-no{font:400 22px/1 Anton,Impact,sans-serif;color:var(--orange,#f2545b)}.ds-card-title{font:700 15px 'Noto Sans SC Variable',sans-serif}.ds-card-title i{font:italic 400 14px 'EB Garamond',Georgia,serif;opacity:.7}.ds-card-tag{font:400 10px Oswald,sans-serif;letter-spacing:.12em;padding:3px 7px;border:1px solid currentColor;opacity:.8}.ds-card-tag.is-ready{background:var(--orange-ink,#cc3642);border-color:var(--orange-ink,#cc3642);color:#fff;opacity:1}"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav",
+      "description": "浮在天空上的白色导航，当前页的西柚红下划线从左画出。",
+      "html": "<nav class=\"ds-nav\"><a class=\"is-active\" href=\"#\"><small>QUIZ</small><span>问答</span></a><a href=\"#\"><small>GAMES</small><span>消遣</span></a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;padding:12px;background:#3896de}.ds-nav a{position:relative;display:grid;padding:2px 10px 8px;color:#fff;text-decoration:none;line-height:1.1;opacity:.82;text-shadow:0 1px 14px rgba(5,15,35,.35);transition:opacity .3s}.ds-nav small{font:600 10px Oswald,sans-serif;letter-spacing:.1em;color:var(--cream,#ffe9de)}.ds-nav span{font:700 15px 'Noto Sans SC Variable',sans-serif}.ds-nav a::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:2px;background:var(--orange,#f2545b);transform:scaleX(0);transform-origin:left;transition:transform .6s cubic-bezier(.22,1,.36,1)}.ds-nav a:hover,.ds-nav a.is-active{opacity:1}.ds-nav a.is-active::after{transform:scaleX(1)}.ds-nav a:focus-visible{outline:2px solid #fff;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "一个人的小镇",
+    "overview": "主站是一座小镇的广场。站主的每种爱好是一栋白色的现代建筑（首页、01 辩论、02 问答、03 消遣、04 其他），镜头像一个散步的人，从一栋楼飞到下一栋。画面的主体是 3D 场景和天空，HTML 叠层不多。叠层不是网页上的面板，而是小镇里的物件：拍立得 logo、贴着胶带的照片、票根、登机牌。昼夜跟随访客的本地时间，每栋楼前都有一个反差装置（路灯光柱、灯塔光束等），装置里露出另一个时间的小镇。\n\n这份文件只管小镇本身。小镇是全站的索引。走进任何一扇门（子站）之后就是另一个世界，那里的颜色、字体和组件都不从这里继承。",
+    "keyCharacteristics": [
+      "饱和的天空上浮着白色的界面，整站只有一种强调色（西柚红）。",
+      "排印是海报式的双语：Anton 写数字和大字，Oswald 写宽字距大写标签，EB Garamond 斜体写英文名和诗，Noto Sans SC 写中文，Great Vibes 只做花饰。",
+      "面板是平面的印刷小物件，方角为主，最多一道投影，没有毛玻璃。",
+      "昼夜两套颜色，切换时纸面用 1.2s 慢慢换色。",
+      "反差：落在光柱里的字会反色，诗句也跟着光柱变色。"
+    ],
+    "rules": [
+      { "name": "The Every Door Its Own World Rule", "body": "每个子站都是独立的视觉世界。小镇的西柚配色、字体组合和票根、登机牌组件只属于小镇，子站一律不沿用，子站之间也不要互相像。小镇和门之间只有一座桥：登机牌的存根用目的地的风格印刷。", "section": "overview" },
+      { "name": "The One Accent Rule", "body": "小镇的 HTML 叠层只有西柚红这一种强调色，分亮、深、印色三档。其他饱和色只出现在 3D 场景里（天空、植物、夜灯）。唯一的例外是问答页答对时的彩虹庆祝字。", "section": "colors" },
+      { "name": "The White On Sky Rule", "body": "直接压在 3D 天空上的字和线一律用白色，可读性靠 --shadow 的柔光来保证。颜色只留给纸面物件。", "section": "colors" },
+      { "name": "The Palette Source Rule", "body": "新颜色先加进 src/palettes.js 的 palette（日夜各一份），再用 CSS 变量引用。src/style.css 的 :root 里是旧「海报」配色的值，运行时会被覆盖，所以不要照抄那里的值，也不要写死 rgba。", "section": "colors" },
+      { "name": "The Bilingual Pair Rule", "body": "中文名旁边配一个英文名。中文用 Noto Sans SC 700 或 900，英文名用 EB Garamond 斜体，拉丁字母的标签一律用 Oswald 大写加宽字距，数字用 Anton。", "section": "typography" },
+      { "name": "The Script Is Ornament Rule", "body": "Great Vibes 只做装饰，不承载访客必须读懂的信息。", "section": "typography" },
+      { "name": "The Unbroken Line Rule", "body": "诗和文字游戏按站主给的行排，不自动折行。排不下时，缩字号或换版式，不改字。", "section": "typography" },
+      { "name": "The Beam Side Rule", "body": "叠层不压住光柱。光柱里是另一个时间，它是每一页的主角。", "section": "layout" },
+      { "name": "The One Lift Rule", "body": "一个纸物件最多一道投影，不叠多层柔和阴影。", "section": "elevation" },
+      { "name": "The No Blur Rule", "body": "不用 backdrop-filter，因为模糊 WebGL 画布每一帧都要重算。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 给每个新子站先选一个属于它自己的视觉世界，写进该子站目录下的 DESIGN.md，然后再动手。参照现有的几个世界，它们彼此毫不相像：攻错的黑金装饰朋克、《大国小国》的清新地图朋克、《解码》的水墨舆图。",
+      "Do 把面板做成有主题的物件（票根、登机牌、拍立得、印章、地图），而不是装字的方框。",
+      "Do 从 src/palettes.js 取颜色并用 CSS 变量引用，日夜两套都给。",
+      "Do 浮在天空上的字用白色加 --shadow。",
+      "Do 动效用 --ease（cubic-bezier(0.22, 1, 0.36, 1)）。页面元素进场时上浮 24px，错开 90ms；昼夜换色用 1.2s。",
+      "Do 每次改完都在桌面和 ≤860px 两种宽度下看一遍，昼夜各看一遍。"
+    ],
+    "donts": [
+      "Don't 让子站长得像小镇，也不要让子站之间互相像：子站不沿用西柚红、Anton 配 Oswald 的组合和票根组件。",
+      "Don't 做成通用的 AI 网页：紫蓝渐变、毛玻璃卡片、圆角加柔和阴影的卡片、Inter 或 Roboto、居中大标题配三张特性卡。",
+      "Don't 用素白方框当面板。白底方框里放几行字就算一个面板，看起来很简陋。一个物件如果除了标签什么都没加，就把它缩成按钮上的一个小图标。",
+      "Don't 用 backdrop-filter，也不要给一个物件叠多层阴影。",
+      "Don't 为了排版改站主的字句，只能改换行。"
+    ]
+  }
+}

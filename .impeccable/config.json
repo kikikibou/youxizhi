@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "segoe ui symbol",
+        "createdAt": "2026-11-27T09:21:53.808Z",
+        "reason": "Claude: symbol-font fallback so the footer badge's ★ stars render (.strip-stars), not a text face; predates this session"
+      }
+    ]
+  }
+}
