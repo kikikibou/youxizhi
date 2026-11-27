@@ -293,6 +293,38 @@ export const PAGES = [
           diveVia: [-4.25, 2.6, 10],
           route: 'maze',
           keepTexts: true, // (the door's sign stays lit, see World.update)
+          // On the plaza left of the maze, the ground as a poster (as at
+          // 攻错's helipad): the opening of 三国演义, a giant 分 under it as a
+          // watermark, an English line of its own, and a word on reading
+          // what is hidden. Decoration: it may run off the screen.
+          // (p: [x, z] on the ground, r: turned to face the camera, scale;
+          // items at [across, away] in metres; under: beneath the others)
+          ground: {
+            // (on the plaza beside the cube, the big lines set against its
+            // left edge and running off the screen; the script out in front
+            // of the maze, in the corner the pass leaves clear)
+            p: [-11.2, -2.6],
+            r: -0.42,
+            scale: 1,
+            portrait: { p: [4.2, 14.6], r: 0, scale: 0.52 }, // (only the two big lines, between the maze and the pass)
+            items: [
+              { t: '分', f: 'cn', s: 24, at: [-9, 5], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
+              { t: '话说天下大势，', f: 'cn', s: 1.7, at: [0, 12.1], anchor: 'right', c: 'ink', portrait: false },
+              { t: '分久必合', f: 'cn', s: 4.4, at: [0, 8], anchor: 'right', c: 'orange' },
+              { t: '合久必分', f: 'cn', s: 4.4, at: [0, 2.9], anchor: 'right', c: 'ink' },
+              {
+                t: 'LONG DIVIDED, THE REALM WILL BE ONE;\nLONG ONE, IT WILL DIVIDE AGAIN.',
+                f: 'caps',
+                s: 0.85,
+                at: [0, 0.1],
+                anchor: 'right',
+                c: 'orange',
+                portrait: false,
+              },
+              { t: 'LUO GUANZHONG · ROMANCE OF THE THREE KINGDOMS · I', f: 'caps', s: 0.62, at: [0, -1.6], anchor: 'right', c: 'ink', portrait: false },
+              { t: 'Read between the lines.', f: 'script', s: 2.5, at: [15.6, -9.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
+            ],
+          },
           pass: {
             kind: 'seal',
             takeoff: 'ink',
