@@ -9,7 +9,8 @@
  * - 带 #DB 编号打开（分享出去的链接）：主窗口放那一只；
  * - 第一次来：放票数最多的；
  * - 以后每次来：随机换一只和上次不一样的。
- * 下面是行情表（点一行就放进主窗口）、月度涨幅榜（只算本月新增的票）和申请上市。
+ * 下面是行情表（点一行就放进主窗口；「月榜」标签换成上一张收盘的月榜，按当月新增票数排名）、
+ * 月度涨幅榜（只算本月新增的票）和申请上市。
  *
  * 页面骨架只画一次；主窗口、行情表、月榜、快讯、我的申请这几块数据变了就重画。
  * 投稿表单（连同里面的 Turnstile 人机验证）不重画，免得打到一半的字被清掉。
@@ -35,11 +36,11 @@ const store = createStore();
 const app = document.getElementById('app');
 let phase = 'loading'; // loading / ready / error
 let loadError = '';
-let sort = 'hot'; // hot = 最热（累计票数），new = 最新（上市时间）
+let sort = 'hot'; // hot = 最热（累计票数），new = 最新（上市时间），month = 月榜（上一张收盘的月榜）
 let order = []; // 当前排好的顺序；投票后不马上重排，免得行在手指下跳走
 let featured = null; // 主窗口里的那一只
 let pastOpen = false; // 往月榜展开了没有
-let past = null; // 往月榜数据：null 还没取 / 'loading' / 'error' / 数组
+let past = null; // 往月榜数据（月榜标签也用它）：null 还没取 / 'loading' / 'error' / 数组，最近的月份在前
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -205,10 +206,39 @@ function row(s) {
 }
 
 function table() {
+  if (sort === 'month') return boardTable();
   const cols = '<div class="cols" aria-hidden="true"><span>代码</span><span>辩题</span><span>票数</span><span>今日涨幅</span></div>';
   if (phase !== 'ready') return cols;
   const rows = order.map(byCode).filter(Boolean);
   return cols + (rows.length ? rows.map(row).join('') : '');
+}
+
+/** 月榜里的一行：名次和代码、辩题、当月新增票数、现在的累计票数。已经下市的不能点。 */
+function boardRow(r) {
+  const s = byCode(r.code);
+  const on = featured === r.code;
+  const inner = `<span class="code"><b class="rank">${r.rank}</b>${r.code}</span>
+      <span class="t"><span class="name">${esc(r.title)}</span><span class="who">题库人 <b>${esc(r.who)}</b></span></span>
+      <span class="num up">+${r.gain}</span>
+      ${s ? `<span class="tot">${s.votes}</span>` : '<span class="tot is-off">已下市</span>'}`;
+  return `<article class="row${on ? ' is-current' : ''}" data-code="${r.code}">${
+    s
+      ? `<button class="row-head" aria-current="${on}" aria-label="放进主窗口：第 ${r.rank} 名 ${esc(r.title)}">${inner}</button>`
+      : `<div class="row-head">${inner}</div>`
+  }</article>`;
+}
+
+/** 「月榜」标签：上一张收盘的月榜（每月 1 日收盘存前十名）。 */
+function boardTable() {
+  const cols = '<div class="cols" aria-hidden="true"><span>名次</span><span>辩题</span><span>当月票</span><span>累计票</span></div>';
+  if (phase !== 'ready' || past === null || past === 'loading') return cols + '<p class="empty">正在翻往月的行情……</p>';
+  if (past === 'error') return cols + '<p class="empty">月榜没取到，再点一下「月榜」试试</p>';
+  const m = past[0];
+  if (!m) {
+    const now = monthInfo();
+    return `${cols}<p class="empty">还没有收盘过的月榜：${now.name}榜 ${now.last} 日收盘，下个月 1 日挂在这里。这个月的排名在下面的月度涨幅榜。</p>`;
+  }
+  return `<p class="board-cap"><b>${m.month.slice(0, 4)} 年 ${monthName(m.month)}榜</b><span>已收盘 · 按当月新增票数</span></p>${cols}${m.top.map(boardRow).join('')}`;
 }
 
 function pastList() {
@@ -262,9 +292,10 @@ function shell() {
     </header>
     <p class="lede">在这里，你可以自由分享交流你喜欢的大辩题。我们授权所有人使用它们，只是请千万不要忘记题库。</p>
     <section class="spot" aria-label="主窗口" aria-live="polite" data-part="spot"></section>
-    <nav class="tabs" aria-label="排序">
+    <nav class="tabs" aria-label="行情表">
       <button data-sort="hot" aria-pressed="true">最热</button>
       <button data-sort="new" aria-pressed="false">最新</button>
+      <button data-sort="month" aria-pressed="false">月榜</button>
       <button class="tabs-rec" type="button" data-rec>${icon.bell}推荐辩题</button>
     </nav>
     <section class="table" aria-label="辩题行情" data-part="table"></section>
@@ -453,18 +484,23 @@ function randomPick() {
   if (pool.length) feature(pool[Math.floor(Math.random() * pool.length)]);
 }
 
-async function togglePast() {
-  pastOpen = !pastOpen;
-  if (pastOpen && (past === null || past === 'error')) {
-    past = 'loading';
-    update();
-    try {
-      past = await store.months();
-    } catch {
-      past = 'error';
-    }
+/** 往月榜：没取过（或上次没取到）就去取。 */
+async function loadPast() {
+  if (past !== null && past !== 'error') return;
+  past = 'loading';
+  update();
+  try {
+    past = await store.months();
+  } catch {
+    past = 'error';
   }
   update();
+}
+
+async function togglePast() {
+  pastOpen = !pastOpen;
+  update();
+  if (pastOpen) await loadPast();
   refocus('[data-past]');
 }
 
@@ -637,6 +673,7 @@ app.addEventListener('click', (e) => {
     sort = t.dataset.sort;
     order = sorted();
     update();
+    if (sort === 'month') loadPast();
     return refocus(`[data-sort="${sort}"]`);
   }
   if ('rand' in t.dataset) return randomPick();

@@ -322,6 +322,44 @@ input:focus-visible {
   background: var(--yellow);
   padding: 2px 4px;
 }
+/* 月榜 tab: last closed month's board in the same table, rank over code, the month's gain in yellow, today's total dim */
+.board-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0 2px;
+}
+.board-cap b {
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--yellow);
+}
+.board-cap span {
+  font: 600 11.5px var(--sys);
+  color: var(--dim);
+}
+.code .rank {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--yellow);
+  margin-bottom: 2px;
+}
+.tot {
+  text-align: right;
+  font-family: var(--dot);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.tot.is-off {
+  font: 600 11.5px/1.2 var(--sys);
+}
 .empty {
   padding: 28px 4px;
   font: 600 14px/1.6 var(--sys);

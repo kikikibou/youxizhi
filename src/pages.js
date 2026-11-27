@@ -211,7 +211,7 @@ export const PAGES = [
       // A page of its own, /dbtk/ (src/dbtk/). Its close-up: the camera comes
       // down to a street bin in front of Tower B's lobby (BIN in buildings.js,
       // bin.js), low and from the left, its LED ticker running in the page's
-      // own yellow; a trade slip (交割单) opens. 扔进去 flips the left lid
+      // own yellow; a trade slip (交割单) opens. 推门 flips the left lid
       // open and the camera dives into it; on the black inside, the page's
       // dot-matrix name lights up (takeoff 'led', ledveil.js).
       {
@@ -236,10 +236,10 @@ export const PAGES = [
             label: '交割单',
             flight: 'DB 0001',
             mark: '涨',
-            board: '扔进去',
-            text: '在这里，你可以自由分享交流你喜欢的大辩题：申请上市，看涨投票，站队看正还是看反；每月出一张涨幅榜。',
+            board: '推门',
+            text: '好辩题人人都想要，可大辩题同样需要疏通交流的空间。欢迎来到人人皆可抛出想法的大辩题库：我们授权（但不推荐）所有比赛的主办方使用这里的养分——',
             fields: [['MARKET', '大辩题库'], ['SIDES', '看正 · 看反'], ['GAIN', '1~99 / 次']],
-            motto: '只是请千万\u200b不要忘记题库。', // (\u200b: where the stub's two lines break, see .pass--led .pass-motto)
+            motto: 'Pecunia non\u00a0olet.', // (money doesn't stink: Vespasian on his tax on the public urinals; and a market, and a dump, and the 养分 its text ends on. \u00a0: on the stub's two lines it breaks after Pecunia)
           },
         },
       },

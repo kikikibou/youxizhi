@@ -2468,13 +2468,7 @@ html[data-theme='night'] .pass-head {
   height: auto;
 }
 .pass--led .pass-motto {
-  font-family: var(--cn);
-  font-style: normal;
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 1.5;
   text-align: center;
-  word-break: keep-all; /* (it breaks only after 千万: a zero-width space there, pages.js) */
   color: var(--led-white);
 }
 .pass--led .pass-stub small {
@@ -2496,9 +2490,6 @@ html[data-theme='night'] .pass-head {
   }
   .pass-ticker-k {
     width: 70px;
-  }
-  .pass--led .pass-motto {
-    font-size: 10px;
   }
 }
 
@@ -2760,11 +2751,6 @@ html[data-theme='night'] .pass-head {
   position: relative;
   /* (under the name, which stands a little above the middle) */
   transform: translateY(clamp(70px, 13vh, 130px));
-  font-family: var(--cn);
-  font-style: normal;
-  font-weight: 700;
-  font-size: clamp(15px, 1.5vw, 19px);
-  letter-spacing: 0.08em;
   color: #d2cdbb;
   opacity: 0;
   transition: none;
