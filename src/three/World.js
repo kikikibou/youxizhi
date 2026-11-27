@@ -1555,8 +1555,10 @@ export class World {
         g.group.rotation.y = v.r || 0;
         g.group.scale.setScalar(v.scale || 1);
         g.blocks.forEach((t, k) => {
-          const hide = tall && g.ground.items[k].portrait === false;
-          t.update(this.night, hide ? 0 : THREE.MathUtils.clamp(g.shown * 1.8 - k * 0.12, 0, 1));
+          const it = g.ground.items[k];
+          const hide = tall && it.portrait === false;
+          // (alpha: how strongly it's printed on the paving, so the poster stays quiet)
+          t.update(this.night, hide ? 0 : THREE.MathUtils.clamp(g.shown * 1.8 - k * 0.12, 0, 1) * (it.alpha ?? 1));
         });
       }
     });

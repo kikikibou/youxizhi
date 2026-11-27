@@ -284,7 +284,7 @@ const MAZE = {
 };
 // (its place: see puzzle below; the way out right in front of the door under
 // the canopy, so the way through it leads there: mazeRoute; the way in one
-// cell along, so the two arches don't stand in line)
+// cell along, so the two gates don't stand in line)
 const MAZE_AT = { cols: 10, rows: 3, s: 1.7, x0: -8.5, z0: 2.6, in: 3, out: 2 };
 
 /**
@@ -436,17 +436,23 @@ function debate(b, k, site, R) {
 
 /* ---------------------------------------------------------------- puzzle */
 // A small hedge maze on the plaza in front of the cube (one way through),
-// laid out as a garden: a gravel bed in a stone kerb, leafy arches over the
-// ways in and out, lanterns, planting round it; and clipped cubes on the
+// laid out as a garden: a gravel bed in a stone kerb, a moon gate at the way
+// in and the way out, lanterns, planting round it; and clipped cubes on the
 // cube's roof. (The 问答 close-up looks down on it: its route, World.)
 function puzzle(b, k, site, R) {
   const { cols, rows, s, x0 } = MAZE_AT;
   const z0 = MAZE_AT.z0; // back edge (row 0); rows run towards the plaza (+z)
+  const t = 0.21; // half a hedge's thickness
+  const h = 0.8;
   const [right, down] = [MAZE.right, MAZE.down].map((rows) => rows.map((row) => [...row].map((c) => c === '1')));
-  // The walls, as centre lines [x, z, x, z] (drawn round and leafy by mazeGarden).
-  const walls = [];
-  const wallX = (x, za, zb) => walls.push([x, za, x, zb]);
-  const wallZ = (z, xa, xb) => walls.push([xa, z, xb, z]);
+  // (one shade for every wall: where two meet, their tops share a plane; a
+  // narrower, lighter top on each, as if fresh from the shears)
+  const hedge = (a, c) => {
+    k.hedge(a, c, 1.12);
+    k.hedge([a[0] + 0.06, h, a[2] + 0.06], [c[0] - 0.06, h + 0.08, c[2] - 0.06], 1.42);
+  };
+  const wallX = (x, za, zb) => hedge([x - t, 0, za - t], [x + t, h, zb + t]);
+  const wallZ = (z, xa, xb) => hedge([xa - t, 0, z - t], [xb + t, h, z + t]);
   for (let c = 0; c < cols; c++) {
     if (c !== MAZE_AT.out) wallZ(z0, x0 + c * s, x0 + (c + 1) * s); // back, the way out
     if (c !== MAZE_AT.in) wallZ(z0 + rows * s, x0 + c * s, x0 + (c + 1) * s); // front, the way in
@@ -459,7 +465,7 @@ function puzzle(b, k, site, R) {
       if (down[r][c] && r < rows - 1) wallZ(z0 + (r + 1) * s, x0 + c * s, x0 + (c + 1) * s);
     }
   }
-  mazeGarden(b, { x0, z0, s, cols, rows, walls });
+  mazeGarden(b, { x0, z0, s, cols, rows });
 
   // Clipped cubes in square planters: two big ones beside the maze, and a
   // row on the roof (top at 20.4; seen from above, during flights).
@@ -479,121 +485,21 @@ function puzzle(b, k, site, R) {
 }
 
 /**
- * The hedge maze as a garden: its hedges round and leafy, low-poly like the
- * tree crowns (rows of overlapping clumps on a darker core); its bed of
- * gravel in a low stone kerb (open at the ways in and out, stepping stones up
- * to the way in); a leafy arch, flowering, over each way; stone lanterns at
- * its corners; low planting along its front and sides. On a random sequence
- * of its own, so the other pages' planting (which shares one) stays as it was.
+ * Round the hedge maze: its bed of gravel in a low stone kerb (open at the
+ * ways in and out, stepping stones up to the way in), a moon gate (月洞门)
+ * at each way, stone lanterns at its corners, and low planting along its
+ * front and sides. On a random sequence of its own, so the other pages'
+ * planting (which shares one) stays as it was.
  */
-function mazeGarden(b, { x0, z0, s, cols, rows, walls }) {
+function mazeGarden(b, { x0, z0, s, cols, rows }) {
   const R = rng(20261128);
   const k = kit(meshes(b, R), pieces(b, R), R);
-  const lin = new THREE.Color();
-  /** A leafy clump: an icosahedron squashed / stretched, darker below, lighter on top. */
-  const clump = (x, y, z, r, [sx, sy, sz], shade) => {
-    const g = new THREE.IcosahedronGeometry(r, 1);
-    g.rotateY(R() * 6.28);
-    g.scale(sx, sy, sz);
-    g.translate(x, y, z);
-    const pos = g.getAttribute('position');
-    const uv = g.getAttribute('uv');
-    const col = new Float32Array(pos.count * 3);
-    for (let i = 0; i < pos.count; i++) {
-      const t = Math.min(1, Math.max(0, (pos.getY(i) - (y - r * sy)) / (2 * r * sy)));
-      const v = (0.74 + 0.4 * t) * shade;
-      col.set([v, v * 1.02, v * 0.92], i * 3);
-      uv.setY(i, 0);
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    b.push('bush', g);
-  };
-  const flower = (x, y, z) => {
-    const g = new THREE.IcosahedronGeometry(0.06 + R() * 0.03, 0);
-    g.translate(x, y, z);
-    lin.setRGB(...pick(R, FLOWERS), THREE.SRGBColorSpace);
-    const pos = g.getAttribute('position');
-    const uv = g.getAttribute('uv');
-    const col = new Float32Array(pos.count * 3);
-    for (let i = 0; i < pos.count; i++) {
-      col.set([lin.r, lin.g, lin.b], i * 3);
-      uv.setY(i, 0);
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    b.push('flower', g);
-  };
-
   const x1 = x0 + cols * s;
   const z1 = z0 + rows * s;
   const bed = { x0: x0 - 0.6, x1: x1 + 0.6, z0: z0 - 0.42, z1: z1 + 0.6 };
   const way = (c) => [x0 + c * s, x0 + (c + 1) * s];
   const [in0, in1] = way(MAZE_AT.in);
   const [out0, out1] = way(MAZE_AT.out);
-
-  // Lumps: every vertex nudged by a hash of where it is (so the copies of a
-  // vertex that faces share move together and no crack opens), darker at the
-  // foot, lighter on top, a little mottled. Flat-shaded, it reads low-poly.
-  const hash = (x, y, z) => {
-    const v = Math.sin(Math.round(x * 9) * 127.1 + Math.round(y * 9) * 311.7 + Math.round(z * 9) * 74.7) * 43758.5453;
-    return v - Math.floor(v);
-  };
-  const leafy = (g, { lump = 0.03, base = 0, top = 1, shade = 1 } = {}) => {
-    const pos = g.getAttribute('position');
-    const col = new Float32Array(pos.count * 3);
-    for (let i = 0; i < pos.count; i++) {
-      let [x, y, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
-      const [hx, hy, hz] = [hash(x, y, z), hash(z + 3.1, x, y), hash(y, z + 7.3, x)];
-      x += (hx - 0.5) * 2 * lump;
-      z += (hz - 0.5) * 2 * lump;
-      if (y > base + 0.02) y += (hy - 0.5) * 2 * lump;
-      pos.setXYZ(i, x, y, z);
-      const t = Math.min(1, Math.max(0, (y - base) / (top - base)));
-      const v = (0.7 + 0.42 * t) * shade * (0.94 + hx * 0.12);
-      col.set([v, v * 1.02, v * 0.92], i * 3);
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    const uv = g.getAttribute('uv');
-    for (let i = 0; i < uv.count; i++) uv.setY(i, 0);
-    g.computeVertexNormals();
-    return g;
-  };
-
-  // The hedges: each wall one clipped hedge, its section a rectangle with
-  // its top corners rounded, its ends rounded off too (bevelled), lumpy.
-  const HW = 0.25; // half its width
-  const HH = 0.86; // its height
-  const section = new THREE.Shape();
-  section.moveTo(-HW, 0);
-  section.lineTo(HW, 0);
-  section.lineTo(HW, HH - 0.2);
-  section.quadraticCurveTo(HW, HH, HW - 0.2, HH);
-  section.lineTo(-HW + 0.2, HH);
-  section.quadraticCurveTo(-HW, HH, -HW, HH - 0.2);
-  section.lineTo(-HW, 0);
-  for (const [xa, za, xb, zb] of walls) {
-    const len = Math.hypot(xb - xa, zb - za);
-    const g = new THREE.ExtrudeGeometry(section, {
-      depth: len,
-      steps: Math.max(2, Math.round(len / 0.55)),
-      curveSegments: 1,
-      bevelEnabled: true,
-      bevelThickness: 0.14,
-      bevelSize: 0.05,
-      bevelOffset: -0.05,
-      bevelSegments: 2,
-    });
-    // (extruded along +z from 0: turned to lie along the wall)
-    if (Math.abs(xb - xa) > Math.abs(zb - za)) g.rotateY(Math.PI / 2).translate(Math.min(xa, xb), 0, za);
-    else g.translate(xa, 0, Math.min(za, zb));
-    b.push('bush', leafy(g, { lump: 0.08, top: HH, shade: 1.12 + R() * 0.12 }));
-    // (and a few clumps sunk into its top, so its line isn't a smooth roll)
-    const n = Math.round(len / 0.75);
-    for (let i = 0; i < n; i++) {
-      const u = (i + 0.2 + R() * 0.6) / n;
-      const r = 0.2 + R() * 0.1;
-      clump(xa + (xb - xa) * u + (R() - 0.5) * 0.06, HH - r * 0.45, za + (zb - za) * u + (R() - 0.5) * 0.06, r, [1.25, 0.85, 1.25], 1.18 + R() * 0.16);
-    }
-  }
 
   // The bed: gravel, and its kerb (open where the ways are).
   b.box('gravel', [bed.x0, 0, bed.z0], [bed.x1, 0.035, bed.z1]);
@@ -614,31 +520,30 @@ function mazeGarden(b, { x0, z0, s, cols, rows, walls }) {
     b.box('concrete', [mid + dx - 0.36, 0, z - 0.26], [mid + dx + 0.36, 0.05, z + 0.26]);
   }
 
-  // A leafy arch over each way: rising from the hedges' ends either side,
-  // clumps up two legs and round a half circle over the top (about 2.1 m),
-  // two deep, a few flowers in it.
-  const arch = (xa, xb, z) => {
+  // A moon gate (月洞门) at each way, as in a Chinese garden: a short white
+  // wall across it, wider than the gap, with a round opening down to a low
+  // sill, a stone ring round the opening standing a little proud, and dark
+  // coping along the top. (The close-up's last look goes through the far
+  // one, at the door.)
+  const moonGate = (xa, xb, z) => {
     const m = (xa + xb) / 2;
-    const r = (xb - xa) / 2 - 0.05; // (the legs on the hedges' ends)
-    const spring = 1.25;
-    const path = new THREE.CurvePath();
-    path.add(new THREE.LineCurve3(new THREE.Vector3(m - r, 0.5, z), new THREE.Vector3(m - r, spring, z)));
-    path.add(new THREE.EllipseCurve(m, spring, r, r * 0.95, Math.PI, 0, true).getPoints(14).reduce((c, p, i, ps) => {
-      if (i) c.add(new THREE.LineCurve3(new THREE.Vector3(ps[i - 1].x, ps[i - 1].y, z), new THREE.Vector3(p.x, p.y, z)));
-      return c;
-    }, new THREE.CurvePath()));
-    path.add(new THREE.LineCurve3(new THREE.Vector3(m + r, spring, z), new THREE.Vector3(m + r, 0.5, z)));
-    const g = new THREE.TubeGeometry(path, 30, 0.26, 5, false);
-    b.push('bush', leafy(g, { lump: 0.08, base: 0.5, top: spring + r, shade: 1.12 }));
-    // a few clumps on it, and flowers
-    const pts = path.getSpacedPoints(18);
-    pts.forEach((p, i) => {
-      if (i % 2 === 1) clump(p.x + (R() - 0.5) * 0.08, p.y + 0.06, z + (R() - 0.5) * 0.12, 0.2 + R() * 0.06, [1, 0.9, 1], 1.15 + R() * 0.15);
-      if (R() < 0.45) flower(p.x + (R() - 0.5) * 0.24, p.y + 0.08 + R() * 0.1, z + (R() < 0.5 ? -1 : 1) * (0.16 + R() * 0.06));
-    });
+    const W = 1.45; // half the wall's width
+    const H = 2.35; // its height
+    const r = 0.88; // the opening's radius
+    const cy = r + 0.06; // its centre (over a low sill)
+    const disc = (rad, cw) => new THREE.Path().absarc(0, cy, rad, 0, Math.PI * 2, cw);
+    const wall = new THREE.Shape([new THREE.Vector2(-W, 0), new THREE.Vector2(W, 0), new THREE.Vector2(W, H), new THREE.Vector2(-W, H)]);
+    wall.holes.push(disc(r + 0.05, true)); // (a little wider than the ring's opening: the ring's edge is the one seen)
+    b.push('white', new THREE.ExtrudeGeometry(wall, { depth: 0.26, bevelEnabled: false, curveSegments: 32 }).translate(m, 0, z - 0.13));
+    const ring = new THREE.Shape().absarc(0, cy, r + 0.11, 0, Math.PI * 2, false);
+    ring.holes.push(disc(r, true));
+    b.push('concrete', new THREE.ExtrudeGeometry(ring, { depth: 0.34, bevelEnabled: false, curveSegments: 32 }).translate(m, 0, z - 0.17));
+    b.box('metal', [m - W - 0.12, H, z - 0.24], [m + W + 0.12, H + 0.09, z + 0.24]);
+    b.box('metal', [m - W - 0.03, H + 0.09, z - 0.08], [m + W + 0.03, H + 0.17, z + 0.08]);
+    for (const x of [m - W + 0.25, m + W - 0.25]) k.tuft(x, 0.035, z + (z > z0 + 1 ? 0.36 : -0.36), 0.55, null, 0.5);
   };
-  arch(in0, in1, z1);
-  arch(out0, out1, z0);
+  moonGate(in0, in1, z1);
+  moonGate(out0, out1, z0);
 
   // Stone lanterns at the bed's corners: a post, a light, a cap.
   const lantern = (x, z) => {

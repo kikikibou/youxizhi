@@ -160,7 +160,9 @@ export const PAGES = [
           // lie, all avoidable "with an If". Decoration: it may run off the
           // screen or behind the tower. (p: [x, z] on the ground, r: turned to
           // face the camera, scale: all of it larger; items at [across, away]
-          // in metres; under: drawn beneath the others, a watermark)
+          // in metres; under: drawn beneath the others, a watermark; alpha:
+          // how strongly printed, the dark ink kept light so it doesn't pull
+          // the eye from the pass)
           ground: {
             // (high and large enough that the title runs off the top, under the
             // top bar, and the script off the right)
@@ -170,7 +172,7 @@ export const PAGES = [
             portrait: { p: [-12.5, -59.5], r: 0.02, scale: 0.62 }, // (only the title, just under the nav: the rest would fall behind the roof)
             items: [
               { t: 'IF', f: 'display', s: 50, at: [-27, -19], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
-              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [3, -0.4], c: 'orange' },
+              { t: 'MUCH VIRTUE IN IF.', f: 'display', s: 14, at: [3, -0.4], c: 'orange', alpha: 0.85 },
               {
                 t: 'I. THE RETORT COURTEOUS\nII. THE QUIP MODEST\nIII. THE REPLY CHURLISH\nIV. THE REPROOF VALIANT\nV. THE COUNTERCHECK QUARRELSOME\nVI. THE LIE WITH CIRCUMSTANCE\nVII. THE LIE DIRECT',
                 f: 'caps',
@@ -178,6 +180,7 @@ export const PAGES = [
                 at: [-47.5, -15.4],
                 anchor: 'left',
                 c: 'ink',
+                alpha: 0.42,
                 portrait: false,
               },
               {
@@ -187,10 +190,11 @@ export const PAGES = [
                 at: [-44.5, -28.4],
                 anchor: 'left',
                 c: 'orange',
+                alpha: 0.75,
                 portrait: false,
               },
-              { t: 'We quarrel in print, by the book.', f: 'script', s: 4.9, at: [26.5, -7.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
-              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.4, at: [47, -12.4], anchor: 'right', c: 'ink', portrait: false },
+              { t: 'We quarrel in print, by the book.', f: 'script', s: 4.9, at: [26.5, -7.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, alpha: 0.6, portrait: false },
+              { t: 'TOUCHSTONE · AS YOU LIKE IT · V. IV', f: 'caps', s: 1.4, at: [47, -12.4], anchor: 'right', c: 'ink', alpha: 0.42, portrait: false },
             ],
           },
           pass: {
@@ -289,40 +293,39 @@ export const PAGES = [
           view: { pos: [-15, 15, 15], target: [-9, 0, 1.5], fov: 44 }, // (the gates, the door and the route clear of the pass, the maze running off to the right)
           portrait: { pos: [-1.5, 14, 19], target: [-1, 0, 12.5], fov: 44 }, // (the maze and the door above the pass)
           dive: [-4.25, 1.6, -4.9], // (the lobby's glass, under the sign, straight on from the maze's way out)
-          diveAt: [-4.25, 1.45, 4.3], // (inside the maze, looking through its back gate at the door)
+          diveAt: [-4.25, 1.1, 5.9], // (over the maze, the back moon gate's circle round the door)
           diveVia: [-4.25, 2.6, 10],
           route: 'maze',
           keepTexts: true, // (the door's sign stays lit, see World.update)
-          // On the plaza left of the maze, the ground as a poster (as at
-          // 攻错's helipad): the opening of 三国演义, a giant 分 under it as a
-          // watermark, an English line of its own, and a word on reading
-          // what is hidden. Decoration: it may run off the screen.
-          // (p: [x, z] on the ground, r: turned to face the camera, scale;
-          // items at [across, away] in metres; under: beneath the others)
+          // On the plaza beside the cube, the ground as a poster (as at
+          // 攻错's helipad), quiet: Legrand in Poe's The Gold-Bug, the first
+          // cipher story, on why every cipher can be read. Its lines run along
+          // the cube's left side, the letters' tops towards it, as if read by
+          // someone coming from the left: a pale giant ENIGMA under the quote,
+          // printed lightly over it, and RESOLVE. the one word in the accent.
+          // Decoration: it may run off the screen. (p: [x, z] on the ground,
+          // r: its turn, -90° so its lines run towards the plaza; scale; items
+          // at [across, away] in metres, across along the lines; under:
+          // beneath the others; alpha: how strongly printed)
           ground: {
-            // (on the plaza beside the cube, the big lines set against its
-            // left edge and running off the screen; the script out in front
-            // of the maze, in the corner the pass leaves clear)
-            p: [-11.2, -2.6],
-            r: -0.42,
+            p: [-11.6, -15.5],
+            r: -Math.PI / 2,
             scale: 1,
-            portrait: { p: [4.2, 14.6], r: 0, scale: 0.52 }, // (only the two big lines, between the maze and the pass)
+            portrait: { p: [-4.7, 9.4], r: 0, scale: 0.55 }, // (only RESOLVE. on its ENIGMA, between the maze and the pass)
             items: [
-              { t: '分', f: 'cn', s: 24, at: [-9, 5], c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, portrait: false },
-              { t: '话说天下大势，', f: 'cn', s: 1.7, at: [0, 12.1], anchor: 'right', c: 'ink', portrait: false },
-              { t: '分久必合', f: 'cn', s: 4.4, at: [0, 8], anchor: 'right', c: 'orange' },
-              { t: '合久必分', f: 'cn', s: 4.4, at: [0, 2.9], anchor: 'right', c: 'ink' },
+              { t: 'ENIGMA', f: 'display', s: 9, at: [-1.5, -4], anchor: 'left', c: { dayIn: 'light', dayOut: 'light', nightIn: 'ink', nightOut: 'ink' }, under: true, alpha: 0.5 },
+              { t: 'EDGAR ALLAN POE · THE GOLD-BUG · 1843', f: 'caps', s: 0.5, at: [0.2, 0.9], anchor: 'left', c: 'ink', alpha: 0.42, portrait: false },
               {
-                t: 'LONG DIVIDED, THE REALM WILL BE ONE;\nLONG ONE, IT WILL DIVIDE AGAIN.',
+                t: 'YET IT MAY WELL BE DOUBTED WHETHER HUMAN INGENUITY\nCAN CONSTRUCT AN ENIGMA OF THE KIND WHICH HUMAN\nINGENUITY MAY NOT, BY PROPER APPLICATION,',
                 f: 'caps',
-                s: 0.85,
-                at: [0, 0.1],
-                anchor: 'right',
-                c: 'orange',
+                s: 0.82,
+                at: [0.2, -1.5],
+                anchor: 'left',
+                c: 'ink',
+                alpha: 0.5,
                 portrait: false,
               },
-              { t: 'LUO GUANZHONG · ROMANCE OF THE THREE KINGDOMS · I', f: 'caps', s: 0.62, at: [0, -1.6], anchor: 'right', c: 'ink', portrait: false },
-              { t: 'Read between the lines.', f: 'script', s: 2.5, at: [15.6, -9.4], c: { dayIn: 'accent', dayOut: 'ink', nightIn: 'accent', nightOut: 'cream' }, portrait: false },
+              { t: 'RESOLVE.', f: 'display', s: 4.4, at: [0, -6.4], anchor: 'left', c: 'orange', alpha: 0.82 },
             ],
           },
           pass: {
