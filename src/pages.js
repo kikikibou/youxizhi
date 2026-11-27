@@ -293,7 +293,7 @@ export const PAGES = [
           view: { pos: [-15, 15, 15], target: [-9, 0, 1.5], fov: 44 }, // (the gates, the door and the route clear of the pass, the maze running off to the right)
           portrait: { pos: [-1.5, 14, 19], target: [-1, 0, 12.5], fov: 44 }, // (the maze and the door above the pass)
           dive: [-4.25, 1.6, -4.9], // (the lobby's glass, under the sign, straight on from the maze's way out)
-          diveAt: [-4.25, 1.1, 5.9], // (over the maze, the back moon gate's circle round the door)
+          diveAt: [-4.25, 1.1, 5.9], // (over the maze, the back portal's frame round the door)
           diveVia: [-4.25, 2.6, 10],
           route: 'maze',
           keepTexts: true, // (the door's sign stays lit, see World.update)

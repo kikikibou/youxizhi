@@ -436,8 +436,8 @@ function debate(b, k, site, R) {
 
 /* ---------------------------------------------------------------- puzzle */
 // A small hedge maze on the plaza in front of the cube (one way through),
-// laid out as a garden: a gravel bed in a stone kerb, a moon gate at the way
-// in and the way out, lanterns, planting round it; and clipped cubes on the
+// laid out as a garden: a gravel bed in a stone kerb, a square portal at the
+// way in and the way out, lanterns, planting round it; and clipped cubes on the
 // cube's roof. (The 问答 close-up looks down on it: its route, World.)
 function puzzle(b, k, site, R) {
   const { cols, rows, s, x0 } = MAZE_AT;
@@ -486,8 +486,8 @@ function puzzle(b, k, site, R) {
 
 /**
  * Round the hedge maze: its bed of gravel in a low stone kerb (open at the
- * ways in and out, stepping stones up to the way in), a moon gate (月洞门)
- * at each way, stone lanterns at its corners, and low planting along its
+ * ways in and out, stepping stones up to the way in), a portal in the cube's
+ * manner at each way, stone lanterns at its corners, and low planting along its
  * front and sides. On a random sequence of its own, so the other pages'
  * planting (which shares one) stays as it was.
  */
@@ -520,30 +520,31 @@ function mazeGarden(b, { x0, z0, s, cols, rows }) {
     b.box('concrete', [mid + dx - 0.36, 0, z - 0.26], [mid + dx + 0.36, 0.05, z + 0.26]);
   }
 
-  // A moon gate (月洞门) at each way, as in a Chinese garden: a short white
-  // wall across it, wider than the gap, with a round opening down to a low
-  // sill, a stone ring round the opening standing a little proud, and dark
-  // coping along the top. (The close-up's last look goes through the far
-  // one, at the door.)
-  const moonGate = (xa, xb, z) => {
+  // A portal at each way, in the cube's own manner, as if one of its facade
+  // modules had been set down in the garden: a deep white square frame, its
+  // posts on the hedges' ends, a whiteShade coping over it like the cube's
+  // roof edge, and the reveal round the opening lined in the accent, like
+  // its orange module. (The close-up's last look goes through the far one,
+  // at the door.)
+  const portal = (xa, xb, z) => {
     const m = (xa + xb) / 2;
-    const W = 1.45; // half the wall's width
-    const H = 2.35; // its height
-    const r = 0.88; // the opening's radius
-    const cy = r + 0.06; // its centre (over a low sill)
-    const disc = (rad, cw) => new THREE.Path().absarc(0, cy, rad, 0, Math.PI * 2, cw);
-    const wall = new THREE.Shape([new THREE.Vector2(-W, 0), new THREE.Vector2(W, 0), new THREE.Vector2(W, H), new THREE.Vector2(-W, H)]);
-    wall.holes.push(disc(r + 0.05, true)); // (a little wider than the ring's opening: the ring's edge is the one seen)
-    b.push('white', new THREE.ExtrudeGeometry(wall, { depth: 0.26, bevelEnabled: false, curveSegments: 32 }).translate(m, 0, z - 0.13));
-    const ring = new THREE.Shape().absarc(0, cy, r + 0.11, 0, Math.PI * 2, false);
-    ring.holes.push(disc(r, true));
-    b.push('concrete', new THREE.ExtrudeGeometry(ring, { depth: 0.34, bevelEnabled: false, curveSegments: 32 }).translate(m, 0, z - 0.17));
-    b.box('metal', [m - W - 0.12, H, z - 0.24], [m + W + 0.12, H + 0.09, z + 0.24]);
-    b.box('metal', [m - W - 0.03, H + 0.09, z - 0.08], [m + W + 0.03, H + 0.17, z + 0.08]);
-    for (const x of [m - W + 0.25, m + W - 0.25]) k.tuft(x, 0.035, z + (z > z0 + 1 ? 0.36 : -0.36), 0.55, null, 0.5);
+    const ow = 0.64; // half the opening (the hedges' faces)
+    const t = 0.28; // the frame's thickness
+    const d = 0.32; // half its depth
+    const H = 2.05; // the opening's height
+    b.box('white', [m - ow - t, 0, z - d], [m - ow, H + t, z + d]);
+    b.box('white', [m + ow, 0, z - d], [m + ow + t, H + t, z + d]);
+    b.box('white', [m - ow, H, z - d], [m + ow, H + t, z + d]);
+    b.box('whiteShade', [m - ow - t - 0.07, H + t, z - d - 0.07], [m + ow + t + 0.07, H + t + 0.09, z + d + 0.07]);
+    const e = 0.035;
+    const [za, zb] = [z - d + 0.03, z + d - 0.03];
+    b.box('orange', [m - ow, 0, za], [m - ow + e, H, zb]);
+    b.box('orange', [m + ow - e, 0, za], [m + ow, H, zb]);
+    b.box('orange', [m - ow, H - e, za], [m + ow, H, zb]);
+    for (const x of [m - ow - t - 0.25, m + ow + t + 0.25]) k.tuft(x, 0.035, z + (z > z0 + 1 ? 0.42 : -0.42), 0.55, null, 0.5);
   };
-  moonGate(in0, in1, z1);
-  moonGate(out0, out1, z0);
+  portal(in0, in1, z1);
+  portal(out0, out1, z0);
 
   // Stone lanterns at the bed's corners: a post, a light, a cap.
   const lantern = (x, z) => {
