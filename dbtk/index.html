@@ -8,6 +8,19 @@
     <meta name="description" content="离谱辩题交易所：投稿搞笑、抽象、垃圾辩题，买入挺正方，卖出挺反方，每月出一个月榜。" />
     <!-- Pre-launch, like the rest of the site. -->
     <meta name="robots" content="noindex, nofollow" />
+    <!-- 从小镇的转场进来（它留了 youxizhi-arrive 记号）：页面先藏着，底色是屏的黑，等 src/dbtk/arrive.js 画好转场最后那块屏 -->
+    <script>
+      try {
+        if (sessionStorage.getItem('youxizhi-arrive')) {
+          document.documentElement.classList.add('is-arriving');
+          setTimeout(() => document.documentElement.classList.remove('is-arriving'), 3000);
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      html.is-arriving { background: #070807; }
+      html.is-arriving #app { visibility: hidden; }
+    </style>
   </head>
   <body>
     <main id="app" class="board"></main>

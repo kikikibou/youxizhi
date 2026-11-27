@@ -22,6 +22,7 @@ import '@fontsource/doto/latin-700.css';
 import '@fontsource/doto/latin-900.css';
 import './style.css';
 import { TURNSTILE_SITEKEY } from './config.js';
+import { arrive } from './arrive.js';
 import { change, createStore } from './data.js';
 import { klineSvg } from './kline.js';
 
@@ -84,7 +85,10 @@ function sorted() {
 
 const byCode = (code) => store.all().find((s) => s.code === code);
 const isNew = (s) => Date.now() - s.listedAt < NEW_FOR;
-const pct = (n) => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+// 涨幅：百分之百以上不带小数（「+250%」「-100%」），好放进行情表那一列
+const pct = (n) => (n >= 0 ? '+' : '') + (Math.abs(n) >= 100 ? Math.round(n) : n.toFixed(1)) + '%';
+// 数字太长时字号小一号（is-long），不让它撑出那一列
+const long = (text, max) => (String(text).length > max ? ' is-long' : '');
 
 function remember(code) {
   try {
@@ -140,7 +144,7 @@ function ticker() {
 function chgHtml(s) {
   const c = change(s);
   if (c === null) return '<span class="chg up">新股</span>';
-  return `<span class="chg ${c >= 0 ? 'up' : 'down'}">${pct(c)}${c >= LIMIT ? '<span class="limit">涨停</span>' : ''}</span>`;
+  return `<span class="chg ${c >= 0 ? 'up' : 'down'}${long(pct(c), 6)}">${pct(c)}${c >= LIMIT ? '<span class="limit">涨停</span>' : ''}</span>`;
 }
 
 function sidesOf(s) {
@@ -199,7 +203,7 @@ function row(s) {
     <button class="row-head" aria-current="${on}" aria-label="放进主窗口：${esc(s.title)}">
       <span class="code">${s.code}${isNew(s) ? '<i>新上市</i>' : ''}</span>
       <span class="t"><span class="name">${esc(s.title)}</span><span class="who">题库人 <b>${esc(s.who)}</b></span></span>
-      <span class="num ${dir}" data-num>${s.votes}</span>
+      <span class="num ${dir}${long(s.votes, 4)}" data-num>${s.votes}</span>
       ${chgHtml(s)}
     </button>
   </article>`;
@@ -219,7 +223,7 @@ function boardRow(r) {
   const on = featured === r.code;
   const inner = `<span class="code"><b class="rank">${r.rank}</b>${r.code}</span>
       <span class="t"><span class="name">${esc(r.title)}</span><span class="who">题库人 <b>${esc(r.who)}</b></span></span>
-      <span class="num up">+${r.gain}</span>
+      <span class="num up${long(r.gain, 4)}">+${r.gain}</span>
       ${s ? `<span class="tot">${s.votes}</span>` : '<span class="tot is-off">已下市</span>'}`;
   return `<article class="row${on ? ' is-current' : ''}" data-code="${r.code}">${
     s
@@ -659,8 +663,14 @@ async function submit(form) {
 
 /* ---------- wiring ---------- */
 
+// 开发时 ?arrive=秒：假装从小镇的转场进来，停在那一刻看（?arrive=play 照常播一遍）
+const hold = import.meta.env.DEV ? new URLSearchParams(location.search).get('arrive') : null;
+if (hold !== null) sessionStorage.setItem('youxizhi-arrive', JSON.stringify({ kind: 'led', at: Date.now() }));
+const arrival = arrive(); // 从小镇的转场进来：先画好转场最后那块屏（arrive.js）
 shell();
 load();
+if (hold !== null && hold !== 'play') arrival?.seek(Number(hold), app.querySelector('.head h1'));
+else arrival?.play(app.querySelector('.head h1'));
 
 app.addEventListener('click', (e) => {
   const t = e.target.closest('button');

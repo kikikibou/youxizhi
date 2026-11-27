@@ -1,4 +1,5 @@
 import { LED, textDots } from './leddots.js';
+import { gridCanvas, nameBoard, paintDots } from './ledboard.js';
 
 /**
  * 大辩题库's way in (board() in app.js, takeoff kind 'led'): the camera has
@@ -6,8 +7,9 @@ import { LED, textDots } from './leddots.js';
  * quote board. Its dots come up dim over the whole screen, a flash of news
  * runs across it (快讯 大辩题库开盘), and as it passes, the page's name lights
  * up in yellow dots from the middle outwards, each dot flaring white first.
- * The board then stays on the black the page opens on (#070807), under the
- * motto (CSS, .takeoff[data-kind='led']).
+ * The board then stays lit under the motto (CSS, .takeoff[data-kind='led']);
+ * the motto goes, and the page opens on this same board (src/dbtk/arrive.js)
+ * and unfolds from it.
  *
  * Drawn on a canvas frame by frame, played by the clock (a slow machine sees
  * fewer frames, not a slower board; a timer finishes it where no frames
@@ -35,78 +37,20 @@ export function ledVeil(host) {
   const ctx = canvas.getContext('2d');
   host.prepend(canvas);
 
-  // The name: on one line on a wide screen, 大辩 over 题库 on a narrow one;
-  // the dots as large as lets it take most of the width.
-  const wide = W / H > 0.9 && W >= 640;
-  const lines = (wide ? ['大辩题库'] : ['大辩', '题库']).map((t) => textDots(t, 24, 500));
-  const nCols = Math.max(...lines.map((l) => l.cols));
-  const nRows = lines.length * 24 + (lines.length - 1) * 3;
-  const pitch = Math.max(5, Math.min(wide ? 13 : 11, Math.floor(Math.min((W * 0.74) / nCols, (H * 0.34) / nRows)))) * k;
-  const cols = Math.ceil(canvas.width / pitch) + 1;
-  const rows = Math.ceil(canvas.height / pitch) + 1;
-  const ox = (canvas.width - cols * pitch) / 2; // (the grid centred on the screen)
-  const oy = (canvas.height - rows * pitch) / 2;
-  const c0 = Math.floor((cols - nCols) / 2);
-  const r0 = Math.floor(rows / 2 - nRows / 2 - rows * 0.05); // (a little above the middle: the motto goes under it)
-  const R = pitch * 0.36;
-
-  // Which dots the name lights, and when each one does (by its distance from the middle).
-  const name = [];
-  const mid = [c0 + nCols / 2, r0 + nRows / 2];
-  let far = 1;
-  lines.forEach((l, j) => {
-    const top = r0 + j * 27;
-    const left = c0 + Math.floor((nCols - l.cols) / 2);
-    for (let r = 0; r < l.rows; r++) for (let i = 0; i < l.cols; i++) {
-      if (!l.on(r, i)) continue;
-      const d = Math.hypot(left + i - mid[0], (top + r - mid[1]) * 1.4);
-      far = Math.max(far, d);
-      name.push({ c: left + i, r: top + r, d });
-    }
-  });
-  for (const n of name) n.at = NAME[0] + (NAME[1] - NAME[0] - FLARE) * (n.d / far) ** 0.8;
+  // The board: its grid and the name's dots, the same the page then opens on
+  // (ledboard.js); each dot lights at a time by its distance from the middle.
+  const b = nameBoard(W, H, k);
+  const { cols, R, at } = b;
+  const name = b.name.map((n) => ({ ...n, at: NAME[0] + (NAME[1] - NAME[0] - FLARE) * (n.d / b.far) ** 0.8 }));
 
   // The news: 16 rows high, through the middle of the name's band.
   const news = [textDots('快讯 ', 16, 400), textDots('大辩题库开盘   快讯 ', 16, 400), textDots('大辩题库开盘', 16, 400)];
   const newsColors = [LED.yellow, LED.white, LED.white];
   const newsCols = news.reduce((a, n) => a + n.cols, 0);
-  const newsTop = Math.round(mid[1] - 8);
+  const newsTop = Math.round(b.mid[1] - 8);
 
-  // The unlit dots, drawn once.
-  const grid = document.createElement('canvas');
-  grid.width = canvas.width;
-  grid.height = canvas.height;
-  const g = grid.getContext('2d');
-  g.fillStyle = LED.screen;
-  g.fillRect(0, 0, grid.width, grid.height);
-  g.fillStyle = LED.off;
-  g.beginPath();
-  for (let i = 0; i < cols; i++) for (let r = 0; r < rows; r++) {
-    const x = ox + i * pitch + pitch / 2;
-    const y = oy + r * pitch + pitch / 2;
-    g.moveTo(x + R, y);
-    g.arc(x, y, R, 0, Math.PI * 2);
-  }
-  g.fill();
-
-  const at = (i, r) => [ox + i * pitch + pitch / 2, oy + r * pitch + pitch / 2];
-  // Lit dots in batches by colour and size: a soft halo under each, then its core.
-  const paint = (batches) => {
-    for (const [color, list, big] of batches) {
-      if (!list.length) continue;
-      ctx.fillStyle = color;
-      for (const [rad, alpha] of [[R * (big ? 2 : 1.5), 0.22], [R * (big ? 1.25 : 1), 1]]) {
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        for (const [x, y] of list) {
-          ctx.moveTo(x + rad, y);
-          ctx.arc(x, y, rad, 0, Math.PI * 2);
-        }
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-  };
+  const grid = gridCanvas(b); // (the unlit dots, drawn once)
+  const paint = (batches) => paintDots(ctx, R, batches);
 
   let T = 0;
   /** The board at time T (seconds into its lighting up). */

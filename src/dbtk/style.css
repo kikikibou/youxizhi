@@ -103,6 +103,15 @@ input:focus-visible {
   }
 }
 
+/* coming in from the town: its way in's last board over the page, unfolding (arrive.js) */
+.arrive {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none; /* (its size: the window's as the page opened, arrive.js) */
+}
+
 /* LED dot mask: only for big fixed lettering */
 .led {
   -webkit-mask-image: radial-gradient(circle, #000 1.15px, transparent 1.5px);
@@ -229,7 +238,7 @@ input:focus-visible {
 .cols,
 .row-head {
   display: grid;
-  grid-template-columns: 46px 1fr 48px 56px;
+  grid-template-columns: 46px minmax(0, 1fr) 54px 58px; /* (票数 5 位、涨幅 6 个字符以内放得下，再长的 is-long 小一号) */
   column-gap: 6px;
   align-items: center;
 }
@@ -306,6 +315,12 @@ input:focus-visible {
   font-weight: 900;
   font-size: 16px;
   line-height: 1;
+}
+.num.is-long {
+  font-size: 16px;
+}
+.chg.is-long {
+  font-size: 13px;
 }
 /* growth is yellow; a slower day than yesterday is just dimmer, never green (green means 看反) */
 .up {

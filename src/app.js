@@ -419,7 +419,16 @@ function board() {
   const leave = (quiet, go) => {
     setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), quiet);
     setTimeout(() => {
-      if (spot === s) location.assign(c.href);
+      if (spot !== s) return;
+      // (大辩题库's page opens on the board left lit here, and unfolds from it: src/dbtk/arrive.js)
+      if (kind === 'led') {
+        try {
+          sessionStorage.setItem(ARRIVE_KEY, JSON.stringify({ kind, at: Date.now() }));
+        } catch {
+          /* storage unavailable: the page just opens */
+        }
+      }
+      location.assign(c.href);
     }, go);
   };
   // (the leaving's own animation; once it has covered the screen, the other
@@ -451,8 +460,9 @@ function board() {
     }
     if (kind === 'led') {
       // (into the bin as its ticker races; once the opening's black fills
-      // the screen, the board's dots come up and the name lights; it stays
-      // there under the motto, and they go together)
+      // the screen, the board's dots come up and the name lights; the motto
+      // comes under it and goes again, and the board is left lit: the page
+      // opens on it)
       world.dive(1.2);
       setTimeout(() => {
         if (spot !== s) return;
@@ -528,6 +538,8 @@ window.addEventListener('pageshow', (e) => {
 // Back from the other site with this one loaded afresh: board() left a note
 // of the pass. (Read once; only a Back or Forward to the same page uses it.)
 const SPOT_KEY = 'youxizhi-spot';
+// (a page that opens on where its way in left off reads this, once: { kind, at })
+const ARRIVE_KEY = 'youxizhi-arrive';
 function takeBackSpot() {
   let s = null;
   try {

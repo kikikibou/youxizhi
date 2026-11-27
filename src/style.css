@@ -2726,8 +2726,8 @@ html[data-theme='night'] .pass-head {
 /* 大辩题库 (kind 'led', ledveil.js): the camera has dived into its bin, and
    the black inside turns into a quote board, its name lighting up in yellow
    dots; the board's black itself (is-open) under it, the motto under the
-   name; the name and the motto go together, and the page follows on the
-   bare black. */
+   name; the motto goes, and the page opens on the board left lit (its own
+   arrive.js lays out the same board and unfolds from it). */
 .takeoff[data-kind='led'] {
   opacity: 1;
   background: transparent;
@@ -2741,10 +2741,6 @@ html[data-theme='night'] .pass-head {
   inset: 0;
   width: 100%;
   height: 100%;
-}
-.takeoff[data-kind='led'].is-quiet .led {
-  opacity: 0;
-  transition: opacity 0.6s ease;
 }
 .takeoff[data-kind='led'] .takeoff-motto,
 .takeoff[data-kind='led'].is-on .takeoff-motto {
