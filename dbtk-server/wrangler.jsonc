@@ -26,6 +26,8 @@
     "AI_MODEL": "anthropic/claude-haiku-5.5",
     // 每天最多调用 AI 初筛多少次，超出的投稿直接进人工审核队列，防止被刷爆账单。
     "AI_DAILY_CAP": "100",
+    // 每天 AI 最多自动放行多少只新股，满了的进待审队列（站主点上市才上市），防灌水。
+    "LIST_DAILY_CAP": "30",
     // 审核提醒的发件人：必须在账号里开通了 Email Sending 的域名下（debatestone.com 已开通）。
     "NOTIFY_FROM": "dbtk@debatestone.com",
     // 邮件里「去审核」的链接

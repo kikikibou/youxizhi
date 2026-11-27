@@ -18,6 +18,11 @@ export function monthLength(month: string): number {
   return new Date(Date.UTC(y, m, 0)).getUTCDate();
 }
 
+/** 到今天为止最近 n 天（北京时间），从早到晚。 */
+export function recentDays(ms: number, n: number): string[] {
+  return Array.from({ length: n }, (_, i) => bjDay(ms - (n - 1 - i) * 86400e3));
+}
+
 export function prevMonth(month: string): string {
   const [y, m] = month.split('-').map(Number);
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;

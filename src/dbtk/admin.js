@@ -96,9 +96,11 @@ function render() {
   }
   const pending = data?.pending ?? [];
   const recent = data?.recent ?? [];
+  const ai = data?.ai;
   root.innerHTML = `
     <header class="head"><h1 class="led">大辩题库</h1><p class="desk-sub">上市审核<button class="desk-out" data-out>退出</button></p></header>
     <p class="note desk-note" role="status" aria-live="polite">${esc(error)}</p>
+    ${ai ? `<p class="desk-ai">本月 AI 初筛 <b>${ai.calls}</b> 次，花费 <b>$${ai.cost.toFixed(4)}</b>　今天 ${ai.today} / ${ai.cap} 次<button class="desk-refresh" data-mail>发测试邮件</button></p>` : ''}
     <section class="desk">
       <h2>待审 <b>${pending.length}</b><button class="desk-refresh" data-refresh>刷新</button></h2>
       ${data ? (pending.length ? `<ul>${pending.map(pendingItem).join('')}</ul>` : '<p class="past-note">没有待审的投稿</p>') : '<p class="past-note">正在取……</p>'}
@@ -150,6 +152,18 @@ root.addEventListener('click', async (e) => {
     return render();
   }
   if ('refresh' in b.dataset) return refresh();
+  if ('mail' in b.dataset) {
+    b.disabled = true;
+    const note = root.querySelector('.desk-note');
+    try {
+      const r = await api('/admin/test-email', {});
+      note.textContent = r.ok ? `测试邮件已发到 ${r.to}，去收件箱（也看看垃圾箱）找「【大辩题库】测试邮件」` : `没发出去：${r.error}`;
+    } catch (err) {
+      note.textContent = `没发出去：${err.message}`;
+    }
+    b.disabled = false;
+    return;
+  }
   const item = b.closest('.desk-item');
   if (!item || !b.dataset.do) return;
   const field = (n) => item.querySelector(`[name="${n}"]`)?.value;

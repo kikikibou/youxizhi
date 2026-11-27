@@ -18,7 +18,10 @@
     "db:seed:local": "wrangler d1 execute dbtk --local --file seed.local.sql",
     "check": "tsc -p .",
     "secret:notify": "wrangler secret put NOTIFY_TO",
-    "db:seed:remote": "wrangler d1 execute dbtk --remote --file seed.launch.sql"
+    "db:seed:remote": "wrangler d1 execute dbtk --remote --file seed.launch.sql",
+    "db:mock:local": "wrangler d1 execute dbtk --local --file mock.sql",
+    "db:mock:remote": "wrangler d1 execute dbtk --remote --file mock.sql",
+    "db:unmock:remote": "wrangler d1 execute dbtk --remote --file unmock.sql"
   },
   "devDependencies": {
     "wrangler": "4.168.0"

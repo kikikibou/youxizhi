@@ -125,6 +125,42 @@
         ],
         "createdAt": "2026-11-27T11:20:58.595Z",
         "reason": "Archived approved /new-world sample; it sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "dbtk round",
+        "files": [
+          "设计世界/样张/dbtk/spot-a.html"
+        ],
+        "createdAt": "2026-11-27T13:29:31.740Z",
+        "reason": "/new-world style mockup for the dbtk main window; sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "doto",
+        "files": [
+          "设计世界/样张/dbtk/spot-a.html"
+        ],
+        "createdAt": "2026-11-27T13:29:31.939Z",
+        "reason": "/new-world style mockup for the dbtk main window; sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "dbtk round",
+        "files": [
+          "设计世界/样张/dbtk/spot-b.html"
+        ],
+        "createdAt": "2026-11-27T13:29:34.629Z",
+        "reason": "/new-world style mockup for the dbtk main window; sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "doto",
+        "files": [
+          "设计世界/样张/dbtk/spot-b.html"
+        ],
+        "createdAt": "2026-11-27T13:29:34.837Z",
+        "reason": "/new-world style mockup for the dbtk main window; sits under the town's root DESIGN.md, its own rules are src/dbtk/DESIGN.md"
       }
     ]
   }

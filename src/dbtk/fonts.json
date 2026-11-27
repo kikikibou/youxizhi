@@ -1,6 +1,8 @@
 {
   "text": [
     "src/dbtk/main.js",
+    "src/dbtk/share.js",
+    "src/dbtk/kline.js",
     "src/dbtk/style.css",
     "src/dbtk/config.js",
     "src/dbtk/admin.css",

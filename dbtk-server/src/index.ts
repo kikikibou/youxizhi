@@ -3,13 +3,15 @@
  *
  *   GET  /board            行情：所有已上市的辩题，累计票数、本月票数、今天和昨天的票数、多空人数
  *   GET  /me               这台设备的状态：本月看涨过哪些、买入卖出了哪些、自己的投稿
- *   POST /vote             看涨（给辩题投一票）   { code }        每台设备每月每只股一票
- *   POST /side             买入 / 卖出            { code, side }  side = pro（支持正方）/ con（支持反方）
+ *   POST /vote             看涨（给辩题投票）     { code }        每台设备每月每只股一次，一次随机加 1~99 票 → { gain }
+ *   POST /side             站队                   { code, side }  side = pro（看正）/ con（看反）
+ *   GET  /history?code=    K 线：近 14 天每天新增的票数、当天看正 / 看反的设备数
  *   POST /submit           申请上市（投稿）       { title, who, token }  token 是 Turnstile 的结果
  *   GET  /months           往月榜（最近 12 个月）
  *   GET  /admin/queue      后台：待审和最近处理的投稿          （Authorization: Bearer ADMIN_TOKEN）
  *   POST /admin/decide     后台：上市 / 退回 / 下市            { id, action, reason?, pro?, con? }
  *   POST /admin/close      后台：手动收盘某个月                { month }
+ *   POST /admin/test-email 后台：给站主发一封测试邮件
  *
  * 设备用请求头 X-Device 识别（浏览器第一次来时随机生成）。IP 只存加盐哈希，用来限速。
  * 月榜只算当月新增的票，行情显示累计票数；日期和月份按北京时间。
@@ -17,9 +19,9 @@
  * 新投稿进待审队列时给站主发提醒邮件（notify.ts）。
  */
 
-import { notifyPending } from './notify.ts';
+import { notifyPending, sendTestEmail } from './notify.ts';
 import { review } from './review.ts';
-import { bjDay, bjMonth, checkDraft, deviceOf, ipHash, monthLength, normalize, prevMonth, stance } from './text.ts';
+import { bjDay, bjMonth, checkDraft, deviceOf, ipHash, monthLength, normalize, prevMonth, recentDays, stance } from './text.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -117,7 +119,7 @@ async function board(env: Env) {
 async function me(env: Env, device: string) {
   const month = bjMonth(Date.now());
   const [voted, sides, mine] = await env.DB.batch<Record<string, unknown>>([
-    env.DB.prepare('SELECT t.code FROM votes v JOIN topics t ON t.id = v.topic_id WHERE v.device = ?1 AND v.month = ?2').bind(device, month),
+    env.DB.prepare('SELECT t.code, v.n FROM votes v JOIN topics t ON t.id = v.topic_id WHERE v.device = ?1 AND v.month = ?2').bind(device, month),
     env.DB.prepare('SELECT t.code, s.side FROM sides s JOIN topics t ON t.id = s.topic_id WHERE s.device = ?1').bind(device),
     env.DB.prepare(
       'SELECT title, status, code, reason, decided_by, created_at FROM topics WHERE device = ?1 ORDER BY created_at DESC LIMIT 5',
@@ -125,6 +127,8 @@ async function me(env: Env, device: string) {
   ]);
   return {
     voted: voted.results.map((r) => r.code),
+    // 本月每只看涨时加了多少票
+    gains: Object.fromEntries(voted.results.map((r) => [r.code, r.n])),
     sides: Object.fromEntries(sides.results.map((r) => [r.code, r.side])),
     mine: mine.results.map((r) => ({
       title: r.title,
@@ -151,6 +155,33 @@ async function months(env: Env) {
   return { months: out };
 }
 
+/** K 线：近 14 天（上市前的不算）每天新增的票数、当天看正 / 看反的设备数。 */
+async function history(env: Env, code: unknown) {
+  if (typeof code !== 'string' || !CODE.test(code)) return null;
+  const t = await env.DB.prepare("SELECT id, votes, listed_at FROM topics WHERE code = ?1 AND status = 'listed'")
+    .bind(code)
+    .first<{ id: number; votes: number; listed_at: number }>();
+  if (!t) return null;
+  const days = recentDays(Date.now(), 14).filter((d) => d >= bjDay(t.listed_at));
+  const first = days[0];
+  const [gains, picks] = await env.DB.batch<Record<string, unknown>>([
+    env.DB.prepare('SELECT day, n FROM daily WHERE topic_id = ?1 AND day >= ?2').bind(t.id, first),
+    env.DB.prepare(
+      `SELECT day, SUM(CASE WHEN side = 'pro' THEN 1 ELSE 0 END) AS pro, SUM(CASE WHEN side = 'con' THEN 1 ELSE 0 END) AS con
+         FROM side_days WHERE topic_id = ?1 AND day >= ?2 GROUP BY day`,
+    ).bind(t.id, first),
+  ]);
+  const g = new Map(gains.results.map((r) => [r.day, Number(r.n)]));
+  const p = new Map(picks.results.map((r) => [r.day, r]));
+  return {
+    code,
+    votes: t.votes,
+    days: days.map((day) => ({ day, gain: g.get(day) ?? 0, pro: Number(p.get(day)?.pro ?? 0), con: Number(p.get(day)?.con ?? 0) })),
+  };
+}
+
+const historyKey = (url: URL, code: string) => new Request(new URL(`/history?code=${code}`, url.origin).toString());
+
 /* ---------------------------------------------------------------- 写 */
 
 async function listedId(env: Env, code: unknown): Promise<number | null> {
@@ -159,24 +190,30 @@ async function listedId(env: Env, code: unknown): Promise<number | null> {
   return row?.id ?? null;
 }
 
+/** 看涨一次加 1~99 票，随机。 */
+function randomGain(): number {
+  return 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % 99);
+}
+
 async function vote(env: Env, device: string, ip: string, body: Record<string, unknown>): Promise<Response> {
   const id = await listedId(env, body.code);
   if (!id) return fail('没有这只股，可能已经下市了', 404);
   const now = Date.now();
   const day = bjDay(now);
   const month = bjMonth(now);
+  const gain = randomGain();
   const ins = await env.DB.prepare(
-    'INSERT OR IGNORE INTO votes (topic_id, device, month, day, ip_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)',
+    'INSERT OR IGNORE INTO votes (topic_id, device, month, day, ip_hash, created_at, n) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)',
   )
-    .bind(id, device, month, day, ip, now)
+    .bind(id, device, month, day, ip, now, gain)
     .run();
   if (!ins.meta.changes) return json({ error: '这个月已经看涨过这只了', voted: true }, 409);
   await env.DB.batch([
-    env.DB.prepare('UPDATE topics SET votes = votes + 1 WHERE id = ?1').bind(id),
-    env.DB.prepare('INSERT INTO daily (topic_id, day, n) VALUES (?1, ?2, 1) ON CONFLICT (topic_id, day) DO UPDATE SET n = n + 1').bind(id, day),
-    env.DB.prepare('INSERT INTO monthly (topic_id, month, n) VALUES (?1, ?2, 1) ON CONFLICT (topic_id, month) DO UPDATE SET n = n + 1').bind(id, month),
+    env.DB.prepare('UPDATE topics SET votes = votes + ?2 WHERE id = ?1').bind(id, gain),
+    env.DB.prepare('INSERT INTO daily (topic_id, day, n) VALUES (?1, ?2, ?3) ON CONFLICT (topic_id, day) DO UPDATE SET n = n + ?3').bind(id, day, gain),
+    env.DB.prepare('INSERT INTO monthly (topic_id, month, n) VALUES (?1, ?2, ?3) ON CONFLICT (topic_id, month) DO UPDATE SET n = n + ?3').bind(id, month, gain),
   ]);
-  return json({ ok: true });
+  return json({ ok: true, gain });
 }
 
 async function side(env: Env, device: string, body: Record<string, unknown>): Promise<Response> {
@@ -193,6 +230,10 @@ async function side(env: Env, device: string, body: Record<string, unknown>): Pr
       'INSERT INTO sides (topic_id, device, side, updated_at) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (topic_id, device) DO UPDATE SET side = ?3, updated_at = ?4',
     ).bind(id, device, s, Date.now()),
     env.DB.prepare('UPDATE topics SET long_n = MAX(0, long_n + ?2), short_n = MAX(0, short_n + ?3) WHERE id = ?1').bind(id, dLong, dShort),
+    // K 线下面的红绿柱：当天最后选的那一边
+    env.DB.prepare(
+      'INSERT INTO side_days (topic_id, device, day, side) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (topic_id, device, day) DO UPDATE SET side = ?4',
+    ).bind(id, device, bjDay(Date.now()), s),
   ]);
   return json({ ok: true });
 }
@@ -227,12 +268,28 @@ async function submit(env: Env, ctx: ExecutionContext, req: Request, device: str
     )
       .bind(day)
       .first<{ n: number }>();
-    if ((used?.n ?? 0) <= cap) verdict = await review(env, draft.title, draft.who);
+    if ((used?.n ?? 0) <= cap) {
+      verdict = await review(env, draft.title, draft.who);
+      if (verdict?.cost) await env.DB.prepare('UPDATE ai_usage SET cost = cost + ?2 WHERE day = ?1').bind(day, verdict.cost).run();
+    }
   }
 
-  const status = verdict?.verdict === 'pass' ? 'listed' : verdict?.verdict === 'reject' ? 'rejected' : 'pending';
+  let status = verdict?.verdict === 'pass' ? 'listed' : verdict?.verdict === 'reject' ? 'rejected' : 'pending';
+  let reason = verdict ? verdict.reason : '';
+  let full = false;
+  if (status === 'listed') {
+    // 每天 AI 最多自动放行 LIST_DAILY_CAP 只，满了就进待审，等站主点上市（防灌水）
+    const since = Date.parse(`${day}T00:00:00+08:00`);
+    const listedToday = await env.DB.prepare("SELECT COUNT(*) AS n FROM topics WHERE status = 'listed' AND listed_at >= ?1")
+      .bind(since)
+      .first<{ n: number }>();
+    if ((listedToday?.n ?? 0) >= (Number(env.LIST_DAILY_CAP) || 30)) {
+      status = 'pending';
+      reason = 'AI 已放行，但今天的上市名额满了';
+      full = true;
+    }
+  }
   const who = verdict && !verdict.whoOk ? '匿名' : draft.who;
-  const reason = verdict ? verdict.reason : '';
   const now = Date.now();
   const row = await env.DB.prepare(
     `INSERT INTO topics (code, title, norm, who, pro, con, status, reason, decided_by, device, ip_hash, created_at, listed_at)
@@ -246,7 +303,7 @@ async function submit(env: Env, ctx: ExecutionContext, req: Request, device: str
   if (status === 'listed') return json({ status, code: row?.code });
   if (status === 'rejected') return json({ status, reason });
   ctx.waitUntil(notifyPending(env)); // 进了待审队列：给站主发提醒邮件
-  return json({ status });
+  return json(full ? { status, full } : { status });
 }
 
 /* ---------------------------------------------------------------- 后台 */
@@ -264,11 +321,23 @@ function isAdmin(env: Env, req: Request): boolean {
 
 async function queue(env: Env) {
   const cols = 'id, code, title, who, pro, con, status, reason, decided_by, created_at, listed_at, votes';
-  const [pending, recent] = await env.DB.batch([
+  const now = Date.now();
+  const [pending, recent, ai] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare(`SELECT ${cols} FROM topics WHERE status = 'pending' ORDER BY created_at ASC LIMIT 100`),
     env.DB.prepare(`SELECT ${cols} FROM topics WHERE status != 'pending' ORDER BY created_at DESC LIMIT 60`),
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(n), 0) AS calls, COALESCE(SUM(cost), 0) AS cost,
+              COALESCE(SUM(CASE WHEN day = ?2 THEN n END), 0) AS today_calls
+         FROM ai_usage WHERE substr(day, 1, 7) = ?1`,
+    ).bind(bjMonth(now), bjDay(now)),
   ]);
-  return { pending: pending.results, recent: recent.results };
+  const a = ai.results[0] ?? {};
+  return {
+    pending: pending.results,
+    recent: recent.results,
+    // 本月 AI 初筛：调用次数、花费（美元）、今天的次数和每天上限
+    ai: { calls: Number(a.calls ?? 0), cost: Number(a.cost ?? 0), today: Number(a.today_calls ?? 0), cap: Number(env.AI_DAILY_CAP) || 100 },
+  };
 }
 
 async function decide(env: Env, body: Record<string, unknown>): Promise<Response> {
@@ -345,6 +414,16 @@ export default {
         return json(data);
       }
       if (path === '/months' && method === 'GET') return json(await months(env));
+      if (path === '/history' && method === 'GET') {
+        const code = url.searchParams.get('code') || '';
+        const key = historyKey(url, code);
+        const hit = await caches.default.match(key);
+        if (hit) return json(await hit.json());
+        const data = await history(env, code);
+        if (!data) return fail('没有这只股', 404);
+        ctx.waitUntil(caches.default.put(key, Response.json(data, { headers: { 'Cache-Control': 'public, max-age=30' } })));
+        return json(data);
+      }
 
       if (path.startsWith('/admin/')) {
         if (!env.ADMIN_TOKEN) return fail('后台没开（没配 ADMIN_TOKEN）', 503);
@@ -353,6 +432,7 @@ export default {
         const body = method === 'POST' ? await readBody(request) : {};
         let res: Response | null = null;
         if (path === '/admin/decide' && method === 'POST') res = await decide(env, body);
+        if (path === '/admin/test-email' && method === 'POST') return json(await sendTestEmail(env));
         if (path === '/admin/close' && method === 'POST') {
           const month = typeof body.month === 'string' && /^\d{4}-\d{2}$/.test(body.month) ? body.month : prevMonth(bjMonth(Date.now()));
           res = json({ ok: true, month, saved: await closeMonth(env, month) });
@@ -377,7 +457,10 @@ export default {
         const body = await readBody(request);
         const res =
           path === '/vote' ? await vote(env, device, ip, body) : path === '/side' ? await side(env, device, body) : await submit(env, ctx, request, device, ip, body);
-        if (res.ok) ctx.waitUntil(caches.default.delete(boardKey(url)));
+        if (res.ok) {
+          ctx.waitUntil(caches.default.delete(boardKey(url)));
+          if (typeof body.code === 'string' && CODE.test(body.code)) ctx.waitUntil(caches.default.delete(historyKey(url, body.code)));
+        }
         return res;
       }
     } catch (e) {

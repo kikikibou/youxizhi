@@ -36,6 +36,25 @@ export function compose(total: number, items: Pending[], adminUrl: string, daily
   return { subject, text, html };
 }
 
+/** 后台的「发测试邮件」：确认提醒邮件能送到。返回发到了哪里（打码）或者为什么没发。 */
+export async function sendTestEmail(env: Env): Promise<{ ok: boolean; to?: string; error?: string }> {
+  if (!env.NOTIFY_TO) return { ok: false, error: '还没设收件邮箱（npm run secret:notify）' };
+  const [user, domain] = env.NOTIFY_TO.split('@');
+  const masked = `${user.slice(0, 2)}***@${domain}`;
+  try {
+    await env.EMAIL.send({
+      to: env.NOTIFY_TO,
+      from: { email: env.NOTIFY_FROM, name: '大辩题库' },
+      subject: '【大辩题库】测试邮件',
+      text: `这是一封测试邮件。收到它，说明有投稿等你审核时，提醒邮件能送到这个邮箱。\n\n后台：${env.ADMIN_URL}\n`,
+      html: `<p>这是一封测试邮件。收到它，说明有投稿等你审核时，提醒邮件能送到这个邮箱。</p><p><a href="${esc(env.ADMIN_URL)}">去后台</a></p>`,
+    });
+    return { ok: true, to: masked };
+  } catch (e) {
+    return { ok: false, to: masked, error: e instanceof Error ? e.message : '发送失败' };
+  }
+}
+
 /** daily：每天的汇总，不受 30 分钟限制。 */
 export async function notifyPending(env: Env, daily = false): Promise<void> {
   if (!env.NOTIFY_TO || !env.NOTIFY_FROM) return;
