@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createTree } from './props.js';
+import { createBin } from './bin.js';
 
 const THIN = new Set(['pane', 'paneLit', 'frosted', 'blind', 'beacon', 'gold', 'bone']);
 
@@ -237,6 +238,8 @@ function home(mats) {
 /* ------------------------------------------------------------------------ */
 // The gap between the bridge arms: the split device in pages.js pivots here.
 export const FORUM = { gap: [1, 23.05, -3] };
+// 大辩题库's bin (bin.js): its foot, in the debate building's frame (pages.js aims its close-up at it).
+export const BIN = [9.4, 0, 1.8];
 // The two towers' sky gardens, at about the same height across the gap
 // (floor and ceiling; see debate() and the planting in details.js). The right
 // tower's floors: five glazed ones, gH tall, with 0.95 m bands between.
@@ -690,8 +693,17 @@ function debate(mats) {
     group.add(bar);
     bars.push(bar);
   }
+  // 大辩题库's street bin before Tower B's lobby, right of the stage, its
+  // ticker running (bin.js; the card's close-up looks at it, pages.js, and
+  // boarding opens its lid: World.lid). BIN: where it stands.
+  const bin = createBin(mats);
+  bin.group.position.set(...BIN);
+  group.add(bin.group);
+  group.userData.bin = bin;
+
   const turn = 9; // seconds per speech
-  group.userData.animate = (t) => {
+  // (returns whether a shadow moved: the bin's lid)
+  group.userData.animate = (t, dt, night, here) => {
     mats.beacon.userData.on = t % 1.6 < 0.22 ? 1 : 0; // (the mast's light: a short blink, see updateMaterials)
     const k = (t / turn) % 2;
     bars.forEach((bar, i) => {
@@ -701,6 +713,7 @@ function debate(mats) {
       const left = mine ? 1 - f : Math.min(1, f * 4);
       bar.scale.x = bar.userData.len * Math.max(0.001, left);
     });
+    return bin.update(dt, t, night, here);
   };
   return group;
 }

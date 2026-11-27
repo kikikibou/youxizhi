@@ -33,6 +33,7 @@
  *               22 Chinese characters fit)
  * cards[].spot  (optional) a close-up before a card's href: where the camera
  *               flies and the boarding pass shown there (see 攻错 below)
+ * cards[].tag   (optional) the card's tag in place of ENTER / PLAY / VISIT
  * panelTop      (optional) the highest the content panel's top may stand, as a
  *               share of the window's height, for a title standing above it
  * footer        the strip along the bottom: left { title, stars, items },
@@ -207,8 +208,41 @@ export const PAGES = [
         },
       },
       // (大辩题库 hides 大便提裤: a dump of motions, and "motion" as in bowel motion)
-      // (a page of its own, /dbtk/: src/dbtk/; its close-up and boarding pass come later)
-      { no: '02', title: '大辩题库', en: 'Motion Dump', desc: '分享你推荐的大辩题，每月有精品推荐', href: 'dbtk/', ready: true },
+      // A page of its own, /dbtk/ (src/dbtk/). Its close-up: the camera comes
+      // down to a street bin in front of Tower B's lobby (BIN in buildings.js,
+      // bin.js), low and from the left, its LED ticker running in the page's
+      // own yellow; a trade slip (交割单) opens. 扔进去 flips the left lid
+      // open and the camera dives into it; on the black inside, the page's
+      // dot-matrix name lights up (takeoff 'led', ledveil.js).
+      {
+        no: '02',
+        title: '大辩题库',
+        en: 'Motion Dump',
+        desc: '分享你推荐的大辩题，每月有精品推荐',
+        href: 'dbtk/',
+        ready: true,
+        tag: 'TRADE →',
+        spot: {
+          view: { pos: [6.25, 0.82, 6.3], target: [9.8, 2.0, -1.6], fov: 42 }, // (low, looking up a little: the bin low on the right, clear of the pass; the lobby's curved glazing and canopy behind)
+          portrait: { pos: [7.4, 1.0, 4.9], target: [10.25, 0.35, 0.6], fov: 30 }, // (the bin in the middle, above the pass)
+          dive: [9.11, 0.84, 1.8], // (the left compartment's opening: BIN, less half a compartment)
+          diveAt: [9.08, 1.32, 2.12], // (just over it, looking in)
+          diveVia: [9.65, 2.29, 2.55], // (up and over the bin first, as if leaning over it: the bin stays in the middle of the screen as the camera turns down)
+          bin: true, // (boarding opens the bin's lid, and the camera rises out of it again: World.lid)
+          pass: {
+            kind: 'led',
+            takeoff: 'led',
+            head: 'TRADE SLIP · 交割单',
+            label: '交割单',
+            flight: 'DB 0001',
+            mark: '涨',
+            board: '扔进去',
+            text: '在这里，你可以自由分享交流你喜欢的大辩题：申请上市，看涨投票，站队看正还是看反；每月出一张涨幅榜。',
+            fields: [['MARKET', '大辩题库'], ['SIDES', '看正 · 看反'], ['GAIN', '1~99 / 次']],
+            motto: '只是请千万\u200b不要忘记题库。', // (\u200b: where the stub's two lines break, see .pass--led .pass-motto)
+          },
+        },
+      },
       { no: '03', title: '抽卡赛制', en: 'Luck of the Draw', desc: '结合氪金（并没有）抽卡与卡组构筑的新型赛制', ready: false },
       { no: '04', title: '更酷炫的计时器', en: 'Shinier Timer', desc: '除了动效更多之外没有什么提升点的辩论计时器', ready: false },
     ],

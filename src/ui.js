@@ -1,5 +1,6 @@
 /** DOM overlay: nav, per-page poster layouts, footer, drawer. */
 import { infinity00 } from './infinity.js';
+import { LED, dotsImage } from './leddots.js';
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -20,8 +21,8 @@ function cardHtml(c, i) {
   // (a card with a close-up flies there first: see openSpot in app.js)
   const action = c.go ? `data-go="${c.go}"` : c.tool ? `data-tool="${c.tool}"` : c.spot ? `data-spot="${i}"` : c.href ? `data-href="${esc(c.href)}"` : '';
   const ready = c.go || c.ready;
-  // (a link to another site: VISIT; a page of this one: PLAY)
-  const tag = c.go ? 'ENTER →' : c.href && ready ? (/^https?:/.test(c.href) ? 'VISIT →' : 'PLAY →') : ready ? 'OPEN' : 'SOON';
+  // (a link to another site: VISIT; a page of this one: PLAY; or the card's own `tag`)
+  const tag = c.tag || (c.go ? 'ENTER →' : c.href && ready ? (/^https?:/.test(c.href) ? 'VISIT →' : 'PLAY →') : ready ? 'OPEN' : 'SOON');
   return `
     <li class="reveal" style="--d:${6 + i}">
       <button class="card" type="button" ${action} ${ready ? '' : 'disabled'}>
@@ -182,6 +183,30 @@ function sealStubHtml(c, p) {
   </div>`;
 }
 
+/**
+ * 大辩题库's stub (pass--led): a piece of its quote board, black with unlit
+ * dots, a code with its arrow, its name in yellow dots (大辩 over 题库), and
+ * a small K-line: yellow candles (votes) over red and green bars (看正 / 看反).
+ */
+function ledStubHtml() {
+  // (the takeoff's news line too, so its font is in by then: ledveil.js)
+  document.fonts?.load('400 16px "Noto Sans SC Variable"', '快讯大辩题库开盘').catch(() => {});
+  const name = dotsImage(['大辩', '题库'], { rows: 22, gap: 3, pitch: 6 });
+  // (seven days rising: candle heights, and the day's 看正 / 看反 under each)
+  const days = [[5, 3, 2], [8, 2, 3], [6, 3, 1], [11, 2, 2], [9, 1, 3], [15, 3, 2], [21, 2, 1]];
+  const k = days
+    .map(([h, pro, con], i) => {
+      const x = 3 + i * 15;
+      return `<rect x="${x}" y="${30 - h}" width="8" height="${h}" fill="${LED.yellow}"/><line x1="${x + 4}" x2="${x + 4}" y1="${27 - h}" y2="${30 - h}" stroke="${LED.yellow}"/><rect x="${x}" y="${34}" width="8" height="${pro}" fill="${LED.red}"/><rect x="${x}" y="${34 + pro}" width="8" height="${con}" fill="${LED.green}"/>`;
+    })
+    .join('');
+  return `<div class="pass-emblem pass-ticker" aria-hidden="true">
+    <span class="pass-ticker-code">DB0001 <b>▲</b></span>
+    <img class="pass-ticker-name" src="${name.url}" width="${name.cols * 6}" height="${name.rows * 6}" alt="">
+    <svg class="pass-ticker-k" viewBox="0 0 108 40"><line x1="0" x2="108" y1="31.5" y2="31.5" stroke="#2a2d2a"/>${k}</svg>
+  </div>`;
+}
+
 /** The other site's address as its stub prints it (this site's own pages with their path). */
 function hostOf(href) {
   const u = new URL(href, location.href);
@@ -194,8 +219,9 @@ function hostOf(href) {
  * lands at its close-up: the face in this site's paper and ink, the stub in
  * the other site's look (`kind`: 攻错's black and gold by default; 'atlas',
  * 大国小国's map paper and globe; 'seal', 解码与三国知识问答's hanging scroll
- * and seal). `head`, `board` and `mark` (the sign at the end of the route)
- * change its wording for a ride or a pass rather than a flight. The
+ * and seal; 'led', 大辩题库's quote board). `head`, `board` and `mark` (the
+ * sign at the end of the route) change its wording for a ride, a pass or a
+ * trade slip rather than a flight. The
  * board button is a real link (so it can open in a new tab too); app.js
  * plays the leaving first.
  */
@@ -220,7 +246,7 @@ export function passHtml(c) {
         </div>
       </div>
       <div class="pass-stub">
-        ${p.kind === 'atlas' ? atlasEmblemSvg() : p.kind === 'seal' ? sealStubHtml(c, p) : emblemSvg()}
+        ${p.kind === 'atlas' ? atlasEmblemSvg() : p.kind === 'seal' ? sealStubHtml(c, p) : p.kind === 'led' ? ledStubHtml() : emblemSvg()}
         <span class="pass-motto">${esc(p.motto)}</span>
         <small>${esc(hostOf(c.href))}</small>
       </div>

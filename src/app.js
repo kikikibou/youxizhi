@@ -3,6 +3,7 @@ import { World } from './three/World.js';
 import { renderNav, renderPages, renderFooter, Drawer, passHtml, foldCoverHtml } from './ui.js';
 import { foldMap } from './foldmap.js';
 import { inkWash } from './inkwash.js';
+import { ledVeil } from './ledveil.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
@@ -309,6 +310,8 @@ function openSpot(idx, c, back = false) {
   if (!c?.spot) return;
   const s = (spot = { idx, c, landed: false });
   if (back) world.placeAtDive(c.spot);
+  // (大辩题库's bin: the camera rises out of it, its lid open, and it shuts)
+  if (back && c.spot.bin) world.lid(true, true);
   const el = pageEls[idx];
   if (el.contains(document.activeElement)) document.activeElement.blur();
   el.classList.remove('is-in', 'is-settled');
@@ -321,6 +324,7 @@ function openSpot(idx, c, back = false) {
   world.flyToSpot(c.spot, back ? 2 : undefined).then(() => {
     if (spot !== s || s.landed) return;
     s.landed = true;
+    world.lid(false);
     spotEl.classList.add('is-open');
     spotEl.querySelector('.pass-board')?.focus({ preventScroll: true });
   });
@@ -342,6 +346,7 @@ function dropSpot() {
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
   document.body.classList.remove('is-spot');
   takeoff.classList.remove('is-on', 'is-quiet', 'is-open'); // (if it was on its way out)
+  world.lid(false); // (大辩题库's bin, if a boarding into it was called off)
   veil?.remove();
   veil = null;
 }
@@ -369,14 +374,16 @@ function closeSpot() {
  * the screen: --x, --y), the earlier version, kept to compare: ?takeoff=globe;
  * 'ink', 解码与三国知识问答's: its way through the 问答 maze drawn first,
  * then its map paper spreading from the door like ink (inkwash.js) and its
- * seal stamped on it.
+ * seal stamped on it; 'led', 大辩题库's: its street bin's lid flies open,
+ * the camera dives in, and on the black inside its name lights up in LED
+ * dots (ledveil.js).
  */
 function takeoffKind(c) {
   const kind = c.spot.pass.takeoff || '';
   if (kind === 'fold' && new URLSearchParams(location.search).get('takeoff') === 'globe') return 'globe';
   return kind;
 }
-let veil = null; // (the leaving's own animation, 'fold' or 'ink', while it plays or plays back)
+let veil = null; // (the leaving's own animation, 'fold', 'ink' or 'led', while it plays or plays back)
 
 /** Set the leaving's look without a transition, so nothing slides over from the last one. */
 function readyTakeoff(kind) {
@@ -408,6 +415,7 @@ function board() {
     /* storage unavailable */
   }
   const kind = takeoffKind(c);
+  if (c.spot.bin) world.lid(true); // (大辩题库's: as the stub tears, the lid flies open)
   const leave = (quiet, go) => {
     setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), quiet);
     setTimeout(() => {
@@ -438,6 +446,23 @@ function board() {
         if (spot !== s) return;
         world.dive(1.6);
         setTimeout(() => spot === s && play(inkWash(takeoff, { source: () => world.diveOnScreen() }), 850, 1400), 500);
+      }, 800);
+      return;
+    }
+    if (kind === 'led') {
+      // (into the bin as its ticker races; once the opening's black fills
+      // the screen, the board's dots come up and the name lights; it stays
+      // there under the motto, and they go together)
+      world.dive(1.2);
+      setTimeout(() => {
+        if (spot !== s) return;
+        veil?.remove();
+        const v = (veil = ledVeil(takeoff));
+        v.play(1).then(() => {
+          if (spot !== s || veil !== v) return;
+          takeoff.classList.add('is-open');
+          leave(1100, 1700);
+        });
       }, 800);
       return;
     }
@@ -494,6 +519,7 @@ window.addEventListener('pageshow', (e) => {
   world.flyToSpot(s.c.spot, 1.6).then(() => {
     if (spot !== s) return;
     s.landed = true;
+    world.lid(false);
     spotEl.classList.remove('is-boarding');
     spotEl.classList.add('is-open');
   });
@@ -618,9 +644,17 @@ function frame(now) {
   await world.buildTypography();
   world.warmUp();
   const back = takeBackSpot();
+  // (dev only: ?spot=<card> opens that card's close-up on this page at once,
+  // landed, for screenshots: ?spot=1#/debate is 大辩题库's bin)
+  const devSpot = import.meta.env.DEV ? PAGES[ids.indexOf(currentId())]?.cards[new URLSearchParams(location.search).get('spot')] : null;
   if (back) {
     go(currentId(), 'jump');
     openSpot(current, back, true);
+  } else if (devSpot?.spot) {
+    loader.style.display = 'none';
+    go(currentId(), 'jump');
+    openSpot(current, devSpot);
+    world.flyToSpot(devSpot.spot, 0.01);
   } else go(currentId(), 'intro');
   requestAnimationFrame((t) => {
     last = lastRaw = t;

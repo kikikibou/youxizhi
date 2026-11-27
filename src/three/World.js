@@ -955,6 +955,15 @@ export class World {
     return on;
   }
 
+  /**
+   * 大辩题库's bin (bin.js, on the 辩论 plaza): open or shut its lid, if the
+   * page in view has one. Boarding opens it, and the camera dives in; coming
+   * back, the camera rises out of it open (`instant`), and it shuts.
+   */
+  lid(open, instant = false) {
+    this.sites[this.active]?.group.userData.bin?.set(open, instant);
+  }
+
   /** Where a close-up's dive point is on the screen now, in CSS pixels (for the leaving's own effects). */
   diveOnScreen() {
     if (!this.closeUp) return null;
@@ -1556,7 +1565,7 @@ export class World {
       if (this.quality.ribbons) site.ribbon?.update(this.time + i * 3.1);
       site.plane?.update(this.time);
       site.device.update(this.time, dt, this.night, site.activity, this.camera);
-      site.group.userData.animate?.(this.time, dt, this.night);
+      if (site.group.userData.animate?.(this.time, dt, this.night, i === this.active)) this.shadowDirty = true;
       // (a close-up that looks at the building's own lettering keeps it lit:
       // spot.keepTexts, the 问答 door's sign)
       const keep = i === this.active && this.closeUp?.spot.keepTexts;

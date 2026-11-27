@@ -2403,6 +2403,105 @@ html[data-theme='night'] .pass-head {
   letter-spacing: 0.08em;
 }
 
+/* 大辩题库's trade slip (pass--led): the stub a piece of its quote board,
+   black with unlit dots, a code, its name in yellow dots, a small K-line of
+   yellow candles over red and green bars; the route ends at a black disc
+   with a yellow 涨. Its colours are the page's own (yellow is
+   growth, red 看正, green 看反: src/dbtk/DESIGN.md). */
+.pass--led {
+  --led-screen: #070807;
+  --led-off: #1b1f1c;
+  --led-yellow: #ffcc33;
+  --led-white: #f1eedf;
+  --led-red: #ff3b30;
+  --led-green: #33d17a;
+}
+.pass--led .pass-path::after {
+  background: var(--led-screen);
+  box-shadow: 0 0 0 1.5px var(--led-yellow);
+  font-family: var(--cn);
+  font-weight: 900;
+  font-size: 10px;
+  color: var(--led-yellow);
+}
+.pass--led .pass-stub {
+  background-color: var(--led-screen);
+  background-image: radial-gradient(circle, var(--led-off) 1.1px, transparent 1.5px);
+  background-size: 4px 4px;
+  background-position: 1px 1px;
+  color: var(--led-white);
+  border-top-color: var(--led-yellow);
+}
+.pass--led .pass-stub::before {
+  border-left-color: rgba(255, 204, 51, 0.35);
+}
+.pass--led .pass-stub::after {
+  display: none;
+}
+.pass-ticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  inset: 15px 0 auto;
+  height: auto;
+}
+.pass-ticker-code {
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  color: var(--led-white);
+}
+.pass-ticker-code b {
+  color: var(--led-yellow);
+}
+.pass-ticker-name {
+  display: block;
+  width: 92px;
+  height: auto;
+}
+.pass-ticker-k {
+  display: block;
+  width: 100px;
+  height: auto;
+}
+.pass--led .pass-motto {
+  font-family: var(--cn);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  word-break: keep-all; /* (it breaks only after 千万: a zero-width space there, pages.js) */
+  color: var(--led-white);
+}
+.pass--led .pass-stub small {
+  color: #9a978a;
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+@media (max-width: 860px) {
+  .pass-ticker {
+    gap: 7px;
+    inset-block-start: 12px;
+  }
+  .pass-ticker-code {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+  .pass-ticker-name {
+    width: 62px;
+  }
+  .pass-ticker-k {
+    width: 70px;
+  }
+  .pass--led .pass-motto {
+    font-size: 10px;
+  }
+}
+
 /* Leaving for the card's site: the screen goes to the black that site opens
    on (debatestone.com's first frame is a black veil), its motto comes up in
    gold and goes again, and the site follows on the same black. */
@@ -2631,6 +2730,52 @@ html[data-theme='night'] .pass-head {
 }
 .fold[hidden] {
   display: none;
+}
+
+/* 大辩题库 (kind 'led', ledveil.js): the camera has dived into its bin, and
+   the black inside turns into a quote board, its name lighting up in yellow
+   dots; the board's black itself (is-open) under it, the motto under the
+   name; the name and the motto go together, and the page follows on the
+   bare black. */
+.takeoff[data-kind='led'] {
+  opacity: 1;
+  background: transparent;
+  transition: none;
+}
+.takeoff[data-kind='led'].is-open {
+  background: #070807;
+}
+.led {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.takeoff[data-kind='led'].is-quiet .led {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.takeoff[data-kind='led'] .takeoff-motto,
+.takeoff[data-kind='led'].is-on .takeoff-motto {
+  position: relative;
+  /* (under the name, which stands a little above the middle) */
+  transform: translateY(clamp(70px, 13vh, 130px));
+  font-family: var(--cn);
+  font-style: normal;
+  font-weight: 700;
+  font-size: clamp(15px, 1.5vw, 19px);
+  letter-spacing: 0.08em;
+  color: #d2cdbb;
+  opacity: 0;
+  transition: none;
+}
+.takeoff[data-kind='led'].is-open .takeoff-motto {
+  opacity: 1;
+  transition: opacity 0.5s ease 0.1s;
+}
+.takeoff[data-kind='led'].is-open.is-quiet .takeoff-motto {
+  opacity: 0;
+  transition: opacity 0.6s ease;
 }
 .fold-panel {
   position: absolute;
