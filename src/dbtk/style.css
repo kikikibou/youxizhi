@@ -446,6 +446,17 @@ input:focus-visible {
 .rate[aria-pressed='true'] small {
   color: var(--screen);
 }
+.depth-meta {
+  grid-column: 1 / -1;
+  font: 600 11.5px/1.4 var(--sys);
+  color: var(--dim);
+}
+.depth-meta b {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--white);
+}
 
 /* a change on the board: the row blinks, the number flickers like a LED refresh */
 .row.flash {
@@ -477,6 +488,80 @@ input:focus-visible {
   margin-bottom: 14px;
   border-top: 2px solid #000;
   padding-top: 7px;
+}
+.month:empty {
+  display: none;
+}
+.past-toggle {
+  margin-top: 7px;
+  border: 0;
+  background: none;
+  color: var(--white);
+  font-family: var(--round);
+  font-size: 14px;
+  padding: 4px 0;
+}
+.past-toggle::after {
+  content: ' ›';
+  color: var(--yellow);
+}
+.past-toggle[aria-expanded='true']::after {
+  content: ' ‹';
+}
+.past-toggle:hover {
+  color: var(--yellow);
+}
+.past-note {
+  font: 600 12.5px/1.5 var(--sys);
+  color: var(--dim);
+  padding: 4px 0;
+}
+.past {
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.past-month h3 {
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--yellow);
+  margin: 6px 0 3px;
+}
+.past-month ol {
+  list-style: none;
+}
+.past-month li {
+  display: grid;
+  grid-template-columns: 16px 50px 1fr auto;
+  column-gap: 6px;
+  align-items: baseline;
+  padding: 2px 0;
+}
+.past-month li b {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--yellow);
+}
+.past-month .c {
+  font-family: var(--dot);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--dim);
+}
+.past-month .pt {
+  font: 600 13px/1.4 var(--sys);
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.past-month .p {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--red);
 }
 .month h2 {
   display: flex;
@@ -605,6 +690,45 @@ input:focus-visible {
 .ipo .go:hover {
   background: #ffd75c;
 }
+.ipo .go:disabled {
+  background: #8a7424;
+  cursor: progress;
+}
+.ts-box:not(:empty) {
+  margin-top: 8px;
+}
+.mine {
+  list-style: none;
+}
+.mine:not(:empty) {
+  margin-top: 8px;
+  border-top: 1px solid var(--rule);
+  padding-top: 6px;
+}
+.mine li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 6px;
+  padding: 3px 0;
+  font: 600 12.5px/1.4 var(--sys);
+  color: var(--who);
+}
+.mine li b {
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--yellow);
+}
+.mine li span {
+  overflow-wrap: anywhere;
+}
+.mine .is-rejected b,
+.mine .is-delisted b {
+  color: var(--dim);
+}
+.mine .is-listed b {
+  color: var(--red);
+}
 .ipo .note {
   min-height: 0;
   font: 600 12.5px/1.4 var(--sys);
@@ -649,4 +773,49 @@ input:focus-visible {
 .share svg {
   width: 15px;
   height: 15px;
+}
+
+/* ---------- loading / error / toast ---------- */
+.ticker .run.is-still {
+  animation: none;
+}
+.empty.is-error p {
+  color: var(--red);
+  margin-bottom: 10px;
+}
+.retry {
+  border: 1px solid var(--yellow);
+  background: none;
+  color: var(--yellow);
+  font-family: var(--round);
+  font-size: 15px;
+  padding: 6px 14px 5px;
+}
+.retry:hover {
+  background: rgba(255, 204, 51, 0.12);
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 10;
+  max-width: min(400px, calc(100vw - 32px));
+  transform: translate(-50%, 12px);
+  padding: 9px 14px;
+  background: var(--screen);
+  border: 1px solid var(--yellow);
+  color: var(--yellow);
+  font: 700 13.5px/1.4 var(--sys);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
 }

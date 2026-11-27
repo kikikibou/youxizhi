@@ -44,3 +44,8 @@ game/server/src/bank.generated.ts
 
 # 子站字体的完整源文件（几 MB 到几十 MB）；子集化后的 woff2 在各子站的 fonts/ 里，要提交
 /字体源/
+
+# 大辩题库后端的本机密钥
+dbtk-server/.dev.vars
+# wrangler types 生成的（npm run types）
+dbtk-server/worker-configuration.d.ts

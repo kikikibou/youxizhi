@@ -1,0 +1,26 @@
+{
+  "name": "dbtk-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8789",
+    "db:local": "wrangler d1 migrations apply dbtk --local",
+    "db:remote": "wrangler d1 migrations apply dbtk --remote",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "whoami": "wrangler whoami",
+    "login": "wrangler login --callback-host 127.0.0.1",
+    "secret:ai": "wrangler secret put OPENROUTER_API_KEY",
+    "secret:turnstile": "wrangler secret put TURNSTILE_SECRET",
+    "secret:admin": "wrangler secret put ADMIN_TOKEN",
+    "secret:salt": "wrangler secret put IP_SALT",
+    "tail": "wrangler tail",
+    "db:seed:local": "wrangler d1 execute dbtk --local --file seed.local.sql",
+    "check": "tsc -p .",
+    "secret:notify": "wrangler secret put NOTIFY_TO",
+    "db:seed:remote": "wrangler d1 execute dbtk --remote --file seed.launch.sql"
+  },
+  "devDependencies": {
+    "wrangler": "4.168.0"
+  }
+}

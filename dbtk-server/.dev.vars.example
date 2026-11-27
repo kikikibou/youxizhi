@@ -1,0 +1,10 @@
+# 本机开发用的密钥（wrangler dev 读 .dev.vars）。复制成 .dev.vars 就能用，这些都是测试值。
+# TURNSTILE_SECRET 用的是 Cloudflare 官方的「永远通过」测试密钥；前端开发模式用配套的测试站点密钥。
+TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+ADMIN_TOKEN=dev-admin-token
+IP_SALT=dev-salt
+# 想在本机试 AI 初筛，就填一个 OpenRouter 的 key；不填的话投稿都进人工审核队列。
+# OPENROUTER_API_KEY=
+
+# 审核提醒邮件的收件人。本机开发时邮件不会真的发出去，只会写到日志里。
+NOTIFY_TO=owner@example.com

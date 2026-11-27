@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // 大辩题库的后端：行情、看涨、买入/卖出、申请上市（AI 初筛）、月底收盘。数据在 D1。
+  "name": "dbtk",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-20",
+  // 和《大国小国》同一个账号（拥有 yxzzxy.com 的那个）。
+  "account_id": "83052ed0cde1cf2042578364bf32a5da",
+  // 线上地址。api.yxzzxy.com 已经整个绑给了《大国小国》，这里用自己的子域名；workers.dev 在国内打不开。
+  "routes": [{ "pattern": "dbtk-api.yxzzxy.com", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dbtk",
+      // 线上的 D1（2026-11-27 用 npx wrangler d1 create dbtk 建的，APAC 区）
+      "database_id": "bb00fac0-c9b9-4edf-9ee7-4e23cd062de0",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // 每天北京时间 00:05 跑一次：逢 1 日把上个月收盘存进往月榜，顺手清理限速记录。
+  "triggers": { "crons": ["5 16 * * *"] },
+  // 审核提醒邮件（Cloudflare Email Service）。收件人是密钥 NOTIFY_TO：npm run secret:notify
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    // AI 初筛用的模型（OpenRouter 的模型名）。换 Gemini / GPT 改这一行就行。
+    "AI_MODEL": "anthropic/claude-haiku-5.5",
+    // 每天最多调用 AI 初筛多少次，超出的投稿直接进人工审核队列，防止被刷爆账单。
+    "AI_DAILY_CAP": "100",
+    // 审核提醒的发件人：必须在账号里开通了 Email Sending 的域名下（debatestone.com 已开通）。
+    "NOTIFY_FROM": "dbtk@debatestone.com",
+    // 邮件里「去审核」的链接
+    "ADMIN_URL": "https://yxzzxy.com/dbtk/admin.html"
+  },
+  // 密钥不写在这里：npm run secret:ai / secret:turnstile / secret:admin / secret:salt / secret:notify
+  "observability": { "enabled": true }
+}

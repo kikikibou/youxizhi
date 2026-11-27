@@ -1,5 +1,13 @@
 {
-  "text": ["src/dbtk/main.js", "src/dbtk/style.css", "dbtk/index.html"],
+  "text": [
+    "src/dbtk/main.js",
+    "src/dbtk/style.css",
+    "src/dbtk/config.js",
+    "src/dbtk/admin.css",
+    "src/dbtk/admin.js",
+    "dbtk/index.html",
+    "dbtk/admin.html"
+  ],
   "extra": "",
   "out": "src/dbtk/fonts",
   "fonts": [

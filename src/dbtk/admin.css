@@ -1,0 +1,175 @@
+/* 大辩题库后台（admin.html）：同一块 LED 屏，排成审核清单。基础样式来自 style.css。 */
+
+.desk-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--round);
+  font-size: 18px;
+  color: var(--white);
+}
+.desk-out,
+.desk-refresh {
+  border: 1px solid var(--frame);
+  background: none;
+  color: var(--dim);
+  font-family: var(--round);
+  font-size: 13px;
+  padding: 3px 9px 2px;
+}
+.desk-out:hover,
+.desk-refresh:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+.desk-note:empty {
+  display: none;
+}
+.desk-note {
+  font: 700 13px/1.4 var(--sys);
+  color: var(--yellow);
+  padding: 4px 2px 8px;
+}
+.desk-login {
+  margin-top: 8px;
+}
+.desk-login .r input {
+  border-color: var(--yellow);
+}
+
+.desk {
+  border-top: 2px solid #000;
+  padding-top: 8px;
+  margin-bottom: 16px;
+}
+.desk h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--yellow);
+  margin-bottom: 4px;
+}
+.desk h2 b {
+  font-family: var(--dot);
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--red);
+}
+.desk h2 .desk-refresh {
+  margin-left: auto;
+}
+.desk ul {
+  list-style: none;
+}
+.desk-item {
+  border-bottom: 1px solid var(--row-line);
+  padding: 9px 0 10px;
+}
+.desk-title {
+  font: 700 15px/1.45 var(--sys);
+  color: var(--white);
+  overflow-wrap: anywhere;
+}
+.desk-meta {
+  font: 500 12px/1.4 var(--sys);
+  color: var(--dim);
+  margin-top: 2px;
+}
+.desk-meta b {
+  font-weight: 600;
+  color: var(--who);
+}
+.desk-meta em {
+  font-style: normal;
+  color: var(--yellow);
+}
+.desk-status {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font: 600 12px/1.4 var(--sys);
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+.desk-status b {
+  font-family: var(--round);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--red);
+}
+.is-rejected .desk-status b,
+.is-delisted .desk-status b {
+  color: var(--green);
+}
+.desk-status .c {
+  font-family: var(--dot);
+  font-weight: 700;
+  color: var(--white);
+}
+.desk-stance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.desk-stance label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-family: var(--round);
+  font-size: 13px;
+  color: var(--dim);
+}
+.desk input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid #5a5a4c;
+  border-radius: 0;
+  padding: 0 8px;
+  background: var(--field);
+  color: var(--white);
+  font: 700 14px/1 var(--sys);
+  caret-color: var(--yellow);
+}
+.desk input::placeholder {
+  color: #8d8a7e;
+  font-weight: 500;
+}
+.desk-act {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.desk-act input {
+  flex: 1;
+}
+.desk-act button {
+  flex: none;
+  height: 34px;
+  border: 0;
+  padding: 0 14px;
+  font-family: var(--round);
+  font-size: 15px;
+  color: var(--screen);
+}
+.desk-act .list {
+  background: var(--red);
+}
+.desk-act .reject {
+  background: var(--green);
+}
+.desk-act .list:hover {
+  background: var(--red-hi);
+}
+.desk-act .reject:hover {
+  background: var(--green-hi);
+}
+.desk-act button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}

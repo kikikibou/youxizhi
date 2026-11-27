@@ -24,6 +24,8 @@ export default defineConfig({
         sgjm: 'sgjm/index.html',
         // 大辩题库: a page of its own at /dbtk/ (no three.js, no passphrase gate)
         dbtk: 'dbtk/index.html',
+        // 大辩题库的后台：站主审核投稿（口令在后端）
+        dbtkAdmin: 'dbtk/admin.html',
       },
     },
   },
