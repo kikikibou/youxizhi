@@ -12,7 +12,8 @@ import { createSea, inSea } from './sea.js';
 import { createSky, SKY, SKY_SHARED } from './sky.js';
 import { TextBlock, buildCluster, loadFonts, setTextColors, isCJK, MASK, MASK_GLSL, TEXT_LAYER, CRISP } from './typography.js';
 import { GpuTimer, QUALITY_DEFAULTS } from './perf.js';
-import { buildDetails, WIND, rng } from './details.js';
+import { buildDetails, WIND, rng, mazeRoute } from './details.js';
+import { createRoute } from './route.js';
 
 const PLAZA_RADIUS = 56;
 const GRASS = new THREE.Color(0xb5d77a);
@@ -358,7 +359,18 @@ export class World {
       group.updateMatrixWorld(true);
 
 
-      this.sites.push({ page, group, device, ribbon, plane, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
+      // A close-up's route on the ground (spot.route, see drawRoute): for now
+      // the one kind, the way through the 问答 hedge maze to the spot's door.
+      const routes = [];
+      for (const card of page.cards) {
+        if (card.spot?.route !== 'maze') continue;
+        const [x, , z] = card.spot.dive;
+        const route = createRoute(mazeRoute([x, z + 0.35]));
+        group.add(route.group);
+        routes.push({ spot: card.spot, route, t: 0, speed: 0 });
+      }
+
+      this.sites.push({ page, group, device, ribbon, plane, routes, texts: [], view: this.viewFor(group, sc.view), activity: 0, box: new THREE.Vector4() });
     });
   }
 
@@ -865,28 +877,54 @@ export class World {
     }
   }
 
+  /**
+   * Where dive() ends: 2.6 m short of the dive point, on the way from `from`;
+   * or, with spot.diveAt, there (in the building's frame), looking at it.
+   */
+  diveEnd(c, from) {
+    const target = this.diveTarget(c);
+    const pos = c.spot.diveAt ? this.sites[this.active].group.localToWorld(new THREE.Vector3(...c.spot.diveAt)) : from.clone().sub(target).setLength(2.6).add(target);
+    const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
+    return { pos, quat };
+  }
+
   /** Put the camera where dive() ends at a close-up (back from the card's site, to rise again). */
   placeAtDive(spot) {
     const c = this.closeUpFor(spot);
     const v = this.spotView(c);
-    const target = this.diveTarget(c);
-    this.basePos.copy(v.pos).sub(target).setLength(2.6).add(target);
-    this.baseQuat.setFromRotationMatrix(new THREE.Matrix4().lookAt(this.basePos, target, UP));
+    const end = this.diveEnd(c, v.pos);
+    this.basePos.copy(end.pos);
+    this.baseQuat.copy(end.quat);
     this.baseFov = v.fov - 6;
     this.flight = null;
     this.sites[this.active].activity = 0; // (the page's titles don't show for a moment first)
+    // (its route, if it has one, as it was left: drawn all the way)
+    for (const r of this.sites[this.active].routes) if (r.spot === spot) r.route.setProgress((r.t = 1));
   }
 
-  /** From a close-up, drop towards its `dive` point (leaving for the card's site). */
+  /**
+   * From a close-up, drop towards its `dive` point (leaving for the card's
+   * site); with spot.diveVia, by way of there (in the building's frame: low
+   * over the 问答 maze, say, to come in under the door's canopy).
+   */
   dive(duration = 1.5) {
-    const target = this.diveTarget(this.closeUp);
+    const c = this.closeUp;
     const from = { pos: this.basePos.clone(), quat: this.baseQuat.clone(), fov: this.baseFov };
-    const pos = from.pos.clone().sub(target).setLength(2.6).add(target);
-    const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(pos, target, UP));
+    const { pos, quat } = this.diveEnd(c, from.pos);
     const to = { pos, quat, fov: this.baseFov - 6 };
-    const flight = this.fly(from, to, from.pos.clone().lerp(pos, 0.5), duration);
+    const mid = c.spot.diveVia ? this.sites[this.active].group.localToWorld(new THREE.Vector3(...c.spot.diveVia)) : from.pos.clone().lerp(pos, 0.5);
+    const flight = this.fly(from, to, mid, duration);
     this.flight.carry = [1, 1, 1]; // (into a ride's cabin as it goes)
     return flight;
+  }
+
+  /** At a close-up with a route (spot.route), draw it on the ground over `duration` seconds. */
+  drawRoute(duration = 1.2) {
+    for (const r of this.sites[this.active].routes) {
+      if (r.spot !== this.closeUp?.spot) continue;
+      r.t = 0; // (from its start again, if it was left drawn: back from the card's site)
+      r.speed = 1 / duration;
+    }
   }
 
   /** Where a close-up's dive point is on the screen now, in CSS pixels (for the leaving's own effects). */
@@ -1491,11 +1529,21 @@ export class World {
       site.plane?.update(this.time);
       site.device.update(this.time, dt, this.night, site.activity, this.camera);
       site.group.userData.animate?.(this.time, dt, this.night);
+      // (a close-up that looks at the building's own lettering keeps it lit:
+      // spot.keepTexts, the 问答 door's sign)
+      const keep = i === this.active && this.closeUp?.spot.keepTexts;
       site.texts.forEach((t, k) => {
         // Stagger the letters' arrival a little.
-        const o = THREE.MathUtils.clamp(site.activity * 1.6 - k * 0.12, 0, 1);
+        const o = keep ? 1 : THREE.MathUtils.clamp(site.activity * 1.6 - k * 0.12, 0, 1);
         t.update(this.night, o);
       });
+      // (a close-up's route: drawn on demand, gone once the camera leaves it)
+      for (const r of site.routes) {
+        if (this.closeUp?.spot !== r.spot) r.speed = r.t = 0;
+        else if (r.speed) r.t = Math.min(1, r.t + dt * r.speed);
+        const e = r.t < 0.5 ? 2 * r.t * r.t : 1 - (-2 * r.t + 2) ** 2 / 2;
+        r.route.setProgress(e);
+      }
       // (a close-up's ground lettering: in as the camera rises to it, out as it leaves)
       for (const g of site.grounds || []) {
         const on = this.closeUp?.spot === g.spot ? 1 : 0;

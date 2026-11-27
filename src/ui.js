@@ -113,6 +113,18 @@ export function foldCoverHtml(c) {
     </div>`;
 }
 
+/**
+ * 解码与三国知识问答's stub: a small hanging scroll (its page's title hangs on
+ * one), its name down the paper and its seal under it.
+ */
+function sealStubHtml(c, p) {
+  return `<div class="pass-emblem pass-scroll" aria-hidden="true">
+    <i class="pass-rod"></i>
+    <span class="pass-scroll-paper"><b>${esc(p.scroll || c.title)}</b><span class="pass-seal">${esc(p.seal || '')}</span></span>
+    <i class="pass-rod"></i>
+  </div>`;
+}
+
 /** The other site's address as its stub prints it (this site's own pages with their path). */
 function hostOf(href) {
   const u = new URL(href, location.href);
@@ -124,8 +136,9 @@ function hostOf(href) {
  * A card's boarding pass (its spot.pass in pages.js), shown where the camera
  * lands at its close-up: the face in this site's paper and ink, the stub in
  * the other site's look (`kind`: 攻错's black and gold by default; 'atlas',
- * 大国小国's map paper and globe). `head`, `board` and `mark` (the sign at the
- * end of the route) change its wording for a ride rather than a flight. The
+ * 大国小国's map paper and globe; 'seal', 解码与三国知识问答's hanging scroll
+ * and seal). `head`, `board` and `mark` (the sign at the end of the route)
+ * change its wording for a ride or a pass rather than a flight. The
  * board button is a real link (so it can open in a new tab too); app.js
  * plays the leaving first.
  */
@@ -150,7 +163,7 @@ export function passHtml(c) {
         </div>
       </div>
       <div class="pass-stub">
-        ${p.kind === 'atlas' ? atlasEmblemSvg() : emblemSvg()}
+        ${p.kind === 'atlas' ? atlasEmblemSvg() : p.kind === 'seal' ? sealStubHtml(c, p) : emblemSvg()}
         <span class="pass-motto">${esc(p.motto)}</span>
         <small>${esc(hostOf(c.href))}</small>
       </div>

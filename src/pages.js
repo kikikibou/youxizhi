@@ -268,7 +268,46 @@ export const PAGES = [
     ],
     cards: [
       // (a page of its own, /sgjm/: src/sgjm/)
-      { no: '01', title: '解码与三国知识问答', en: 'Kingdoms, Decoded', desc: '连题目都要先破译的三国知识问答', href: 'sgjm/', ready: true },
+      {
+        no: '01',
+        title: '解码与三国知识问答',
+        en: 'Kingdoms, Decoded',
+        desc: '连题目都要先破译的三国知识问答',
+        href: 'sgjm/',
+        ready: true,
+        // Its close-up (see 攻错's): the camera rises over the hedge maze in
+        // front of the cube, the door under the canopy behind it, whose sign
+        // reads PEDO MELLON A MINNO ("say 'friend' and enter": the password
+        // is in the riddle); a pass (过所) opens. 入关 draws the way through
+        // the maze in vermilion like a campaign arrow (route: World.drawRoute),
+        // the camera swoops down along it to the door (diveVia: low over the
+        // maze; diveAt: under the canopy), and the page's map paper spreads
+        // from the door like ink, its seal stamped on it (takeoff 'ink').
+        // (view / portrait / dive / diveAt / diveVia: in the building's frame)
+        spot: {
+          view: { pos: [-7, 17, 17], target: [-1.5, 0, 1], fov: 44 },
+          portrait: { pos: [-1.5, 14, 19], target: [-1, 0, 12.5], fov: 44 }, // (the maze and the door above the pass)
+          dive: [-4.25, 1.6, -4.9], // (the lobby's glass, under the sign, straight on from the maze's way out)
+          diveAt: [-4.25, 1.5, 0.6],
+          diveVia: [-4.25, 2.4, 9.5],
+          route: 'maze',
+          keepTexts: true, // (the door's sign stays lit, see World.update)
+          pass: {
+            kind: 'seal',
+            takeoff: 'ink',
+            head: '过所 · LAISSEZ-PASSER',
+            label: '过所',
+            flight: 'SGJM-01',
+            mark: '密',
+            seal: '密',
+            scroll: '解码与三国',
+            board: '入关',
+            text: '这是一份用虚构「密语」写成的三国知识问答：先破译题目，再回答问题。每题的答案都是一个人物，正史、演义都算，可以使用搜索引擎。',
+            fields: [['SETS', '基础 · 进阶'], ['QUESTIONS', '24 题'], ['ANSWERS', '都是人物']],
+            motto: 'Mellon.', // (the door's password: "friend", in the sign's own Sindarin)
+          },
+        },
+      },
       { no: '02', title: '三园警察', en: 'Mole Patrol', desc: '考验反应速度、知识量，与直觉的打地鼠小游戏', ready: false },
       { no: '03', title: '切半', en: 'Bisect', desc: '一个考验地理知识与常识的小游戏', ready: false },
       // (until the old ones move in, the stand-in puzzle from the first prototype)

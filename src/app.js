@@ -2,6 +2,7 @@ import { PAGES } from './pages.js';
 import { World } from './three/World.js';
 import { renderNav, renderPages, renderFooter, Drawer, passHtml, foldCoverHtml } from './ui.js';
 import { foldMap } from './foldmap.js';
+import { inkWash } from './inkwash.js';
 import { mountTimer } from './tools/timer.js';
 import { mountDaily } from './tools/daily.js';
 import { PALETTES, paletteById, paletteCss, initialPaletteId } from './palettes.js';
@@ -105,7 +106,7 @@ for (const ev of ['wheel', 'touchstart', 'touchend']) palEl.addEventListener(ev,
 if (import.meta.env.DEV) {
   // Debug helpers for driving the scene from devtools.
   window.__world = world;
-  window.__fold = () => fold; // (大国小国's map while it's out: seek(t) shows a moment of it)
+  window.__veil = () => veil; // (the leaving's own animation while it's out: seek(t) shows a moment of it)
   window.__step = (n = 60) => {
     for (let i = 0; i < n; i++) world.update(1 / 60);
   };
@@ -341,8 +342,8 @@ function dropSpot() {
   if (spotEl.contains(document.activeElement)) document.activeElement.blur();
   document.body.classList.remove('is-spot');
   takeoff.classList.remove('is-on', 'is-quiet', 'is-open'); // (if it was on its way out)
-  fold?.remove();
-  fold = null;
+  veil?.remove();
+  veil = null;
 }
 
 /** 返回: fly back down to the page. */
@@ -365,14 +366,17 @@ function closeSpot() {
  * the black 攻错 opens on; 'fold', 大国小国's folded map coming out of the
  * spot and unfolding to the grey-green its page opens on (foldmap.js);
  * 'globe', its globe opening out of the spot instead (where the spot is on
- * the screen: --x, --y), the earlier version, kept to compare: ?takeoff=globe.
+ * the screen: --x, --y), the earlier version, kept to compare: ?takeoff=globe;
+ * 'ink', 解码与三国知识问答's: its way through the 问答 maze drawn first,
+ * then its map paper spreading from the door like ink (inkwash.js) and its
+ * seal stamped on it.
  */
 function takeoffKind(c) {
   const kind = c.spot.pass.takeoff || '';
   if (kind === 'fold' && new URLSearchParams(location.search).get('takeoff') === 'globe') return 'globe';
   return kind;
 }
-let fold = null; // (大国小国's map while it unfolds, or folds back up)
+let veil = null; // (the leaving's own animation, 'fold' or 'ink', while it plays or plays back)
 
 /** Set the leaving's look without a transition, so nothing slides over from the last one. */
 function readyTakeoff(kind) {
@@ -396,40 +400,54 @@ function board() {
   s.landed = false;
   spotEl.classList.add('is-boarding');
   takeoff.querySelector('.takeoff-motto').textContent = c.spot.pass.motto;
+  takeoff.querySelector('.takeoff-seal').textContent = c.spot.pass.seal || '';
   // (so that Back, even if it loads this site afresh, comes back to this pass)
   try {
     sessionStorage.setItem(SPOT_KEY, JSON.stringify({ page: ids[spot.idx], card: PAGES[spot.idx].cards.indexOf(c) }));
   } catch {
     /* storage unavailable */
   }
+  const kind = takeoffKind(c);
+  const leave = (quiet, go) => {
+    setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), quiet);
+    setTimeout(() => {
+      if (spot === s) location.assign(c.href);
+    }, go);
+  };
+  // (the leaving's own animation; once it has covered the screen, the other
+  // site's first colour itself is laid there under the motto, and away again)
+  const play = (v, quiet, go) => {
+    veil?.remove();
+    veil = v;
+    v.play(1).then(() => {
+      if (spot !== s || veil !== v) return;
+      takeoff.classList.add('is-open');
+      v.el.hidden = true;
+      leave(quiet, go);
+    });
+  };
   setTimeout(() => {
     if (spot !== s) return;
-    const kind = takeoffKind(c);
     readyTakeoff(kind);
-    world.dive();
     takeoff.classList.add('is-on');
-    const leave = (quiet, go) => {
-      setTimeout(() => spot === s && takeoff.classList.add('is-quiet'), quiet);
+    if (kind === 'ink') {
+      // (the way through the maze drawn in vermilion first; the camera swoops
+      // down along it to the door, and the paper spreads from there)
+      world.drawRoute(0.95);
       setTimeout(() => {
-        if (spot === s) location.assign(c.href);
-      }, go);
-    };
-    if (kind !== 'fold') {
-      // (covered by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
-      // only the other site's first colour is left, and it opens on that)
-      leave(2200, 2900);
+        if (spot !== s) return;
+        world.dive(1.6);
+        setTimeout(() => spot === s && play(inkWash(takeoff, { source: () => world.diveOnScreen() }), 850, 1400), 500);
+      }, 800);
       return;
     }
+    world.dive();
     // (the map out of the cabin's window as the camera dives into it, open
     // by 1.8 s; then the motto on its sea, and away again)
-    fold?.remove();
-    const f = (fold = foldMap(takeoff, { cover: foldCoverHtml(c), source: () => world.diveOnScreen() }));
-    f.play(1).then(() => {
-      if (spot !== s || fold !== f) return;
-      takeoff.classList.add('is-open'); // (the sea itself now, laid over the whole screen)
-      f.el.hidden = true;
-      leave(800, 1400);
-    });
+    if (kind === 'fold') return play(foldMap(takeoff, { cover: foldCoverHtml(c), source: () => world.diveOnScreen() }), 800, 1400);
+    // (covered by 1.4 s, the motto in by 1.6 s and out again by 2.8 s: then
+    // only the other site's first colour is left, and it opens on that)
+    leave(2200, 2900);
   }, 380);
 }
 
@@ -453,21 +471,22 @@ window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   takeBackSpot();
   // (大国小国's globe closes again, into the cabin where it is now; its map
-  // folds up again and goes back in through the window)
+  // folds up again and goes back in through the window; 三国's ink draws
+  // back into the door)
   const at = world.diveOnScreen();
   if (at) {
     takeoff.style.setProperty('--x', `${at.x.toFixed(1)}px`);
     takeoff.style.setProperty('--y', `${at.y.toFixed(1)}px`);
   }
   takeoff.classList.remove('is-on', 'is-quiet', 'is-open');
-  const f = fold;
-  if (f) {
-    f.el.hidden = false;
-    f.seek(f.end);
-    f.play(-1).then(() => {
-      if (fold !== f) return;
-      f.remove();
-      fold = null;
+  const v = veil;
+  if (v) {
+    v.el.hidden = false;
+    v.seek(v.end);
+    v.play(-1).then(() => {
+      if (veil !== v) return;
+      v.remove();
+      veil = null;
     });
   }
   if (!spot) return;

@@ -282,6 +282,47 @@ const MAZE = {
   right: ['1001000011', '0010101111', '0000010101'],
   down: ['0100111000', '1111000000', '1111111111'],
 };
+// (its place: see puzzle below; the way out right in front of the door under
+// the canopy, so the way through it leads there: mazeRoute)
+const MAZE_AT = { cols: 10, rows: 3, s: 1.7, x0: -8.5, z0: 2.6, in: 2, out: 2 };
+
+/**
+ * The way through the hedge maze, as [x, z] points on the ground in the 问答
+ * building's frame: from the plaza in at the way in, cell by cell to the way
+ * out, and on to `door` ([x, z]; if it isn't straight ahead, along the
+ * cube's front first, between the hedges and the planters). (For the arrow
+ * drawn through it: World, route.js.)
+ */
+export function mazeRoute(door) {
+  const { cols, rows, s, x0, z0 } = MAZE_AT;
+  const [right, down] = [MAZE.right, MAZE.down].map((rs) => rs.map((row) => [...row].map((c) => c === '1')));
+  const start = [rows - 1, MAZE_AT.in];
+  const goal = [0, MAZE_AT.out];
+  const key = ([r, c]) => r * cols + c;
+  const prev = new Map([[key(start), null]]);
+  const queue = [start];
+  while (queue.length) {
+    const [r, c] = queue.shift();
+    if (r === goal[0] && c === goal[1]) break;
+    const next = [];
+    if (c < cols - 1 && !right[r][c]) next.push([r, c + 1]);
+    if (c > 0 && !right[r][c - 1]) next.push([r, c - 1]);
+    if (r < rows - 1 && !down[r][c]) next.push([r + 1, c]);
+    if (r > 0 && !down[r - 1][c]) next.push([r - 1, c]);
+    for (const n of next) {
+      if (prev.has(key(n))) continue;
+      prev.set(key(n), [r, c]);
+      queue.push(n);
+    }
+  }
+  const cells = [];
+  for (let p = goal; p; p = prev.get(key(p))) cells.unshift(p);
+  const at = ([r, c]) => [x0 + (c + 0.5) * s, z0 + (r + 0.5) * s];
+  const lane = z0 - 0.4; // (between the back hedges and the planters by the canopy)
+  const out = at(goal)[0];
+  const along = Math.abs(out - door[0]) > 0.05 ? [[out, lane], [door[0], lane]] : [];
+  return [[at(start)[0], z0 + rows * s + 1.8], ...cells.map(at), ...along, door];
+}
 
 /** Shared helpers on top of the plants and the pieces. */
 function kit(p, g, R) {
@@ -396,11 +437,8 @@ function debate(b, k, site, R) {
 // A small hedge maze on the plaza in front of the cube (one way through),
 // and clipped cubes on the cube's roof.
 function puzzle(b, k, site, R) {
-  const cols = 10;
-  const rows = 3;
-  const s = 1.7;
-  const x0 = -8.5;
-  const z0 = 2.6; // back edge (row 0); rows run towards the plaza (+z)
+  const { cols, rows, s, x0 } = MAZE_AT;
+  const z0 = MAZE_AT.z0; // back edge (row 0); rows run towards the plaza (+z)
   const t = 0.21; // half a hedge's thickness
   const h = 0.8;
   const [right, down] = [MAZE.right, MAZE.down].map((rows) => rows.map((row) => [...row].map((c) => c === '1')));
@@ -408,8 +446,8 @@ function puzzle(b, k, site, R) {
   const wallX = (x, za, zb) => k.hedge([x - t, 0, za - t], [x + t, h, zb + t], 1.25);
   const wallZ = (z, xa, xb) => k.hedge([xa - t, 0, z - t], [xb + t, h, z + t], 1.25);
   for (let c = 0; c < cols; c++) {
-    if (c !== 7) wallZ(z0, x0 + c * s, x0 + (c + 1) * s); // back, the way out at column 7
-    if (c !== 2) wallZ(z0 + rows * s, x0 + c * s, x0 + (c + 1) * s); // front, the way in at column 2
+    if (c !== MAZE_AT.out) wallZ(z0, x0 + c * s, x0 + (c + 1) * s); // back, the way out
+    if (c !== MAZE_AT.in) wallZ(z0 + rows * s, x0 + c * s, x0 + (c + 1) * s); // front, the way in
   }
   wallX(x0, z0, z0 + rows * s);
   wallX(x0 + cols * s, z0, z0 + rows * s);
